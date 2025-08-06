@@ -64,7 +64,7 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
                 />
               </div>
             ) : (
-              <div className="w-[120px] h-[80px] bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+              <div className="w-[120px] h-[80px] bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-lg flex items-center justify-center">
                 <div className="text-center">
                   <div className="text-gray-400 dark:text-gray-500 text-2xl mb-1">
                     📰
