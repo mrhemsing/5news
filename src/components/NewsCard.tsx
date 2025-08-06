@@ -12,6 +12,7 @@ interface NewsCardProps {
 export default function NewsCard({ article, onExplain }: NewsCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleExplain = async () => {
     if (article.simpleExplanation) {
@@ -51,7 +52,7 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
       <div className="p-6">
         <div className="flex items-start space-x-4">
           <div className="flex-shrink-0">
-            {article.urlToImage ? (
+            {article.urlToImage && !imageError ? (
               <div className="w-[120px] h-[80px] rounded-lg overflow-hidden">
                 <Image
                   src={article.urlToImage}
@@ -59,10 +60,7 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
                   width={120}
                   height={80}
                   className="w-full h-full object-cover"
-                  onError={e => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
+                  onError={() => setImageError(true)}
                 />
               </div>
             ) : (
