@@ -50,46 +50,65 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="p-6">
         <div className="flex items-start space-x-4">
-          {article.urlToImage && (
-            <div className="flex-shrink-0">
-              <Image
-                src={article.urlToImage}
-                alt={article.title}
-                width={120}
-                height={80}
-                className="rounded-lg object-cover"
-                onError={e => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
-            </div>
-          )}
+          <div className="flex-shrink-0">
+            {article.urlToImage ? (
+              <div className="w-[120px] h-[80px] rounded-lg overflow-hidden">
+                <Image
+                  src={article.urlToImage}
+                  alt={article.title}
+                  width={120}
+                  height={80}
+                  className="w-full h-full object-cover"
+                  onError={e => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="w-[120px] h-[80px] bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <div className="text-center">
+                  <div className="text-gray-400 dark:text-gray-500 text-2xl mb-1">
+                    📰
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    NEWS
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {article.title}
-            </h3>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {article.source.name}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {new Date(article.publishedAt).toLocaleDateString()}
-                </span>
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-0 leading-tight">
+                  {article.title.includes(' - ')
+                    ? article.title.split(' - ')[0]
+                    : article.title}
+                </h3>
+                <div className="flex items-center space-x-2 mt-1">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {article.source.name}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(article.publishedAt).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
 
-              <button
-                onClick={handleExplain}
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors duration-200">
-                {isLoading
-                  ? 'Explaining...'
-                  : isExpanded
-                  ? 'Hide Explanation'
-                  : "Explain Like I'm 5"}
-              </button>
+              <div className="ml-8 flex-shrink-0">
+                <button
+                  onClick={handleExplain}
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors duration-200">
+                  {isLoading
+                    ? 'Explaining...'
+                    : isExpanded
+                    ? 'Hide Explanation'
+                    : "Explain Like I'm 5"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
