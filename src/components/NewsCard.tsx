@@ -78,7 +78,7 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-0 leading-tight">
                   {article.title.includes(' - ')
@@ -95,7 +95,7 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
                 </div>
               </div>
 
-              <div className="ml-8 flex-shrink-0">
+              <div className="mt-3 sm:mt-0 sm:ml-8 flex-shrink-0">
                 <button
                   onClick={handleExplain}
                   disabled={isLoading}
