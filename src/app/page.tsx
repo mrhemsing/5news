@@ -125,7 +125,7 @@ export default function Home() {
             <Logo />
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            Top headlines explained like you were 5
+            TOP HEADLINES EXPLAINED LIKE YOU WERE 5
           </p>
         </div>
 

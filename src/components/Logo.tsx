@@ -22,7 +22,7 @@ export default function Logo() {
 
       <div className="ml-6">
         <h1 className="text-5xl font-black text-gray-900 dark:text-white tracking-tight">
-          News
+          NEWS
         </h1>
         <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mt-1"></div>
       </div>
