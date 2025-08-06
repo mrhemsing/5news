@@ -106,7 +106,7 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
                     ? 'Explaining...'
                     : isExpanded
                     ? 'Hide Explanation'
-                    : "Explain Like I'm 5"}
+                    : &quot;Explain Like I&apos;m 5&quot;}
                 </button>
               </div>
             </div>

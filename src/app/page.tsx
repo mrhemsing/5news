@@ -104,8 +104,8 @@ export default function Home() {
         {/* Footer */}
         <div className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
           <p>
-            Powered by NewsAPI.org and OpenAI. Click "Explain Like I'm 5" to get
-            simple explanations of complex news stories.
+            Powered by NewsAPI.org and OpenAI. Click &quot;Explain Like I&apos;m
+            5&quot; to get simple explanations of complex news stories.
           </p>
         </div>
       </div>
