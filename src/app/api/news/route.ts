@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { NewsApiResponse, NewsArticle } from '@/types/news';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+
     const apiKey = process.env.NEWS_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -12,7 +15,7 @@ export async function GET() {
     }
 
     const response = await fetch(
-      `https://newsapi.org/v2/top-headlines?country=us&apiKey=${apiKey}&pageSize=10`
+      `https://newsapi.org/v2/top-headlines?country=us&apiKey=${apiKey}&pageSize=10&page=${page}`
     );
 
     if (!response.ok) {
@@ -29,9 +32,13 @@ export async function GET() {
       })
     );
 
+    // More flexible logic: if we got articles and haven't reached the total, there might be more
+    const hasMore = data.articles.length > 0 && page * 10 < data.totalResults;
+
     return NextResponse.json({
       articles: articlesWithIds,
-      totalResults: data.totalResults
+      totalResults: data.totalResults,
+      hasMore
     });
   } catch (error) {
     console.error('Error fetching news:', error);

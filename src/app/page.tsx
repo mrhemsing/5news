@@ -9,27 +9,66 @@ export default function Home() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     fetchNews();
   }, []);
 
-  const fetchNews = async () => {
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const documentHeight = document.documentElement.scrollHeight;
+      const threshold = documentHeight - 1000;
+
+      if (scrollPosition >= threshold) {
+        if (hasMore && !loadingMore && !loading) {
+          fetchNews(page + 1, true);
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [hasMore, loadingMore, loading, page]);
+
+  const fetchNews = async (pageNum = 1, append = false) => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/news');
+      if (pageNum === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      // Add 1-second delay for lazy loading
+      if (append) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      const response = await fetch(`/api/news?page=${pageNum}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch news');
       }
 
       const data = await response.json();
-      setArticles(data.articles);
+
+      if (append) {
+        setArticles(prev => [...prev, ...data.articles]);
+      } else {
+        setArticles(data.articles);
+      }
+
+      setHasMore(data.hasMore);
+      setPage(pageNum);
     } catch (err) {
       setError('Failed to load news. Please try again later.');
       console.error('Error fetching news:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -67,7 +106,7 @@ export default function Home() {
               {error}
             </div>
             <button
-              onClick={fetchNews}
+              onClick={() => fetchNews()}
               className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">
               Try Again
             </button>
@@ -99,6 +138,36 @@ export default function Home() {
               onExplain={handleExplain}
             />
           ))}
+
+          {/* Loading More Indicator */}
+          {loadingMore && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">
+                Loading more articles..
+              </p>
+            </div>
+          )}
+
+          {/* Load More Button (for testing) */}
+          {hasMore && !loadingMore && (
+            <div className="text-center py-8">
+              <button
+                onClick={() => fetchNews(page + 1, true)}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200">
+                Load More Headlines
+              </button>
+            </div>
+          )}
+
+          {/* End of Results */}
+          {!hasMore && articles.length > 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400">
+                You&apos;ve reached the end of the headlines!
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
