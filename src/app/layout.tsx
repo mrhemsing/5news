@@ -6,7 +6,10 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: '5News - News Explained Simply',
-  description: 'Get the top news headlines explained in simple terms'
+  description: 'Get the top news headlines explained in simple terms',
+  icons: {
+    icon: '/favicon.svg'
+  }
 };
 
 export default function RootLayout({
