@@ -116,7 +116,7 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
         {isExpanded && article.simpleExplanation && (
           <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
             <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">
-              🤔 Explain like I'm 5:
+              🤔 Explain like I&apos;m 5:
             </h4>
             <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
               {article.simpleExplanation}
