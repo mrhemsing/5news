@@ -96,7 +96,11 @@ export default function Home() {
   };
 
   const handleExplainError = (articleId: string) => {
-    setFailedArticles(prev => new Set([...prev, articleId]));
+    setFailedArticles(prev => {
+      const newSet = new Set(prev);
+      newSet.add(articleId);
+      return newSet;
+    });
   };
 
   const testArticlesForValidity = async (
