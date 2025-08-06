@@ -7,12 +7,18 @@ import Image from 'next/image';
 interface NewsCardProps {
   article: NewsArticle;
   onExplain: (articleId: string, explanation: string) => void;
+  onExplainError: (articleId: string) => void;
 }
 
-export default function NewsCard({ article, onExplain }: NewsCardProps) {
+export default function NewsCard({
+  article,
+  onExplain,
+  onExplainError
+}: NewsCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [explanationError, setExplanationError] = useState(false);
 
   const handleExplain = async () => {
     if (article.simpleExplanation) {
@@ -21,6 +27,7 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
     }
 
     setIsLoading(true);
+    setExplanationError(false);
     try {
       const response = await fetch('/api/explain', {
         method: 'POST',
@@ -35,13 +42,21 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
 
       if (response.ok) {
         const data = await response.json();
-        onExplain(article.id, data.explanation);
-        setIsExpanded(true);
+        if (data.explanation && data.explanation.trim()) {
+          onExplain(article.id, data.explanation);
+          setIsExpanded(true);
+        } else {
+          setExplanationError(true);
+          onExplainError(article.id);
+        }
       } else {
-        console.error('Failed to get explanation');
+        setExplanationError(true);
+        onExplainError(article.id);
       }
     } catch (error) {
       console.error('Error getting explanation:', error);
+      setExplanationError(true);
+      onExplainError(article.id);
     } finally {
       setIsLoading(false);
     }
@@ -100,11 +115,23 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
                   onClick={handleExplain}
                   disabled={isLoading}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors duration-200">
-                  {isLoading
-                    ? 'Explaining...'
-                    : isExpanded
-                    ? 'Hide Explanation'
-                    : "Explain Like I'm 5"}
+                  <span
+                    className={`text-2xl inline-block ${
+                      isLoading ? 'animate-pulse' : ''
+                    }`}
+                    style={
+                      isLoading
+                        ? {
+                            animation: 'shake 1.2s infinite',
+                            transform: 'translateZ(0)'
+                          }
+                        : {}
+                    }>
+                    🤔
+                  </span>{' '}
+                  <span className="text-gray-300">
+                    {isExpanded ? '▲' : '▼'}
+                  </span>
                 </button>
               </div>
             </div>
@@ -113,9 +140,6 @@ export default function NewsCard({ article, onExplain }: NewsCardProps) {
 
         {isExpanded && article.simpleExplanation && (
           <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
-            <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">
-              🤔 Explain like I&apos;m 5:
-            </h4>
             <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
               {article.simpleExplanation}
             </p>

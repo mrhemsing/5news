@@ -12,9 +12,20 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [failedArticles, setFailedArticles] = useState<Set<string>>(new Set());
+  const [validArticles, setValidArticles] = useState<NewsArticle[]>([]);
+  const [validatingArticles, setValidatingArticles] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    fetchNews();
+    const initializeApp = async () => {
+      // Add 1-second fake delay on initial load
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setInitialLoading(false);
+      fetchNews();
+    };
+
+    initializeApp();
   }, []);
 
   useEffect(() => {
@@ -57,8 +68,10 @@ export default function Home() {
 
       if (append) {
         setArticles(prev => [...prev, ...data.articles]);
+        setValidArticles(prev => [...prev, ...data.articles]);
       } else {
         setArticles(data.articles);
+        setValidArticles(data.articles);
       }
 
       setHasMore(data.hasMore);
@@ -73,7 +86,7 @@ export default function Home() {
   };
 
   const handleExplain = (articleId: string, explanation: string) => {
-    setArticles(prevArticles =>
+    setValidArticles(prevArticles =>
       prevArticles.map(article =>
         article.id === articleId
           ? { ...article, simpleExplanation: explanation }
@@ -81,6 +94,64 @@ export default function Home() {
       )
     );
   };
+
+  const handleExplainError = (articleId: string) => {
+    setFailedArticles(prev => new Set([...prev, articleId]));
+  };
+
+  const testArticlesForValidity = async (
+    articlesToTest: NewsArticle[],
+    showAnimation = false
+  ) => {
+    if (showAnimation) {
+      setValidatingArticles(true);
+    }
+    const validArticlesList: NewsArticle[] = [];
+
+    for (const article of articlesToTest) {
+      try {
+        const response = await fetch('/api/explain', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            title: article.title,
+            content: article.content || article.description
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.explanation && data.explanation.trim()) {
+            validArticlesList.push(article);
+          }
+        }
+      } catch (error) {
+        console.error('Error testing article:', error);
+      }
+    }
+
+    setValidArticles(prev => [...prev, ...validArticlesList]);
+    if (showAnimation) {
+      setValidatingArticles(false);
+    }
+  };
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">
+              Give me one teeny-tiny moment — your stories are coming!
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -125,19 +196,22 @@ export default function Home() {
             <Logo />
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            TOP HEADLINES EXPLAINED LIKE YOU WERE 5
+            THE TOP HEADLINES FOR AGES 5+
           </p>
         </div>
 
         {/* News Grid */}
         <div className="max-w-4xl mx-auto space-y-6">
-          {articles.map(article => (
-            <NewsCard
-              key={article.id}
-              article={article}
-              onExplain={handleExplain}
-            />
-          ))}
+          {validArticles
+            .filter(article => !failedArticles.has(article.id))
+            .map(article => (
+              <NewsCard
+                key={article.id}
+                article={article}
+                onExplain={handleExplain}
+                onExplainError={handleExplainError}
+              />
+            ))}
 
           {/* Loading More Indicator */}
           {loadingMore && (
