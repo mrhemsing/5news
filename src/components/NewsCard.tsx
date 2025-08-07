@@ -353,9 +353,13 @@ export default function NewsCard({
                     : article.title}
                 </h3>
                 <div className="flex items-center space-x-2 mt-1">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200 cursor-pointer">
                     {article.source.name}
-                  </span>
+                  </a>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     {new Date(article.publishedAt).toLocaleDateString()}
                   </span>
