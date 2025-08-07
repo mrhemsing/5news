@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
-import { Inter, Comic_Neue } from 'next/font/google';
+import {
+  Inter,
+  Comic_Neue,
+  Architects_Daughter,
+  Bubblegum_Sans
+} from 'next/font/google';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -7,6 +12,18 @@ const comicNeue = Comic_Neue({
   subsets: ['latin'],
   weight: ['300', '400', '700'],
   variable: '--font-comic-neue'
+});
+
+const architectsDaughter = Architects_Daughter({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-architects-daughter'
+});
+
+const bubblegumSans = Bubblegum_Sans({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-bubblegum-sans'
 });
 
 export const metadata: Metadata = {
@@ -24,7 +41,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} ${comicNeue.variable}`}>
+      <body
+        className={`${inter.className} ${comicNeue.variable} ${architectsDaughter.variable} ${bubblegumSans.variable}`}>
         {children}
       </body>
     </html>
