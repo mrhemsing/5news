@@ -6,14 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-cartoons": "node scripts/generate-cartoons.js"
   },
   "dependencies": {
     "next": "14.0.4",
     "react": "^18",
     "react-dom": "^18",
     "@supabase/supabase-js": "^2.38.5",
-    "openai": "^4.20.1"
+    "openai": "^4.20.1",
+    "node-fetch": "^2.6.7"
   },
   "devDependencies": {
     "typescript": "^5",
