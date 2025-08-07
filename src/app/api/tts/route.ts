@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Jessica - clear, friendly female voice perfect for kids
+const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - warm, friendly female voice perfect for kids
 
 export async function POST(request: Request) {
   try {
