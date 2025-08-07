@@ -25,6 +25,13 @@ export default function NewsCard({
   const [showTooltip, setShowTooltip] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // Clear cartoon URL when image fails to load
+  const handleImageError = () => {
+    console.log('Cartoon image failed to load:', cartoonUrl);
+    setImageError(true);
+    setCartoonUrl(null); // Clear the URL to prevent further attempts
+  };
+
   // Generate cartoon when component mounts based on headline
   useEffect(() => {
     if (!cartoonUrl && !cartoonLoading) {
@@ -119,15 +126,16 @@ export default function NewsCard({
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                 </div>
               )}
-              {cartoonUrl ? (
+              {cartoonUrl && !imageError ? (
                 <Image
                   src={cartoonUrl}
                   alt={article.title}
                   width={120}
                   height={80}
                   className="w-full h-full object-cover"
-                  onError={() => setImageError(true)}
+                  onError={handleImageError}
                   priority={true}
+                  unoptimized={true}
                 />
               ) : (
                 <div className="w-[120px] h-[80px] bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-lg flex items-center justify-center">
