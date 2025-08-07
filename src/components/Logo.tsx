@@ -37,7 +37,30 @@ export default function Logo() {
           }}>
           NEWS
         </h1>
-        <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mt-1"></div>
+        <div
+          className="h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mt-1"
+          style={{
+            height: '3px',
+            background: 'linear-gradient(to right, #3b82f6, #8b5cf6)',
+            borderRadius: '2px',
+            marginTop: '4px',
+            transform: 'rotate(-3deg)',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            position: 'relative'
+          }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: '0',
+              left: '0',
+              right: '0',
+              height: '100%',
+              background: 'inherit',
+              borderRadius: 'inherit',
+              transform: 'rotate(1.5deg)',
+              opacity: '0.7'
+            }}></div>
+        </div>
       </div>
     </div>
   );
