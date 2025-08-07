@@ -6,10 +6,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
 
-    const apiKey = process.env.NEWS_API_KEY;
+    const apiKey = process.env.GNEWS_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'News API key not configured' },
+        { error: 'GNews API key not configured' },
         { status: 500 }
       );
     }
@@ -18,17 +18,41 @@ export async function GET(request: Request) {
     const today = new Date().toISOString().split('T')[0];
 
     const response = await fetch(
-      `https://newsapi.org/v2/everything?q=news&language=en&sortBy=publishedAt&apiKey=${apiKey}&pageSize=20&excludeDomains=espn.com,bleacherreport.com,yahoo.com/sports,cnbc.com,bloomberg.com,marketwatch.com,reuters.com/business`
+      `https://gnews.io/api/v4/search?q=news&lang=en&country=us&max=50&apikey=${apiKey}`
     );
 
     if (!response.ok) {
+      if (response.status === 429) {
+        console.error('News API rate limit exceeded');
+        return NextResponse.json(
+          {
+            error: 'Rate limit exceeded. Please try again later.',
+            articles: [],
+            totalResults: 0,
+            hasMore: false
+          },
+          { status: 429 }
+        );
+      }
       throw new Error(`News API error: ${response.status}`);
     }
 
     const data: NewsApiResponse = await response.json();
 
+    // Debug: Log the response structure
+    console.log('GNews API response:', {
+      totalArticles: data.articles?.length || 0,
+      responseKeys: Object.keys(data),
+      sampleArticle: data.articles?.[0]
+    });
+
+    // GNews returns articles directly, not wrapped in a response object
+    const articles = data.articles || data;
+
+    console.log('Before filtering:', articles.length, 'articles');
+
     // Filter out sports and finance articles
-    const filteredArticles = data.articles.filter(article => {
+    const filteredArticles = articles.filter(article => {
       const title = article.title.toLowerCase();
       const description = (article.description || '').toLowerCase();
       const content = (article.content || '').toLowerCase();
@@ -36,11 +60,13 @@ export async function GET(request: Request) {
       // Skip single word headlines
       const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
       if (cleanTitle.split(' ').length <= 1) {
+        console.log('Filtered out single word:', article.title);
         return false;
       }
 
       // Skip headlines containing specific words
       if (cleanTitle.toLowerCase().includes('rail')) {
+        console.log('Filtered out RAIL:', article.title);
         return false;
       }
 
@@ -61,6 +87,12 @@ export async function GET(request: Request) {
         articleUrl.includes('smbc-comics.com') ||
         articleUrl.includes('sportingnews.com')
       ) {
+        console.log(
+          'Filtered out source:',
+          article.source?.name,
+          'URL:',
+          article.url
+        );
         return false;
       }
 
@@ -187,13 +219,22 @@ export async function GET(request: Request) {
       ];
 
       // Check if any keywords are in the title, description, or content
-      return !allKeywords.some(
+      const hasExcludedKeyword = allKeywords.some(
         keyword =>
           title.includes(keyword) ||
           description.includes(keyword) ||
           content.includes(keyword)
       );
+
+      if (hasExcludedKeyword) {
+        console.log('Filtered out keyword match:', article.title);
+        return false;
+      }
+
+      return true;
     });
+
+    console.log('After filtering:', filteredArticles.length, 'articles');
 
     // Remove duplicate articles by URL
     const uniqueArticles = filteredArticles.filter(
@@ -211,11 +252,11 @@ export async function GET(request: Request) {
     );
 
     // More flexible logic: if we got articles and haven't reached the total, there might be more
-    const hasMore = articlesWithIds.length > 0 && page * 10 < data.totalResults;
+    const hasMore = articlesWithIds.length > 0 && articlesWithIds.length >= 20;
 
     return NextResponse.json({
       articles: articlesWithIds,
-      totalResults: data.totalResults,
+      totalResults: articlesWithIds.length,
       hasMore
     });
   } catch (error) {

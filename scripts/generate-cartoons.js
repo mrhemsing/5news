@@ -7,23 +7,26 @@ const fetch = require('node-fetch');
 
 async function getLatestHeadlines() {
   try {
-    const apiKey = process.env.NEWS_API_KEY;
+    const apiKey = process.env.GNEWS_API_KEY;
     if (!apiKey) {
-      throw new Error('NEWS_API_KEY not found');
+      throw new Error('GNEWS_API_KEY not found');
     }
 
     const response = await fetch(
-      `https://newsapi.org/v2/everything?q=news&language=en&sortBy=publishedAt&apiKey=${apiKey}&pageSize=30&excludeDomains=espn.com,bleacherreport.com,yahoo.com/sports,cnbc.com,bloomberg.com,marketwatch.com,reuters.com/business`
+      `https://gnews.io/api/v4/search?q=news&lang=en&country=us&max=30&apikey=${apiKey}`
     );
 
     if (!response.ok) {
-      throw new Error(`News API error: ${response.status}`);
+      throw new Error(`GNews API error: ${response.status}`);
     }
 
     const data = await response.json();
 
+    // GNews returns articles directly, not wrapped in a response object
+    const articles = data.articles || data;
+
     // Filter out sports and finance articles (same logic as API)
-    const filteredArticles = data.articles.filter(article => {
+    const filteredArticles = articles.filter(article => {
       const title = article.title.toLowerCase();
       const description = (article.description || '').toLowerCase();
       const content = (article.content || '').toLowerCase();

@@ -43,7 +43,7 @@ export default function Home() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, loading, page]);
+  }, [hasMore, loadingMore, loading]); // Removed 'page' from dependencies
 
   const fetchNews = async (pageNum = 1, append = false) => {
     try {
@@ -61,6 +61,11 @@ export default function Home() {
       const response = await fetch(`/api/news?page=${pageNum}`);
 
       if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error(
+            'Rate limit exceeded. Please try again in a few minutes.'
+          );
+        }
         throw new Error('Failed to fetch news');
       }
 
