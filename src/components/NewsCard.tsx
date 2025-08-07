@@ -23,6 +23,7 @@ export default function NewsCard({
   const [cartoonLoading, setCartoonLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Clear cartoon URL when image fails to load
@@ -30,21 +31,34 @@ export default function NewsCard({
     console.log('Cartoon image failed to load:', cartoonUrl);
     setImageError(true);
     setCartoonUrl(null); // Clear the URL to prevent further attempts
+
+    // Retry cartoon generation if we haven't exceeded max retries
+    if (retryCount < 2) {
+      console.log('Retrying cartoon generation due to image load failure');
+      setTimeout(() => {
+        setRetryCount(retryCount + 1);
+        generateCartoon(article.title, retryCount + 1);
+      }, 2000); // Wait 2 seconds before retry
+    }
   };
 
   // Generate cartoon when component mounts based on headline
   useEffect(() => {
     if (!cartoonUrl && !cartoonLoading) {
+      setRetryCount(0); // Reset retry count for new headline
       generateCartoon(article.title);
     }
   }, [article.title]);
 
-  const generateCartoon = async (headline: string) => {
+  const generateCartoon = async (headline: string, retryAttempt = 0) => {
     if (cartoonUrl || cartoonLoading) return;
 
     setCartoonLoading(true);
     try {
-      console.log('Generating cartoon for headline:', headline);
+      console.log(
+        `Generating cartoon for headline (attempt ${retryAttempt + 1}):`,
+        headline
+      );
       const response = await fetch('/api/cartoonize', {
         method: 'POST',
         headers: {
@@ -58,18 +72,41 @@ export default function NewsCard({
         console.log('Cartoon response:', data);
         if (data.cartoonUrl) {
           setCartoonUrl(data.cartoonUrl);
+          setRetryCount(0); // Reset retry count on success
           // If it was cached or fallback, we can stop loading immediately
           if (data.cached || data.fallback) {
             setCartoonLoading(false);
           }
+        } else {
+          // No cartoon URL returned, try to retry
+          throw new Error('No cartoon URL returned');
         }
       } else {
         console.error('Cartoon API error:', response.status);
+        throw new Error(`Cartoon API error: ${response.status}`);
       }
     } catch (error) {
-      console.error('Error generating cartoon:', error);
+      console.error(
+        `Error generating cartoon (attempt ${retryAttempt + 1}):`,
+        error
+      );
+
+      // Retry logic - up to 3 attempts with exponential backoff
+      if (retryAttempt < 2) {
+        const delay = Math.pow(2, retryAttempt) * 1000; // 1s, 2s, 4s delays
+        console.log(`Retrying cartoon generation in ${delay}ms...`);
+        setTimeout(() => {
+          setRetryCount(retryAttempt + 1);
+          generateCartoon(headline, retryAttempt + 1);
+        }, delay);
+      } else {
+        console.log('Max retry attempts reached for cartoon generation');
+        setRetryCount(0); // Reset for next time
+      }
     } finally {
-      setCartoonLoading(false);
+      if (retryAttempt >= 2) {
+        setCartoonLoading(false);
+      }
     }
   };
 

@@ -56,6 +56,9 @@ export async function POST(request: Request) {
     const negativePrompt =
       'realistic, photographic, adult, complex, dark, scary, blurry, text, words, letters';
 
+    console.log('Sending request to Replicate API...');
+    console.log('Cartoon prompt:', cartoonPrompt);
+
     // Use Replicate's Stable Diffusion for text-to-image cartoon generation
     const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
@@ -78,7 +81,12 @@ export async function POST(request: Request) {
       })
     });
 
+    console.log('Replicate API response status:', response.status);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Replicate API error response:', errorText);
+
       if (response.status === 402) {
         console.log('Replicate API 402 error - credits may not be applied yet');
         // Return null as fallback - no cartoon generated
@@ -89,14 +97,12 @@ export async function POST(request: Request) {
           fallback: true
         });
       }
-      console.error(
-        `Replicate API error: ${response.status}`,
-        await response.text()
-      );
+      console.error(`Replicate API error: ${response.status}`, errorText);
       throw new Error(`Replicate API error: ${response.status}`);
     }
 
     const prediction = await response.json();
+    console.log('Replicate prediction created:', prediction.id);
 
     // Poll for completion
     let result;
@@ -137,6 +143,8 @@ export async function POST(request: Request) {
     if (!cartoonUrl) {
       throw new Error('Failed to generate cartoon image - no URL');
     }
+
+    console.log('Successfully generated cartoon URL:', cartoonUrl);
 
     // Cache the generated cartoon
     await setCachedCartoon(cleanHeadline, cartoonUrl);
