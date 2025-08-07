@@ -1,22 +1,32 @@
 import { NextResponse } from 'next/server';
+import { getCachedTTS, setCachedTTS } from '@/lib/ttsCache';
 
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - warm, friendly female voice perfect for kids
+const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah voice
 
 export async function POST(request: Request) {
   try {
-    const { text } = await request.json();
+    const { text, timestamp } = await request.json();
 
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
-    if (!ELEVENLABS_API_KEY) {
-      console.error('ElevenLabs API key not found in environment');
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
       return NextResponse.json(
         { error: 'ElevenLabs API key not configured' },
         { status: 500 }
       );
+    }
+
+    // Try to get cached TTS first
+    const cachedAudioUrl = await getCachedTTS(text, VOICE_ID);
+    if (cachedAudioUrl) {
+      console.log('Using cached TTS audio');
+      return NextResponse.json({
+        audioUrl: cachedAudioUrl,
+        cached: true
+      });
     }
 
     console.log('Generating speech for text:', text.substring(0, 100) + '...');
@@ -29,61 +39,42 @@ export async function POST(request: Request) {
         headers: {
           Accept: 'audio/mpeg',
           'Content-Type': 'application/json',
-          'xi-api-key': ELEVENLABS_API_KEY
+          'xi-api-key': apiKey
         },
         body: JSON.stringify({
-          text: text,
+          text,
           model_id: 'eleven_monolingual_v1',
           voice_settings: {
             stability: 0.5,
-            similarity_boost: 0.5,
-            style: 0.0,
-            use_speaker_boost: true
-          },
-          timestamp: Date.now() // Force fresh generation
+            similarity_boost: 0.5
+          }
         })
       }
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('ElevenLabs API error:', response.status, errorText);
-
       if (response.status === 401) {
-        console.log(
-          'ElevenLabs API key missing text-to-speech permission, falling back to browser speech'
-        );
+        console.error('ElevenLabs API error: 401 missing_permissions');
         return NextResponse.json(
-          { error: 'ElevenLabs API key missing permissions', fallback: true },
+          { error: 'API key missing permissions', fallback: true },
           { status: 401 }
         );
       }
-
-      if (response.status === 429) {
-        return NextResponse.json(
-          { error: 'Rate limit exceeded' },
-          { status: 429 }
-        );
-      }
-
-      return NextResponse.json(
-        { error: 'Failed to generate speech' },
-        { status: 500 }
-      );
+      throw new Error(`ElevenLabs API error: ${response.status}`);
     }
 
     const audioBuffer = await response.arrayBuffer();
     const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-
-    // Convert blob to base64 for easy transmission
-    const arrayBuffer = await audioBlob.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    const audioUrl = URL.createObjectURL(audioBlob);
 
     console.log('Successfully generated speech audio');
 
+    // Cache the TTS result
+    await setCachedTTS(text, VOICE_ID, audioUrl);
+
     return NextResponse.json({
-      audioData: base64,
-      success: true
+      audioUrl,
+      cached: false
     });
   } catch (error) {
     console.error('Error generating speech:', error);

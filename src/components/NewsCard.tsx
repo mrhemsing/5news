@@ -160,43 +160,41 @@ export default function NewsCard({
 
   // Generate high-quality audio using ElevenLabs
   const generateAudio = async (text: string) => {
-    if (audioLoading) return;
-
     setAudioLoading(true);
-    try {
-      console.log('Generating audio for text:', text.substring(0, 100) + '...');
-      console.log('Clearing any existing audio URL to force regeneration');
-      setAudioUrl(null); // Clear existing audio to force regeneration
+    setAudioUrl(null);
+    setIsPlaying(false);
 
+    try {
       const response = await fetch('/api/tts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({
+          text,
+          timestamp: Date.now()
+        })
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.audioData) {
-          // Convert base64 to blob URL
-          const audioBlob = new Blob(
-            [Uint8Array.from(atob(data.audioData), c => c.charCodeAt(0))],
-            { type: 'audio/mpeg' }
-          );
-          const url = URL.createObjectURL(audioBlob);
-          setAudioUrl(url);
-          console.log('Audio generated successfully');
+        console.log('TTS response:', data);
 
-          // Automatically play the audio
-          const audio = new Audio(url);
+        if (data.audioUrl) {
+          setAudioUrl(data.audioUrl);
+
+          // Create audio element
+          const audio = new Audio(data.audioUrl);
           setCurrentAudio(audio);
+
+          // Set up event listeners
           audio.onended = () => {
+            console.log('Audio ended');
             setIsPlaying(false);
             setCurrentAudio(null);
           };
-          audio.onerror = e => {
-            console.error('Audio playback error:', e);
+          audio.onerror = () => {
+            console.error('Audio error');
             setIsPlaying(false);
             setCurrentAudio(null);
           };

@@ -1,6 +1,4 @@
--- Create cartoon_cache table in Supabase
--- Run this in your Supabase SQL editor
-
+-- Create cartoon_cache table
 CREATE TABLE IF NOT EXISTS cartoon_cache (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   headline TEXT NOT NULL UNIQUE,
@@ -8,9 +6,32 @@ CREATE TABLE IF NOT EXISTS cartoon_cache (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create index for faster lookups
+-- Create news_cache table
+CREATE TABLE IF NOT EXISTS news_cache (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  date TEXT NOT NULL UNIQUE,
+  articles JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create tts_cache table
+CREATE TABLE IF NOT EXISTS tts_cache (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  text_hash TEXT NOT NULL,
+  voice_id TEXT NOT NULL,
+  audio_url TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(text_hash, voice_id)
+);
+
+-- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_cartoon_cache_headline ON cartoon_cache(headline);
 CREATE INDEX IF NOT EXISTS idx_cartoon_cache_created_at ON cartoon_cache(created_at);
+CREATE INDEX IF NOT EXISTS idx_news_cache_date ON news_cache(date);
+CREATE INDEX IF NOT EXISTS idx_news_cache_created_at ON news_cache(created_at);
+CREATE INDEX IF NOT EXISTS idx_tts_cache_text_hash ON tts_cache(text_hash);
+CREATE INDEX IF NOT EXISTS idx_tts_cache_voice_id ON tts_cache(voice_id);
+CREATE INDEX IF NOT EXISTS idx_tts_cache_created_at ON tts_cache(created_at);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE cartoon_cache ENABLE ROW LEVEL SECURITY;

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { NewsApiResponse, NewsArticle } from '@/types/news';
+import { getCachedNews, setCachedNews } from '@/lib/newsCache';
 
 export async function GET(request: Request) {
   try {
@@ -16,6 +17,19 @@ export async function GET(request: Request) {
 
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
+
+    // Try to get cached news first (only for page 1)
+    if (page === 1) {
+      const cachedArticles = await getCachedNews(today);
+      if (cachedArticles) {
+        console.log('Returning cached news data');
+        return NextResponse.json({
+          articles: cachedArticles,
+          totalResults: cachedArticles.length,
+          hasMore: false
+        });
+      }
+    }
 
     const response = await fetch(
       `https://gnews.io/api/v4/search?q=news&lang=en&country=us&max=50&apikey=${apiKey}`
@@ -250,6 +264,11 @@ export async function GET(request: Request) {
         title: article.title.replace(/\s*\([^)]*\)/g, '').trim() // Remove text in parentheses
       })
     );
+
+    // Cache the results for page 1
+    if (page === 1) {
+      await setCachedNews(today, articlesWithIds);
+    }
 
     // More flexible logic: if we got articles and haven't reached the total, there might be more
     const hasMore = articlesWithIds.length > 0 && articlesWithIds.length >= 20;
