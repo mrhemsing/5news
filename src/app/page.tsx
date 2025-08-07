@@ -200,7 +200,10 @@ export default function Home() {
             <Logo />
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            TODAY&apos;S TOP HEADLINES MADE KID FRIENDLY
+            TODAY&apos;S TOP HEADLINES
+            <br className="block md:hidden" />
+            <span className="hidden md:inline"> </span>
+            MADE KID FRIENDLY
           </p>
         </div>
 
