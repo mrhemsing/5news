@@ -1,0 +1,5 @@
+[33mb5fc146[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Update supabase_setup.sql
+[33m73d8314[m Update caching to limit API calls
+[33m316dc32[m Updates news api to gnews
+[33m9eefb1c[m Updates
+[33m4907ebc[m Add synch for images
