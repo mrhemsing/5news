@@ -200,7 +200,7 @@ export default function Home() {
             <Logo />
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            TODAY&apos;S TOP NEWS HEADLINES FOR KIDS
+            TODAY&apos;S TOP HEADLINES MADE FOR KIDS
           </p>
         </div>
 
