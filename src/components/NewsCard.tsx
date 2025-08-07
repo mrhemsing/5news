@@ -24,6 +24,12 @@ export default function NewsCard({
   const [isPlaying, setIsPlaying] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(
+    null
+  );
+  const [isStopping, setIsStopping] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Clear cartoon URL when image fails to load
@@ -152,6 +158,155 @@ export default function NewsCard({
     }
   };
 
+  // Generate high-quality audio using ElevenLabs
+  const generateAudio = async (text: string) => {
+    if (audioLoading) return;
+
+    setAudioLoading(true);
+    try {
+      console.log('Generating audio for text:', text.substring(0, 100) + '...');
+      console.log('Clearing any existing audio URL to force regeneration');
+      setAudioUrl(null); // Clear existing audio to force regeneration
+
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.audioData) {
+          // Convert base64 to blob URL
+          const audioBlob = new Blob(
+            [Uint8Array.from(atob(data.audioData), c => c.charCodeAt(0))],
+            { type: 'audio/mpeg' }
+          );
+          const url = URL.createObjectURL(audioBlob);
+          setAudioUrl(url);
+          console.log('Audio generated successfully');
+
+          // Automatically play the audio
+          const audio = new Audio(url);
+          setCurrentAudio(audio);
+          audio.onended = () => {
+            setIsPlaying(false);
+            setCurrentAudio(null);
+          };
+          audio.onerror = e => {
+            console.error('Audio playback error:', e);
+            setIsPlaying(false);
+            setCurrentAudio(null);
+          };
+          audio.onloadstart = () => {
+            console.log('Audio loading started');
+            setIsPlaying(true);
+          };
+          audio.oncanplay = () => {
+            console.log('Audio can play, starting playback');
+            if (!isStopping) {
+              audio.play().catch(e => {
+                console.error('Failed to play audio:', e);
+                setIsPlaying(false);
+                setCurrentAudio(null);
+              });
+            } else {
+              console.log('Skipping playback because stopping');
+            }
+          };
+          audio.load(); // Explicitly load the audio
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('TTS API error:', response.status, errorData);
+
+        // Check if it's a permissions issue and fallback to browser speech
+        if (errorData.fallback) {
+          console.log('Falling back to browser speech synthesis');
+          playWithBrowserSpeech(text);
+        } else {
+          // Other error, try browser speech as fallback
+          playWithBrowserSpeech(text);
+        }
+      }
+    } catch (error) {
+      console.error('Error generating audio:', error);
+      // Fallback to browser speech synthesis
+      playWithBrowserSpeech(text);
+    } finally {
+      setAudioLoading(false);
+    }
+  };
+
+  // Fallback to browser speech synthesis
+  const playWithBrowserSpeech = (text: string) => {
+    try {
+      if (!window.speechSynthesis) {
+        console.error('Speech synthesis not supported');
+        alert('Speech synthesis is not supported in this browser');
+        return;
+      }
+
+      if (isPlaying) {
+        speechSynthesis.cancel();
+        setIsPlaying(false);
+        return;
+      }
+
+      speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+
+      const speakWithVoice = () => {
+        const voices = speechSynthesis.getVoices();
+        const femaleVoice =
+          voices.find(
+            voice =>
+              voice.name.includes('Samantha') ||
+              voice.name.includes('Victoria') ||
+              voice.name.includes('Karen') ||
+              voice.name.includes('Alex') ||
+              voice.name.includes('Female') ||
+              (voice.lang.startsWith('en') && voice.name.includes('female'))
+          ) || voices[0];
+
+        if (femaleVoice) {
+          utterance.voice = femaleVoice;
+        }
+
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 0.9;
+
+        utterance.onstart = () => {
+          console.log('Browser speech started');
+          setIsPlaying(true);
+        };
+        utterance.onend = () => {
+          console.log('Browser speech ended');
+          setIsPlaying(false);
+        };
+        utterance.onerror = event => {
+          console.error('Browser speech error:', event);
+          setIsPlaying(false);
+        };
+
+        speechSynthesis.speak(utterance);
+      };
+
+      if (speechSynthesis.getVoices().length > 0) {
+        speakWithVoice();
+      } else {
+        speechSynthesis.onvoiceschanged = speakWithVoice;
+      }
+    } catch (error) {
+      console.error('Error with browser speech synthesis:', error);
+      alert('Unable to play audio. Please try again.');
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-visible border border-gray-200 dark:border-gray-700">
       <div className="p-6">
@@ -256,84 +411,94 @@ export default function NewsCard({
                 {isExpanded && article.simpleExplanation && (
                   <button
                     onClick={() => {
-                      try {
-                        // Check if speech synthesis is supported
-                        if (!window.speechSynthesis) {
-                          console.error('Speech synthesis not supported');
-                          alert(
-                            'Speech synthesis is not supported in this browser'
-                          );
-                          return;
-                        }
+                      console.log(
+                        'Button clicked, isPlaying:',
+                        isPlaying,
+                        'currentAudio:',
+                        !!currentAudio
+                      );
 
-                        if (isPlaying) {
-                          // Stop speech
+                      if (isPlaying) {
+                        console.log('Attempting to stop audio...');
+                        setIsStopping(true); // Set flag to prevent playback
+                        // Stop audio
+                        if (currentAudio) {
+                          console.log('Stopping ElevenLabs audio');
+                          // Stop ElevenLabs audio
+                          currentAudio.pause();
+                          currentAudio.currentTime = 0;
+                          // Remove all event listeners
+                          currentAudio.onended = null;
+                          currentAudio.onerror = null;
+                          currentAudio.onloadstart = null;
+                          currentAudio.oncanplay = null;
+                          // Immediately clear the audio element
+                          const audioToStop = currentAudio;
+                          setCurrentAudio(null);
+                          setIsPlaying(false);
+                          setIsStopping(false); // Clear flag
+                          // Force garbage collection of the audio element
+                          setTimeout(() => {
+                            if (audioToStop) {
+                              audioToStop.src = '';
+                              audioToStop.load();
+                            }
+                          }, 0);
+                          return; // Important: return here to prevent replay
+                        } else {
+                          console.log('Stopping browser speech');
+                          // Stop browser speech
                           speechSynthesis.cancel();
                           setIsPlaying(false);
-                          return;
+                          setIsStopping(false); // Clear flag
+                          return; // Important: return here to prevent replay
                         }
+                      }
 
-                        // Cancel any ongoing speech
-                        speechSynthesis.cancel();
-
-                        const utterance = new SpeechSynthesisUtterance(
-                          article.simpleExplanation
-                        );
-
-                        // Wait for voices to load if they're not available yet
-                        const speakWithVoice = () => {
-                          const voices = speechSynthesis.getVoices();
-                          const femaleVoice =
-                            voices.find(
-                              voice =>
-                                voice.name.includes('Samantha') ||
-                                voice.name.includes('Victoria') ||
-                                voice.name.includes('Karen') ||
-                                voice.name.includes('Alex') ||
-                                voice.name.includes('Female') ||
-                                (voice.lang.startsWith('en') &&
-                                  voice.name.includes('female'))
-                            ) || voices[0];
-
-                          if (femaleVoice) {
-                            utterance.voice = femaleVoice;
-                          }
-
-                          utterance.rate = 1.0;
-                          utterance.pitch = 1.0;
-                          utterance.volume = 0.9;
-
-                          // Add event listeners for debugging and state management
-                          utterance.onstart = () => {
-                            console.log('Speech started');
-                            setIsPlaying(true);
-                          };
-                          utterance.onend = () => {
-                            console.log('Speech ended');
-                            setIsPlaying(false);
-                          };
-                          utterance.onerror = event => {
-                            console.error('Speech error:', event);
-                            setIsPlaying(false);
-                          };
-
-                          speechSynthesis.speak(utterance);
+                      console.log('Starting audio playback...');
+                      // Only generate/play if not currently playing and not stopping
+                      if (audioUrl && !isStopping) {
+                        // Play existing audio
+                        const audio = new Audio(audioUrl);
+                        setCurrentAudio(audio);
+                        audio.onended = () => {
+                          console.log('Audio ended naturally');
+                          setIsPlaying(false);
+                          setCurrentAudio(null);
                         };
-
-                        // If voices are already loaded, speak immediately
-                        if (speechSynthesis.getVoices().length > 0) {
-                          speakWithVoice();
-                        } else {
-                          // Wait for voices to load
-                          speechSynthesis.onvoiceschanged = speakWithVoice;
+                        audio.onerror = e => {
+                          console.error('Audio playback error:', e);
+                          setIsPlaying(false);
+                          setCurrentAudio(null);
+                        };
+                        audio.onloadstart = () => {
+                          console.log('Audio loading started');
+                          setIsPlaying(true);
+                        };
+                        audio.oncanplay = () => {
+                          console.log('Audio can play, starting playback');
+                          if (!isStopping) {
+                            audio.play().catch(e => {
+                              console.error('Failed to play audio:', e);
+                              setIsPlaying(false);
+                              setCurrentAudio(null);
+                            });
+                          } else {
+                            console.log('Skipping playback because stopping');
+                          }
+                        };
+                        audio.load(); // Explicitly load the audio
+                      } else {
+                        // Generate new audio
+                        if (article.simpleExplanation) {
+                          generateAudio(article.simpleExplanation);
                         }
-                      } catch (error) {
-                        console.error('Error with speech synthesis:', error);
-                        alert('Unable to play audio. Please try again.');
                       }
                     }}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-0">
-                    <span className="text-2xl">{isPlaying ? '⏹️' : '👂'}</span>
+                    <span className="text-2xl">
+                      {audioLoading ? '⏳' : isPlaying ? '⏹️' : '👂'}
+                    </span>
                   </button>
                 )}
               </div>
