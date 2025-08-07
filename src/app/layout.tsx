@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Comic_Neue } from 'next/font/google';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
+const comicNeue = Comic_Neue({
+  subsets: ['latin'],
+  weight: ['300', '400', '700'],
+  variable: '--font-comic-neue'
+});
 
 export const metadata: Metadata = {
   title: '5News - News Explained Simply',
@@ -19,7 +24,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.className} ${comicNeue.variable}`}>
+        {children}
+      </body>
     </html>
   );
 }

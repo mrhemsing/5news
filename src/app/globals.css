@@ -25,6 +25,21 @@ body {
   }
 }
 
+/* Kid-friendly headline styles */
+.kid-headline {
+  font-family: var(--font-comic-neue), 'Comic Neue', 'Comic Sans MS', cursive;
+  font-weight: 700;
+  font-size: 1.35em; /* 35% larger than base size */
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* Kid-friendly summary text styles */
+.kid-summary {
+  font-size: 1.1em; /* 10% larger than base size */
+  line-height: 1.4;
+}
+
 @keyframes shake {
   0%,
   100% {
