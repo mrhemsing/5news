@@ -357,7 +357,7 @@ export default function NewsCard({
                     href={article.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200 cursor-pointer">
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200 cursor-pointer underline">
                     {article.source.name}
                   </a>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
