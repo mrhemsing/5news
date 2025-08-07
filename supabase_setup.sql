@@ -35,11 +35,23 @@ CREATE INDEX IF NOT EXISTS idx_tts_cache_created_at ON tts_cache(created_at);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE cartoon_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE news_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tts_cache ENABLE ROW LEVEL SECURITY;
 
--- Create policy to allow all operations (for this demo)
--- In production, you might want more restrictive policies
+-- Drop existing policies if they exist (to avoid conflicts)
+DROP POLICY IF EXISTS "Allow all operations" ON cartoon_cache;
+DROP POLICY IF EXISTS "Allow all operations" ON news_cache;
+DROP POLICY IF EXISTS "Allow all operations" ON tts_cache;
+
+-- Create policies for all operations
 CREATE POLICY "Allow all operations" ON cartoon_cache
-  FOR ALL USING (true);
+  FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow all operations" ON news_cache
+  FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow all operations" ON tts_cache
+  FOR ALL USING (true) WITH CHECK (true);
 
 -- Optional: Create a function to clean old entries
 CREATE OR REPLACE FUNCTION clean_old_cartoons()
