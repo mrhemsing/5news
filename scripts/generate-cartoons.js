@@ -13,7 +13,7 @@ async function getLatestHeadlines() {
     }
 
     const response = await fetch(
-      `https://newsapi.org/v2/everything?q=news&language=en&sortBy=publishedAt&apiKey=${apiKey}&pageSize=20`
+      `https://newsapi.org/v2/everything?q=news&language=en&sortBy=publishedAt&apiKey=${apiKey}&pageSize=30&excludeDomains=espn.com,bleacherreport.com,yahoo.com/sports,cnbc.com,bloomberg.com,marketwatch.com,reuters.com/business`
     );
 
     if (!response.ok) {
@@ -21,7 +21,170 @@ async function getLatestHeadlines() {
     }
 
     const data = await response.json();
-    return data.articles.map(article => article.title);
+
+    // Filter out sports and finance articles (same logic as API)
+    const filteredArticles = data.articles.filter(article => {
+      const title = article.title.toLowerCase();
+      const description = (article.description || '').toLowerCase();
+      const content = (article.content || '').toLowerCase();
+
+      // Skip single word headlines
+      const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
+      if (cleanTitle.split(' ').length <= 1) {
+        return false;
+      }
+
+      // Skip headlines containing specific words
+      if (cleanTitle.toLowerCase().includes('rail')) {
+        return false;
+      }
+
+      // Skip articles from specific sources
+      const sourceName = (article.source?.name || '').toLowerCase();
+      if (
+        sourceName.includes('risbb.cc') ||
+        sourceName.includes('cult of mac') ||
+        sourceName.includes('bleeding cool') ||
+        sourceName.includes('smbc-comics.com') ||
+        sourceName.includes('sporting news')
+      ) {
+        return false;
+      }
+
+      // Keywords to exclude
+      const sportsKeywords = [
+        'sport',
+        'football',
+        'basketball',
+        'baseball',
+        'soccer',
+        'tennis',
+        'golf',
+        'hockey',
+        'nfl',
+        'nba',
+        'mlb',
+        'nhl',
+        'ncaa',
+        'championship',
+        'tournament',
+        'playoff',
+        'coach',
+        'player',
+        'team',
+        'game',
+        'match',
+        'score',
+        'win',
+        'loss',
+        'victory',
+        'league',
+        'season',
+        'draft',
+        'trade',
+        'contract',
+        'salary',
+        'transfer'
+      ];
+
+      const financeKeywords = [
+        'stock',
+        'market',
+        'trading',
+        'investment',
+        'finance',
+        'financial',
+        'economy',
+        'dollar',
+        'euro',
+        'currency',
+        'bitcoin',
+        'crypto',
+        'cryptocurrency',
+        'ethereum',
+        'nasdaq',
+        'dow',
+        's&p',
+        'federal reserve',
+        'interest rate',
+        'inflation',
+        'earnings',
+        'revenue',
+        'profit',
+        'loss',
+        'quarterly',
+        'annual',
+        'dividend',
+        'portfolio',
+        'fund',
+        'etf',
+        'mutual fund',
+        'hedge fund',
+        'wall street'
+      ];
+
+      const tvShowKeywords = [
+        'tv show',
+        'television show',
+        'reality show',
+        'sitcom',
+        'drama series',
+        'netflix show',
+        'hulu show',
+        'amazon prime show',
+        'disney+ show',
+        'hbo show',
+        'season finale',
+        'series finale',
+        'episode',
+        'cast member',
+        'tv star',
+        'television star',
+        'reality star',
+        'celebrity',
+        'actor',
+        'actress',
+        'host',
+        'contestant',
+        'eliminated',
+        'voted off',
+        'winner',
+        'runner-up',
+        'audition',
+        'premiere',
+        'ratings',
+        'viewership',
+        'nielsen',
+        'bachelor',
+        'bachelorette',
+        'survivor',
+        'big brother',
+        'american idol',
+        'the voice',
+        'dancing with the stars',
+        'masked singer',
+        'talent show',
+        'game show'
+      ];
+
+      const allKeywords = [
+        ...sportsKeywords,
+        ...financeKeywords,
+        ...tvShowKeywords
+      ];
+
+      // Check if any keywords are in the title, description, or content
+      return !allKeywords.some(
+        keyword =>
+          title.includes(keyword) ||
+          description.includes(keyword) ||
+          content.includes(keyword)
+      );
+    });
+
+    return filteredArticles.map(
+      article => article.title.replace(/\s*\([^)]*\)/g, '').trim() // Remove text in parentheses
+    );
   } catch (error) {
     console.error('Error fetching headlines:', error);
     return [];
