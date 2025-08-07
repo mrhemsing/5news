@@ -12,6 +12,11 @@ export async function getCachedCartoon(
   headline: string
 ): Promise<string | null> {
   try {
+    if (!supabase) {
+      console.log('Supabase not configured, skipping cache lookup');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('cartoon_cache')
       .select('cartoon_url')
@@ -34,6 +39,11 @@ export async function setCachedCartoon(
   cartoonUrl: string
 ): Promise<void> {
   try {
+    if (!supabase) {
+      console.log('Supabase not configured, skipping cache storage');
+      return;
+    }
+
     // Use upsert to handle duplicate headlines gracefully
     const { error } = await supabase.from('cartoon_cache').upsert(
       {
@@ -57,6 +67,11 @@ export async function setCachedCartoon(
 
 export async function clearExpiredCache(): Promise<void> {
   try {
+    if (!supabase) {
+      console.log('Supabase not configured, skipping cache cleanup');
+      return;
+    }
+
     // Delete cartoons older than 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
