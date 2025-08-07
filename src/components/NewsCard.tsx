@@ -366,7 +366,7 @@ export default function NewsCard({
                 </div>
               </div>
 
-              <div className="mt-3 sm:mt-0 sm:ml-8 flex-shrink-0 flex space-x-2">
+              <div className="mt-3 sm:mt-0 sm:ml-8 flex-shrink-0 flex space-x-2 pt-1 sm:pt-0">
                 <button
                   onClick={handleExplain}
                   disabled={isLoading}
