@@ -14,8 +14,11 @@ export async function GET(request: Request) {
       );
     }
 
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+
     const response = await fetch(
-      `https://newsapi.org/v2/top-headlines?country=us&apiKey=${apiKey}&pageSize=10&page=${page}`
+      `https://newsapi.org/v2/everything?q=news&language=en&sortBy=publishedAt&apiKey=${apiKey}&pageSize=10&page=${page}`
     );
 
     if (!response.ok) {

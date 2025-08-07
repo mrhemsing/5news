@@ -347,7 +347,13 @@ export default function NewsCard({
           <div className="flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-0 leading-tight kid-headline">
+                <h3
+                  className="text-lg font-semibold text-gray-900 dark:text-white mb-0 leading-tight kid-headline"
+                  style={{
+                    fontFamily:
+                      'var(--font-architects-daughter), "Architects Daughter", "Comic Sans MS", cursive',
+                    textTransform: 'uppercase'
+                  }}>
                   {article.title.includes(' - ')
                     ? article.title.split(' - ')[0]
                     : article.title}
