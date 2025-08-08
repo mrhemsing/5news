@@ -56,23 +56,45 @@ export async function GET(request: Request) {
       );
 
       // Use Google News RSS for high-quality, diverse content
-      const response = await fetch(
-        'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en'
-      );
+      // Try different RSS URLs to get more articles
+      const rssUrls = [
+        'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en',
+        'https://news.google.com/rss/search?q=breaking+news&hl=en-US&gl=US&ceid=US:en',
+        'https://news.google.com/rss/search?q=latest+news&hl=en-US&gl=US&ceid=US:en'
+      ];
 
-      if (!response.ok) {
-        throw new Error(`Google News RSS error: ${response.status}`);
+      let mergedArticles: NewsArticle[] = [];
+
+      for (const rssUrl of rssUrls) {
+        try {
+          console.log(`Fetching from: ${rssUrl}`);
+          const response = await fetch(rssUrl);
+
+          if (!response.ok) {
+            console.log(`Failed to fetch from ${rssUrl}: ${response.status}`);
+            continue;
+          }
+
+          const rssText = await response.text();
+          console.log(`RSS text length: ${rssText.length} characters`);
+
+          const articles = parseRSSFeed(rssText);
+          console.log(`Got ${articles.length} articles from ${rssUrl}`);
+
+          // Merge articles from this source
+          mergedArticles = mergeArticles(mergedArticles, articles);
+        } catch (error) {
+          console.error(`Error fetching from ${rssUrl}:`, error);
+        }
       }
 
-      const rssText = await response.text();
-
-      // Parse RSS XML to extract articles
-      const newArticles = parseRSSFeed(rssText);
-
-      console.log('Before filtering:', newArticles.length, 'articles');
+      console.log(
+        'Total articles after merging all sources:',
+        mergedArticles.length
+      );
 
       // Gentle filtering - only remove the most inappropriate content
-      const filteredArticles = newArticles.filter(article => {
+      const filteredArticles = mergedArticles.filter(article => {
         // Skip single word headlines
         const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
         if (cleanTitle.split(' ').length <= 1) {
