@@ -11,46 +11,40 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const forceRefresh = searchParams.get('refresh') === 'true';
-    const testRSS = searchParams.get('test') === 'true'; // Add test parameter
 
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
 
-    // If test mode, skip cache entirely
-    if (testRSS) {
-      console.log('TEST MODE: Bypassing cache to test RSS parsing');
-    } else {
-      // Try to get cached news first (for any page, unless force refresh)
-      if (!forceRefresh) {
-        const cachedArticles = await getCachedNews(today, page);
+    // Try to get cached news first (for any page, unless force refresh)
+    if (!forceRefresh) {
+      const cachedArticles = await getCachedNews(today, page);
+      if (cachedArticles) {
+        console.log(`Returning cached news data for page ${page}`);
+        return NextResponse.json({
+          articles: cachedArticles,
+          totalResults: cachedArticles.length,
+          hasMore: cachedArticles.length >= 20 // Assume there might be more if we got 20+ articles
+        });
+      }
+    }
+
+    // If we're requesting page 1 and don't have it cached, check if we have other pages
+    // This helps when users refresh and we can serve from cache instead of making new API calls
+    if (page === 1 && !forceRefresh) {
+      const cachedPages = await getAllCachedPages(today);
+      if (cachedPages.length > 0) {
+        console.log(
+          'Found cached pages, serving from cache instead of making API call'
+        );
+        // Return the first cached page we have
+        const firstCachedPage = Math.min(...cachedPages);
+        const cachedArticles = await getCachedNews(today, firstCachedPage);
         if (cachedArticles) {
-          console.log(`Returning cached news data for page ${page}`);
           return NextResponse.json({
             articles: cachedArticles,
             totalResults: cachedArticles.length,
-            hasMore: cachedArticles.length >= 20 // Assume there might be more if we got 20+ articles
+            hasMore: cachedPages.length > 1 || cachedArticles.length >= 20
           });
-        }
-      }
-
-      // If we're requesting page 1 and don't have it cached, check if we have other pages
-      // This helps when users refresh and we can serve from cache instead of making new API calls
-      if (page === 1 && !forceRefresh) {
-        const cachedPages = await getAllCachedPages(today);
-        if (cachedPages.length > 0) {
-          console.log(
-            'Found cached pages, serving from cache instead of making API call'
-          );
-          // Return the first cached page we have
-          const firstCachedPage = Math.min(...cachedPages);
-          const cachedArticles = await getCachedNews(today, firstCachedPage);
-          if (cachedArticles) {
-            return NextResponse.json({
-              articles: cachedArticles,
-              totalResults: cachedArticles.length,
-              hasMore: cachedPages.length > 1 || cachedArticles.length >= 20
-            });
-          }
         }
       }
     }
@@ -70,19 +64,8 @@ export async function GET(request: Request) {
 
     const rssText = await response.text();
 
-    // Debug: Log the RSS content structure
-    console.log('RSS Response length:', rssText.length);
-    console.log('RSS Response preview:', rssText.substring(0, 1000));
-
     // Parse RSS XML to extract articles
     const articles = parseRSSFeed(rssText);
-
-    console.log('Parsed articles count:', articles.length);
-    if (articles.length > 0) {
-      console.log('First article sample:', articles[0]);
-    } else {
-      console.log('No articles parsed - RSS structure may be different');
-    }
 
     console.log('Before filtering:', articles.length, 'articles');
 
@@ -126,29 +109,24 @@ export async function GET(request: Request) {
         return false;
       }
 
-      // Only filter out very specific sports/finance content
-      const verySpecificKeywords = [
+      // Enhanced sports filtering - comprehensive list of sports-related keywords
+      const sportsKeywords = [
+        // Major sports leagues
         'nfl',
         'nba',
         'mlb',
         'nhl',
         'ncaa',
-        'championship',
-        'tournament',
-        'playoff',
-        'bitcoin',
-        'crypto',
-        'cryptocurrency',
-        'ethereum',
-        'nasdaq',
-        'dow',
-        's&p',
-        'bachelor',
-        'bachelorette',
-        'survivor',
-        'big brother',
-        'american idol',
-        // Enhanced sports filtering
+        'nascar',
+        'f1',
+        'formula 1',
+        'premier league',
+        'la liga',
+        'bundesliga',
+        'serie a',
+        'champions league',
+
+        // Sports terms
         'football',
         'basketball',
         'baseball',
@@ -156,14 +134,53 @@ export async function GET(request: Request) {
         'soccer',
         'tennis',
         'golf',
+        'cricket',
+        'rugby',
+        'volleyball',
+        'swimming',
+        'track',
+        'athletics',
+
+        // Sports events and competitions
         'olympics',
         'world cup',
         'super bowl',
         'final four',
         'march madness',
         'playoffs',
-        'championship game',
+        'championship',
+        'tournament',
         'all-star',
+        'draft',
+        'playoff',
+        'semifinal',
+        'quarterfinal',
+        'final',
+        'championship game',
+
+        // Sports positions and roles
+        'quarterback',
+        'point guard',
+        'pitcher',
+        'goalie',
+        'striker',
+        'midfielder',
+        'defender',
+        'coach',
+        'manager',
+        'player',
+        'athlete',
+        'team',
+
+        // Sports actions and events
+        'game',
+        'match',
+        'race',
+        'competition',
+        'tournament',
+        'league',
+        'season',
+        'playoff',
         'draft pick',
         'free agent',
         'trade deadline',
@@ -171,19 +188,91 @@ export async function GET(request: Request) {
         'coach fired',
         'team owner',
         'stadium',
-        'arena'
+        'arena',
+        'field',
+        'court',
+        'pitch',
+        'track',
+        'pool',
+
+        // Sports statistics and terms
+        'score',
+        'win',
+        'loss',
+        'victory',
+        'defeat',
+        'tie',
+        'draw',
+        'points',
+        'goals',
+        'runs',
+        'touchdown',
+        'home run',
+        'goal',
+        'assist',
+        'rebound',
+        'steal',
+        'block',
+        'save',
+        'hit',
+
+        // Sports teams and organizations
+        'team',
+        'franchise',
+        'club',
+        'association',
+        'federation',
+
+        // Sports media and coverage
+        'sports center',
+        'espn',
+        'sports news',
+        'game recap',
+        'post-game',
+        'pre-game',
+        'halftime',
+        'overtime',
+        'extra time',
+
+        // Specific sports events
+        'world series',
+        'stanley cup',
+        'nba finals',
+        'super bowl',
+        'world cup final',
+        'olympic games',
+        'paralympics',
+
+        // Sports betting and fantasy
+        'betting',
+        'odds',
+        'fantasy',
+        'draft',
+        'pick',
+        'trade',
+
+        // Sports injuries and health
+        'injury',
+        'concussion',
+        'recovery',
+        'rehab',
+        'surgery',
+        'medical',
+        'health',
+        'fitness',
+        'training'
       ];
 
-      // Check if any very specific keywords are in the title, description, or content
-      const hasExcludedKeyword = verySpecificKeywords.some(
+      // Check if any sports keywords are in the title, description, or content
+      const hasSportsKeyword = sportsKeywords.some(
         keyword =>
           title.includes(keyword) ||
           description.includes(keyword) ||
           content.includes(keyword)
       );
 
-      if (hasExcludedKeyword) {
-        console.log('Filtered out keyword match:', article.title);
+      if (hasSportsKeyword) {
+        console.log('Filtered out sports content:', article.title);
         return false;
       }
 
@@ -232,19 +321,13 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
   const articles: NewsArticle[] = [];
 
   try {
-    console.log('Starting RSS parsing...');
-
     // Method 1: Try parsing <ol> lists (Google News format)
     const listMatches = rssText.match(/<ol>([\s\S]*?)<\/ol>/g);
-    console.log('Found list matches:', listMatches ? listMatches.length : 0);
 
     if (listMatches) {
       listMatches.forEach((list, listIndex) => {
         // Extract individual list items
         const itemMatches = list.match(/<li>([\s\S]*?)<\/li>/g);
-        console.log(
-          `List ${listIndex} has ${itemMatches ? itemMatches.length : 0} items`
-        );
 
         if (itemMatches) {
           itemMatches.forEach((item, itemIndex) => {
@@ -283,9 +366,7 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
 
     // Method 2: If no articles found, try standard RSS <item> parsing
     if (articles.length === 0) {
-      console.log('Trying standard RSS <item> parsing...');
       const itemMatches = rssText.match(/<item>([\s\S]*?)<\/item>/g);
-      console.log('Found item matches:', itemMatches ? itemMatches.length : 0);
 
       if (itemMatches) {
         itemMatches.forEach((item, index) => {
@@ -326,9 +407,7 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
 
     // Method 3: If still no articles, try simple link extraction
     if (articles.length === 0) {
-      console.log('Trying simple link extraction...');
       const linkMatches = rssText.match(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g);
-      console.log('Found link matches:', linkMatches ? linkMatches.length : 0);
 
       if (linkMatches) {
         linkMatches.forEach((link, index) => {
@@ -357,8 +436,6 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
         });
       }
     }
-
-    console.log(`Parsed ${articles.length} articles from Google News RSS`);
   } catch (error) {
     console.error('Error parsing RSS feed:', error);
   }

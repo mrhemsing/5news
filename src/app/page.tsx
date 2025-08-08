@@ -18,7 +18,20 @@ export default function Home() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
   const [usageInfo, setUsageInfo] = useState<any>(null);
-  const [testRSSMode, setTestRSSMode] = useState(false);
+
+  // Fetch usage info on initial load
+  useEffect(() => {
+    const fetchUsageInfo = async () => {
+      try {
+        const response = await fetch('/api/usage');
+        const data = await response.json();
+        setUsageInfo(data);
+      } catch (error) {
+        console.error('Error fetching usage info:', error);
+      }
+    };
+    fetchUsageInfo();
+  }, []);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -26,17 +39,6 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setInitialLoading(false);
       fetchNews();
-
-      // Fetch usage info
-      try {
-        const response = await fetch('/api/usage');
-        if (response.ok) {
-          const data = await response.json();
-          setUsageInfo(data);
-        }
-      } catch (error) {
-        console.error('Error fetching usage info:', error);
-      }
     };
 
     initializeApp();
@@ -140,22 +142,6 @@ export default function Home() {
     });
   };
 
-  const handleTestRSS = async () => {
-    setTestRSSMode(true);
-    try {
-      const response = await fetch('/api/news?test=true');
-      const data = await response.json();
-      if (data.articles) {
-        setArticles(data.articles);
-        console.log('RSS Test Results:', data);
-      }
-    } catch (error) {
-      console.error('Error testing RSS:', error);
-    } finally {
-      setTestRSSMode(false);
-    }
-  };
-
   if (initialLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -239,12 +225,6 @@ export default function Home() {
               </p>
             </div>
           )}
-          <button
-            onClick={handleTestRSS}
-            disabled={testRSSMode}
-            className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white px-4 py-2 rounded-lg text-sm mb-4">
-            {testRSSMode ? 'Testing RSS...' : 'Test RSS Parsing'}
-          </button>
         </div>
 
         {/* News Grid */}
