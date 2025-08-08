@@ -55,24 +55,84 @@ export async function GET(request: Request) {
 
       // Keywords to exclude
       const sportsKeywords = [
-        'sport', 'football', 'basketball', 'baseball', 'soccer', 'tennis', 'golf', 'hockey',
-        'nfl', 'nba', 'mlb', 'nhl', 'ncaa', 'championship', 'tournament', 'playoff',
-        'coach', 'player', 'team', 'game', 'match', 'score', 'win', 'loss', 'victory',
-        'league', 'season', 'draft', 'trade', 'contract', 'salary', 'transfer'
+        'sport',
+        'football',
+        'basketball',
+        'baseball',
+        'soccer',
+        'tennis',
+        'golf',
+        'hockey',
+        'nfl',
+        'nba',
+        'mlb',
+        'nhl',
+        'ncaa',
+        'championship',
+        'tournament',
+        'playoff',
+        'coach',
+        'player',
+        'team',
+        'game',
+        'match',
+        'score',
+        'win',
+        'loss',
+        'victory',
+        'league',
+        'season',
+        'draft',
+        'trade',
+        'contract',
+        'salary',
+        'transfer'
       ];
 
       const financeKeywords = [
-        'stock', 'market', 'trading', 'investment', 'finance', 'financial', 'economy',
-        'economic', 'dollar', 'euro', 'currency', 'bank', 'banking', 'profit', 'revenue',
-        'earnings', 'quarterly', 'annual', 'fiscal', 'budget', 'deficit', 'surplus'
+        'stock',
+        'market',
+        'trading',
+        'investment',
+        'finance',
+        'financial',
+        'economy',
+        'economic',
+        'dollar',
+        'euro',
+        'currency',
+        'bank',
+        'banking',
+        'profit',
+        'revenue',
+        'earnings',
+        'quarterly',
+        'annual',
+        'fiscal',
+        'budget',
+        'deficit',
+        'surplus'
       ];
 
       const tvShowKeywords = [
-        'nielsen', 'bachelor', 'bachelorette', 'survivor', 'big brother', 'american idol',
-        'the voice', 'dancing with the stars', 'masked singer', 'talent show', 'game show'
+        'nielsen',
+        'bachelor',
+        'bachelorette',
+        'survivor',
+        'big brother',
+        'american idol',
+        'the voice',
+        'dancing with the stars',
+        'masked singer',
+        'talent show',
+        'game show'
       ];
 
-      const allKeywords = [...sportsKeywords, ...financeKeywords, ...tvShowKeywords];
+      const allKeywords = [
+        ...sportsKeywords,
+        ...financeKeywords,
+        ...tvShowKeywords
+      ];
 
       // Check if any keywords are in the title, description, or content
       return !allKeywords.some(
@@ -83,8 +143,8 @@ export async function GET(request: Request) {
       );
     });
 
-    const headlines = filteredArticles.map(
-      (article: any) => article.title.replace(/\s*\([^)]*\)/g, '').trim()
+    const headlines = filteredArticles.map((article: any) =>
+      article.title.replace(/\s*\([^)]*\)/g, '').trim()
     );
 
     console.log(`Found ${headlines.length} headlines to process`);
@@ -98,8 +158,8 @@ export async function GET(request: Request) {
     }
 
     // Generate cartoons for headlines by calling the cartoonize API
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
       : process.env.BASE_URL || 'http://localhost:3000';
 
     const cartoonResponse = await fetch(`${baseUrl}/api/cartoonize`, {
@@ -122,9 +182,14 @@ export async function GET(request: Request) {
       console.log(`Processed ${result.results?.length || 0} headlines`);
 
       const stats = {
-        success: result.results?.filter((r: any) => r.status === 'success')?.length || 0,
-        cached: result.results?.filter((r: any) => r.status === 'cached')?.length || 0,
-        failed: result.results?.filter((r: any) => r.status === 'failed')?.length || 0
+        success:
+          result.results?.filter((r: any) => r.status === 'success')?.length ||
+          0,
+        cached:
+          result.results?.filter((r: any) => r.status === 'cached')?.length ||
+          0,
+        failed:
+          result.results?.filter((r: any) => r.status === 'failed')?.length || 0
       };
 
       console.log('Stats:', stats);
