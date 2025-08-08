@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     }
 
     const response = await fetch(
-      `https://gnews.io/api/v4/search?q=news&lang=en&country=us&max=100&apikey=${apiKey}`
+      `https://gnews.io/api/v4/top-headlines?lang=en&country=us&max=100&apikey=${apiKey}`
     );
 
     if (!response.ok) {
