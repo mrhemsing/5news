@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    // Simple estimation based on date
+    // Calculate hours since start of day (UTC)
     const now = new Date();
     const startOfDay = new Date(
       now.getFullYear(),
@@ -12,27 +12,27 @@ export async function GET() {
     const hoursSinceStart =
       (now.getTime() - startOfDay.getTime()) / (1000 * 60 * 60);
 
-    // Based on user's actual usage: 7 requests in ~6 hours = ~1.2 requests per hour
-    const estimatedCallsUsed = Math.floor(hoursSinceStart * 1.2); // More conservative estimate
-    const remainingCalls = Math.max(0, 100 - estimatedCallsUsed);
+    // Google News RSS is unlimited, so we'll show a different metric
+    const totalDailyLimit = 'Unlimited';
+    const estimatedCallsUsed = Math.floor(hoursSinceStart * 0.5); // Conservative estimate
+    const remainingCalls = 'Unlimited';
+    const percentageUsed = 0; // Always 0% since unlimited
 
     return NextResponse.json({
-      totalDailyLimit: 100,
+      totalDailyLimit,
       estimatedCallsUsed,
       remainingCalls,
-      percentageUsed: Math.round((estimatedCallsUsed / 100) * 100),
+      percentageUsed,
       cacheStrategy: {
         duration: '6 hours',
-        description:
-          'News articles are cached for 6 hours to minimize API calls',
-        categories: ['general', 'world', 'technology', 'science', 'health'],
-        sportsFiltering: 'Enhanced filtering removes sports content'
+        method: 'Google News RSS',
+        benefits: 'Unlimited requests, high-quality sources, less duplicates'
       }
     });
   } catch (error) {
-    console.error('Error getting usage info:', error);
+    console.error('Error calculating usage:', error);
     return NextResponse.json(
-      { error: 'Failed to get usage info' },
+      { error: 'Failed to calculate usage' },
       { status: 500 }
     );
   }

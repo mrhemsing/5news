@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NewsApiResponse, NewsArticle } from '@/types/news';
+import { NewsArticle } from '@/types/news';
 import {
   getCachedNews,
   setCachedNews,
@@ -12,20 +12,8 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const forceRefresh = searchParams.get('refresh') === 'true';
 
-    const apiKey = process.env.GNEWS_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'GNews API key not configured' },
-        { status: 500 }
-      );
-    }
-
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
-
-    // Fetch from multiple non-sports categories to get more diverse content
-    const categories = ['general', 'world', 'technology', 'science', 'health'];
-    const category = categories[page % categories.length]; // Rotate through categories
 
     // Try to get cached news first (for any page, unless force refresh)
     if (!forceRefresh) {
@@ -62,42 +50,22 @@ export async function GET(request: Request) {
     }
 
     console.log(
-      `Making GNews API request for page ${page} (category: ${category}) (API calls remaining: ~${
-        100 - Math.floor(Date.now() / (24 * 60 * 60 * 1000))
-      } today)`
+      `Making Google News RSS request for page ${page} (API calls remaining: unlimited)`
     );
 
+    // Use Google News RSS for high-quality, diverse content
     const response = await fetch(
-      `https://gnews.io/api/v4/top-headlines?category=${category}&lang=en&country=us&max=100&apikey=${apiKey}`
+      'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en'
     );
 
     if (!response.ok) {
-      if (response.status === 429) {
-        console.error('News API rate limit exceeded');
-        return NextResponse.json(
-          {
-            error: 'Rate limit exceeded. Please try again later.',
-            articles: [],
-            totalResults: 0,
-            hasMore: false
-          },
-          { status: 429 }
-        );
-      }
-      throw new Error(`News API error: ${response.status}`);
+      throw new Error(`Google News RSS error: ${response.status}`);
     }
 
-    const data: NewsApiResponse = await response.json();
+    const rssText = await response.text();
 
-    // Debug: Log the response structure
-    console.log('GNews API response:', {
-      totalArticles: data.articles?.length || 0,
-      responseKeys: Object.keys(data),
-      sampleArticle: data.articles?.[0]
-    });
-
-    // GNews returns articles directly, not wrapped in a response object
-    const articles = data.articles || data;
+    // Parse RSS XML to extract articles
+    const articles = parseRSSFeed(rssText);
 
     console.log('Before filtering:', articles.length, 'articles');
 
@@ -240,4 +208,60 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+}
+
+// Function to parse Google News RSS feed
+function parseRSSFeed(rssText: string): NewsArticle[] {
+  const articles: NewsArticle[] = [];
+
+  try {
+    // Google News RSS has a specific structure with <ol> lists containing <li> items
+    const listMatches = rssText.match(/<ol>([\s\S]*?)<\/ol>/g);
+
+    if (listMatches) {
+      listMatches.forEach((list, listIndex) => {
+        // Extract individual list items
+        const itemMatches = list.match(/<li>([\s\S]*?)<\/li>/g);
+
+        if (itemMatches) {
+          itemMatches.forEach((item, itemIndex) => {
+            // Extract link and text from <a> tags
+            const linkMatch = item.match(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/);
+            const sourceMatch = item.match(/<font[^>]*>([^<]*)<\/font>/);
+
+            if (linkMatch) {
+              const url = linkMatch[1];
+              const title = linkMatch[2].trim();
+              const sourceName = sourceMatch
+                ? sourceMatch[1].trim()
+                : 'Google News';
+
+              // Skip if title is empty or just whitespace
+              if (title && title.length > 0) {
+                articles.push({
+                  id: `google-${listIndex}-${itemIndex}-${Date.now()}`,
+                  title: title,
+                  url: url,
+                  publishedAt: new Date().toISOString(),
+                  description: title,
+                  content: title,
+                  urlToImage: '',
+                  source: {
+                    id: null,
+                    name: sourceName
+                  }
+                });
+              }
+            }
+          });
+        }
+      });
+    }
+
+    console.log(`Parsed ${articles.length} articles from Google News RSS`);
+  } catch (error) {
+    console.error('Error parsing RSS feed:', error);
+  }
+
+  return articles;
 }
