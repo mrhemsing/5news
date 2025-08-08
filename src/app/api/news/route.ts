@@ -64,8 +64,19 @@ export async function GET(request: Request) {
 
     const rssText = await response.text();
 
+    // Debug: Log the RSS content structure
+    console.log('RSS Response length:', rssText.length);
+    console.log('RSS Response preview:', rssText.substring(0, 1000));
+
     // Parse RSS XML to extract articles
     const articles = parseRSSFeed(rssText);
+
+    console.log('Parsed articles count:', articles.length);
+    if (articles.length > 0) {
+      console.log('First article sample:', articles[0]);
+    } else {
+      console.log('No articles parsed - RSS structure may be different');
+    }
 
     console.log('Before filtering:', articles.length, 'articles');
 
@@ -215,13 +226,19 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
   const articles: NewsArticle[] = [];
 
   try {
-    // Google News RSS has a specific structure with <ol> lists containing <li> items
+    console.log('Starting RSS parsing...');
+
+    // Method 1: Try parsing <ol> lists (Google News format)
     const listMatches = rssText.match(/<ol>([\s\S]*?)<\/ol>/g);
+    console.log('Found list matches:', listMatches ? listMatches.length : 0);
 
     if (listMatches) {
       listMatches.forEach((list, listIndex) => {
         // Extract individual list items
         const itemMatches = list.match(/<li>([\s\S]*?)<\/li>/g);
+        console.log(
+          `List ${listIndex} has ${itemMatches ? itemMatches.length : 0} items`
+        );
 
         if (itemMatches) {
           itemMatches.forEach((item, itemIndex) => {
@@ -256,6 +273,83 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
           });
         }
       });
+    }
+
+    // Method 2: If no articles found, try standard RSS <item> parsing
+    if (articles.length === 0) {
+      console.log('Trying standard RSS <item> parsing...');
+      const itemMatches = rssText.match(/<item>([\s\S]*?)<\/item>/g);
+      console.log('Found item matches:', itemMatches ? itemMatches.length : 0);
+
+      if (itemMatches) {
+        itemMatches.forEach((item, index) => {
+          const titleMatch = item.match(/<title>([\s\S]*?)<\/title>/);
+          const linkMatch = item.match(/<link>([\s\S]*?)<\/link>/);
+          const descriptionMatch = item.match(
+            /<description>([\s\S]*?)<\/description>/
+          );
+
+          if (titleMatch && linkMatch) {
+            const title = titleMatch[1]
+              .replace(/<!\[CDATA\[(.*?)\]\]>/, '$1')
+              .trim();
+            const url = linkMatch[1].trim();
+            const description = descriptionMatch
+              ? descriptionMatch[1]
+                  .replace(/<!\[CDATA\[(.*?)\]\]>/, '$1')
+                  .trim()
+              : '';
+
+            articles.push({
+              id: `rss-${index}-${Date.now()}`,
+              title: title,
+              url: url,
+              publishedAt: new Date().toISOString(),
+              description: description,
+              content: description,
+              urlToImage: '',
+              source: {
+                id: null,
+                name: 'Google News'
+              }
+            });
+          }
+        });
+      }
+    }
+
+    // Method 3: If still no articles, try simple link extraction
+    if (articles.length === 0) {
+      console.log('Trying simple link extraction...');
+      const linkMatches = rssText.match(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g);
+      console.log('Found link matches:', linkMatches ? linkMatches.length : 0);
+
+      if (linkMatches) {
+        linkMatches.forEach((link, index) => {
+          const match = link.match(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/);
+          if (match) {
+            const url = match[1];
+            const title = match[2].trim();
+
+            // Only include news.google.com links
+            if (url.includes('news.google.com') && title && title.length > 0) {
+              articles.push({
+                id: `link-${index}-${Date.now()}`,
+                title: title,
+                url: url,
+                publishedAt: new Date().toISOString(),
+                description: title,
+                content: title,
+                urlToImage: '',
+                source: {
+                  id: null,
+                  name: 'Google News'
+                }
+              });
+            }
+          }
+        });
+      }
     }
 
     console.log(`Parsed ${articles.length} articles from Google News RSS`);
