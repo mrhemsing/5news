@@ -20,7 +20,7 @@ export async function getCachedNews(
 
     const { data, error } = await supabase
       .from('news_cache')
-      .select('articles')
+      .select('articles, created_at')
       .eq('date', date)
       .single();
 

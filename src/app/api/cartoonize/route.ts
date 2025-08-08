@@ -292,7 +292,11 @@ export async function PUT(request: Request) {
           headline,
           error
         );
-        results.push({ headline, status: 'failed', error: error.message });
+        results.push({ 
+          headline, 
+          status: 'failed', 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
       }
     }
 

@@ -34,7 +34,7 @@ export async function getCachedTTS(
 
     const { data, error } = await supabase
       .from('tts_cache')
-      .select('audio_url')
+      .select('audio_url, created_at')
       .eq('text_hash', textHash)
       .eq('voice_id', voiceId)
       .single();
