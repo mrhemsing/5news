@@ -281,11 +281,35 @@ export async function GET(request: Request) {
 
     console.log('After filtering:', filteredArticles.length, 'articles');
 
-    // Simple deduplication - remove exact URL duplicates only
-    const uniqueArticles = filteredArticles.filter(
-      (article, index, self) =>
-        index === self.findIndex(a => a.url === article.url)
-    );
+    // Enhanced deduplication - remove duplicates based on title similarity and URL
+    const uniqueArticles = filteredArticles.filter((article, index, self) => {
+      // Check for exact URL duplicates first
+      const urlIndex = self.findIndex(a => a.url === article.url);
+      if (urlIndex !== index) {
+        console.log('Filtered out duplicate URL:', article.title);
+        return false;
+      }
+
+      // Check for title similarity (case-insensitive, ignoring punctuation)
+      const cleanTitle = article.title
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .trim();
+      const titleIndex = self.findIndex(a => {
+        const aCleanTitle = a.title
+          .toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .trim();
+        return aCleanTitle === cleanTitle;
+      });
+
+      if (titleIndex !== index) {
+        console.log('Filtered out duplicate title:', article.title);
+        return false;
+      }
+
+      return true;
+    });
 
     // Add unique IDs to articles
     const articlesWithIds: NewsArticle[] = uniqueArticles.map(
@@ -316,9 +340,32 @@ export async function GET(request: Request) {
   }
 }
 
+// Function to decode HTML entities
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&copy;/g, '©')
+    .replace(/&reg;/g, '®')
+    .replace(/&trade;/g, '™')
+    .replace(/&hellip;/g, '...')
+    .replace(/&mdash;/g, '—')
+    .replace(/&ndash;/g, '–')
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&ldquo;/g, '"')
+    .replace(/&rdquo;/g, '"');
+}
+
 // Function to parse Google News RSS feed
 function parseRSSFeed(rssText: string): NewsArticle[] {
   const articles: NewsArticle[] = [];
+  const processedUrls = new Set<string>(); // Track processed URLs to avoid duplicates
 
   try {
     // Method 1: Try parsing <ol> lists (Google News format)
@@ -337,13 +384,14 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
 
             if (linkMatch) {
               const url = linkMatch[1];
-              const title = linkMatch[2].trim();
+              const title = decodeHtmlEntities(linkMatch[2].trim());
               const sourceName = sourceMatch
-                ? sourceMatch[1].trim()
+                ? decodeHtmlEntities(sourceMatch[1].trim())
                 : 'Google News';
 
-              // Skip if title is empty or just whitespace
-              if (title && title.length > 0) {
+              // Skip if title is empty, just whitespace, or URL already processed
+              if (title && title.length > 0 && !processedUrls.has(url)) {
+                processedUrls.add(url);
                 articles.push({
                   id: `google-${listIndex}-${itemIndex}-${Date.now()}`,
                   title: title,
@@ -377,29 +425,35 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
           );
 
           if (titleMatch && linkMatch) {
-            const title = titleMatch[1]
-              .replace(/<!\[CDATA\[(.*?)\]\]>/, '$1')
-              .trim();
+            const title = decodeHtmlEntities(
+              titleMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/, '$1').trim()
+            );
             const url = linkMatch[1].trim();
             const description = descriptionMatch
-              ? descriptionMatch[1]
-                  .replace(/<!\[CDATA\[(.*?)\]\]>/, '$1')
-                  .trim()
+              ? decodeHtmlEntities(
+                  descriptionMatch[1]
+                    .replace(/<!\[CDATA\[(.*?)\]\]>/, '$1')
+                    .trim()
+                )
               : '';
 
-            articles.push({
-              id: `rss-${index}-${Date.now()}`,
-              title: title,
-              url: url,
-              publishedAt: new Date().toISOString(),
-              description: description,
-              content: description,
-              urlToImage: '',
-              source: {
-                id: null,
-                name: 'Google News'
-              }
-            });
+            // Skip if URL already processed
+            if (!processedUrls.has(url)) {
+              processedUrls.add(url);
+              articles.push({
+                id: `rss-${index}-${Date.now()}`,
+                title: title,
+                url: url,
+                publishedAt: new Date().toISOString(),
+                description: description,
+                content: description,
+                urlToImage: '',
+                source: {
+                  id: null,
+                  name: 'Google News'
+                }
+              });
+            }
           }
         });
       }
@@ -414,10 +468,16 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
           const match = link.match(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/);
           if (match) {
             const url = match[1];
-            const title = match[2].trim();
+            const title = decodeHtmlEntities(match[2].trim());
 
-            // Only include news.google.com links
-            if (url.includes('news.google.com') && title && title.length > 0) {
+            // Only include news.google.com links and skip if already processed
+            if (
+              url.includes('news.google.com') &&
+              title &&
+              title.length > 0 &&
+              !processedUrls.has(url)
+            ) {
+              processedUrls.add(url);
               articles.push({
                 id: `link-${index}-${Date.now()}`,
                 title: title,
