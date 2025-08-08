@@ -37,7 +37,7 @@ export default function NewsCard({
   const handleImageError = () => {
     console.log('Cartoon image failed to load:', cartoonUrl);
     setImageError(true);
-    
+
     // If we're using proxy, try direct URL as fallback
     if (useProxy && cartoonUrl) {
       console.log('Trying direct URL as fallback');
@@ -45,7 +45,7 @@ export default function NewsCard({
       setImageError(false);
       return; // Don't clear cartoonUrl, let it retry with direct URL
     }
-    
+
     setCartoonUrl(null); // Clear the URL to prevent further attempts
 
     // Retry cartoon generation if we haven't exceeded max retries
@@ -332,7 +332,11 @@ export default function NewsCard({
               )}
               {cartoonUrl && !imageError ? (
                 <Image
-                  src={useProxy ? `/api/proxy-image?url=${encodeURIComponent(cartoonUrl)}` : cartoonUrl}
+                  src={
+                    useProxy
+                      ? `/api/proxy-image?url=${encodeURIComponent(cartoonUrl)}`
+                      : cartoonUrl
+                  }
                   alt={article.title}
                   width={120}
                   height={80}
