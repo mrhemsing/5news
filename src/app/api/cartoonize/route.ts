@@ -4,6 +4,17 @@ import { getCachedCartoon, setCachedCartoon } from '@/lib/cartoonCache';
 // Use Replicate's Stable Diffusion for accurate cartoon generation
 const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 
+// Function to validate if a cartoon URL is still accessible
+async function validateCartoonUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok;
+  } catch (error) {
+    console.log('URL validation failed:', error);
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { headline } = await request.json();
@@ -44,12 +55,21 @@ export async function POST(request: Request) {
     // Check if cartoon is already cached
     const cachedCartoon = await getCachedCartoon(cleanHeadline);
     if (cachedCartoon) {
-      console.log('Found cached cartoon for headline');
-      return NextResponse.json({
-        cartoonUrl: cachedCartoon,
-        success: true,
-        cached: true
-      });
+      console.log('Found cached cartoon for headline, validating URL...');
+
+      // Validate if the cached URL is still accessible
+      const isUrlValid = await validateCartoonUrl(cachedCartoon);
+      if (isUrlValid) {
+        console.log('Cached cartoon URL is still valid');
+        return NextResponse.json({
+          cartoonUrl: cachedCartoon,
+          success: true,
+          cached: true
+        });
+      } else {
+        console.log('Cached cartoon URL is expired, regenerating...');
+        // Continue to generate new cartoon
+      }
     }
 
     const cartoonPrompt = `cartoon illustration, childlike drawing style, simple lines, bright vibrant colors, cute and friendly, showing: ${cleanHeadline}, colorful background, fun and playful, kid-friendly art, simple clean composition, clear visual representation of the story`;
