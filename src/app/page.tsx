@@ -15,12 +15,9 @@ export default function Home() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [failedArticles, setFailedArticles] = useState<Set<string>>(new Set());
   const [validArticles, setValidArticles] = useState<NewsArticle[]>([]);
-  const [validatingArticles, setValidatingArticles] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
   const [usageInfo, setUsageInfo] = useState<any>(null);
-  const [generatingCartoons, setGeneratingCartoons] = useState(false);
-  const [testingAPI, setTestingAPI] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -142,88 +139,6 @@ export default function Home() {
     });
   };
 
-  const testArticlesForValidity = async (
-    articlesToTest: NewsArticle[],
-    showAnimation = false
-  ) => {
-    if (showAnimation) {
-      setValidatingArticles(true);
-    }
-    const validArticlesList: NewsArticle[] = [];
-
-    for (const article of articlesToTest) {
-      try {
-        const response = await fetch('/api/explain', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            title: article.title,
-            content: article.content || article.description
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.explanation && data.explanation.trim()) {
-            validArticlesList.push(article);
-          }
-        }
-      } catch (error) {
-        console.error('Error testing article:', error);
-      }
-    }
-
-    setValidArticles(prev => [...prev, ...validArticlesList]);
-    if (showAnimation) {
-      setValidatingArticles(false);
-    }
-  };
-
-  const handleGenerateCartoons = async () => {
-    setGeneratingCartoons(true);
-    try {
-      const response = await fetch('/api/generate-cartoons', {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Cartoon generation results:', data);
-
-        // Refresh the page to show new cartoons
-        window.location.reload();
-      } else {
-        console.error('Failed to generate cartoons');
-      }
-    } catch (error) {
-      console.error('Error generating cartoons:', error);
-    } finally {
-      setGeneratingCartoons(false);
-    }
-  };
-
-  const handleTestAPI = async () => {
-    setTestingAPI(true);
-    try {
-      const response = await fetch('/api/test-replicate');
-      const data = await response.json();
-      console.log('Replicate API test result:', data);
-
-      if (data.success) {
-        alert('✅ Replicate API is working!');
-      } else {
-        alert(`❌ Replicate API error: ${data.error}`);
-      }
-    } catch (error) {
-      console.error('Error testing API:', error);
-      alert('❌ Error testing API');
-    } finally {
-      setTestingAPI(false);
-    }
-  };
-
   if (initialLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -305,22 +220,6 @@ export default function Home() {
               </div>
             </div>
           )}
-          <button
-            onClick={handleGenerateCartoons}
-            disabled={generatingCartoons}
-            className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center justify-center mx-auto">
-            <span className="mr-2">🎨</span>
-            {generatingCartoons
-              ? 'Generating Cartoons...'
-              : 'Generate Cartoons'}
-          </button>
-          <button
-            onClick={handleTestAPI}
-            disabled={testingAPI}
-            className="mt-4 ml-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center justify-center">
-            <span className="mr-2">🔍</span>
-            {testingAPI ? 'Testing API...' : 'Test Replicate API'}
-          </button>
         </div>
 
         {/* News Grid */}

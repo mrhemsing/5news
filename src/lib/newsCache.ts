@@ -36,7 +36,9 @@ export async function getCachedNews(
     const sixHours = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
 
     if (cacheAge > sixHours) {
-      console.log(`News cache for page ${page} is too old, fetching fresh data`);
+      console.log(
+        `News cache for page ${page} is too old, fetching fresh data`
+      );
       return null;
     }
 
