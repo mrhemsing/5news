@@ -59,20 +59,23 @@ export default function Home() {
 
   useEffect(() => {
     const handleScroll = () => {
+      // Don't trigger if we're already loading, don't have more articles, or are loading more
+      if (loading || loadingMore || !hasMore) {
+        return;
+      }
+
       const scrollPosition = window.innerHeight + window.scrollY;
       const documentHeight = document.documentElement.scrollHeight;
       const threshold = documentHeight - 1000;
 
       if (scrollPosition >= threshold) {
-        if (hasMore && !loadingMore && !loading) {
-          fetchNews(page + 1, true);
-        }
+        fetchNews(page + 1, true);
       }
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, loading]); // Removed 'page' from dependencies
+  }, [hasMore, loadingMore, loading, page]); // Added page back to dependencies
 
   const fetchNews = async (
     pageNum = 1,
@@ -146,12 +149,20 @@ export default function Home() {
 
         setArticles(prev => [...prev, ...newArticles]);
         setValidArticles(prev => [...prev, ...newArticles]);
+
+        // If no new articles were added, we've reached the end
+        if (newArticles.length === 0) {
+          setHasMore(false);
+        }
       } else {
         setArticles(data.articles);
         setValidArticles(data.articles);
       }
 
-      setHasMore(data.hasMore);
+      // Only set hasMore to true if we actually got articles and there might be more
+      const hasMoreArticles =
+        data.articles && data.articles.length > 0 && data.hasMore;
+      setHasMore(hasMoreArticles);
       setPage(pageNum);
     } catch (err) {
       setError('Failed to load news. Please try again later.');
@@ -289,7 +300,7 @@ export default function Home() {
           )}
 
           {/* Load More Button (for testing) */}
-          {hasMore && !loadingMore && (
+          {hasMore && !loadingMore && articles.length > 0 && (
             <div className="text-center py-8">
               <button
                 onClick={() => fetchNews(page + 1, true)}
