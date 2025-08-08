@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
+    const forceRefresh = searchParams.get('refresh') === 'true';
 
     const apiKey = process.env.GNEWS_API_KEY;
     if (!apiKey) {
@@ -18,8 +19,8 @@ export async function GET(request: Request) {
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
 
-    // Try to get cached news first (only for page 1)
-    if (page === 1) {
+    // Try to get cached news first (only for page 1, unless force refresh)
+    if (page === 1 && !forceRefresh) {
       const cachedArticles = await getCachedNews(today);
       if (cachedArticles) {
         console.log('Returning cached news data');

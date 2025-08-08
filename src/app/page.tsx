@@ -46,7 +46,7 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [hasMore, loadingMore, loading]); // Removed 'page' from dependencies
 
-  const fetchNews = async (pageNum = 1, append = false) => {
+  const fetchNews = async (pageNum = 1, append = false, forceRefresh = false) => {
     try {
       if (pageNum === 1) {
         setLoading(true);
@@ -59,7 +59,8 @@ export default function Home() {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
-      const response = await fetch(`/api/news?page=${pageNum}`);
+      const refreshParam = forceRefresh ? '&refresh=true' : '';
+      const response = await fetch(`/api/news?page=${pageNum}${refreshParam}`);
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -89,6 +90,11 @@ export default function Home() {
       setLoading(false);
       setLoadingMore(false);
     }
+  };
+
+  const handleRefresh = () => {
+    console.log('Refreshing headlines...');
+    fetchNews(1, false, true);
   };
 
   const handleExplain = (articleId: string, explanation: string) => {
@@ -211,6 +217,13 @@ export default function Home() {
             <span className="hidden md:inline"> </span>
             MADE KID FRIENDLY
           </p>
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center justify-center mx-auto">
+            <span className="mr-2">🔄</span>
+            {loading ? 'Refreshing...' : 'Get New Headlines'}
+          </button>
         </div>
 
         {/* News Grid */}
