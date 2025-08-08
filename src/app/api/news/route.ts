@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     }
 
     const response = await fetch(
-      `https://gnews.io/api/v4/search?q=news&lang=en&country=us&max=50&apikey=${apiKey}`
+      `https://gnews.io/api/v4/search?q=news&lang=en&country=us&max=100&apikey=${apiKey}`
     );
 
     if (!response.ok) {
@@ -110,120 +110,23 @@ export async function GET(request: Request) {
         return false;
       }
 
-      // Keywords to exclude
+      // Keywords to exclude - make this less aggressive
       const sportsKeywords = [
-        'sport',
-        'football',
-        'basketball',
-        'baseball',
-        'soccer',
-        'tennis',
-        'golf',
-        'hockey',
-        'nfl',
-        'nba',
-        'mlb',
-        'nhl',
-        'ncaa',
-        'championship',
-        'tournament',
-        'playoff',
-        'coach',
-        'player',
-        'team',
-        'game',
-        'match',
-        'score',
-        'win',
-        'loss',
-        'victory',
-        'league',
-        'season',
-        'draft',
-        'trade',
-        'contract',
-        'salary',
-        'transfer'
+        'nfl', 'nba', 'mlb', 'nhl', 'ncaa', 'championship', 'tournament', 'playoff',
+        'coach', 'player', 'team', 'game', 'match', 'score', 'win', 'loss', 'victory',
+        'league', 'season', 'draft', 'trade', 'contract', 'salary', 'transfer'
       ];
 
       const financeKeywords = [
-        'stock',
-        'market',
-        'trading',
-        'investment',
-        'finance',
-        'financial',
-        'economy',
-        'dollar',
-        'euro',
-        'currency',
-        'bitcoin',
-        'crypto',
-        'cryptocurrency',
-        'ethereum',
-        'nasdaq',
-        'dow',
-        's&p',
-        'federal reserve',
-        'interest rate',
-        'inflation',
-        'earnings',
-        'revenue',
-        'profit',
-        'loss',
-        'quarterly',
-        'annual',
-        'dividend',
-        'portfolio',
-        'fund',
-        'etf',
-        'mutual fund',
-        'hedge fund',
-        'wall street'
+        'stock market', 'trading', 'investment', 'bitcoin', 'crypto', 'cryptocurrency',
+        'ethereum', 'nasdaq', 'dow', 's&p', 'federal reserve', 'interest rate',
+        'earnings', 'revenue', 'profit', 'quarterly', 'annual', 'dividend',
+        'portfolio', 'fund', 'etf', 'mutual fund', 'hedge fund', 'wall street'
       ];
 
       const tvShowKeywords = [
-        'tv show',
-        'television show',
-        'reality show',
-        'sitcom',
-        'drama series',
-        'netflix show',
-        'hulu show',
-        'amazon prime show',
-        'disney+ show',
-        'hbo show',
-        'season finale',
-        'series finale',
-        'episode',
-        'cast member',
-        'tv star',
-        'television star',
-        'reality star',
-        'celebrity',
-        'actor',
-        'actress',
-        'host',
-        'contestant',
-        'eliminated',
-        'voted off',
-        'winner',
-        'runner-up',
-        'audition',
-        'premiere',
-        'ratings',
-        'viewership',
-        'nielsen',
-        'bachelor',
-        'bachelorette',
-        'survivor',
-        'big brother',
-        'american idol',
-        'the voice',
-        'dancing with the stars',
-        'masked singer',
-        'talent show',
-        'game show'
+        'bachelor', 'bachelorette', 'survivor', 'big brother', 'american idol',
+        'the voice', 'dancing with the stars', 'masked singer', 'talent show', 'game show'
       ];
 
       const allKeywords = [
