@@ -106,8 +106,46 @@ export default function Home() {
       const data = await response.json();
 
       if (append) {
-        setArticles(prev => [...prev, ...data.articles]);
-        setValidArticles(prev => [...prev, ...data.articles]);
+        // Deduplicate articles before appending
+        const existingUrls = new Set(articles.map(article => article.url));
+        const existingTitles = new Set(
+          articles.map(article =>
+            article.title
+              .toLowerCase()
+              .replace(/[^\w\s]/g, '')
+              .trim()
+          )
+        );
+
+        const newArticles = data.articles.filter((article: NewsArticle) => {
+          const url = article.url;
+          const cleanTitle = article.title
+            .toLowerCase()
+            .replace(/[^\w\s]/g, '')
+            .trim();
+
+          // Check if URL or title already exists
+          if (existingUrls.has(url)) {
+            console.log(
+              'Filtered out duplicate URL in frontend:',
+              article.title
+            );
+            return false;
+          }
+
+          if (existingTitles.has(cleanTitle)) {
+            console.log(
+              'Filtered out duplicate title in frontend:',
+              article.title
+            );
+            return false;
+          }
+
+          return true;
+        });
+
+        setArticles(prev => [...prev, ...newArticles]);
+        setValidArticles(prev => [...prev, ...newArticles]);
       } else {
         setArticles(data.articles);
         setValidArticles(data.articles);
