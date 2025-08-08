@@ -17,21 +17,6 @@ export default function Home() {
   const [validArticles, setValidArticles] = useState<NewsArticle[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
-  const [usageInfo, setUsageInfo] = useState<any>(null);
-
-  // Fetch usage info on initial load
-  useEffect(() => {
-    const fetchUsageInfo = async () => {
-      try {
-        const response = await fetch('/api/usage');
-        const data = await response.json();
-        setUsageInfo(data);
-      } catch (error) {
-        console.error('Error fetching usage info:', error);
-      }
-    };
-    fetchUsageInfo();
-  }, []);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -285,19 +270,6 @@ export default function Home() {
               Refreshing headlines...
             </div>
           )}
-          {usageInfo && (
-            <div className="bg-blue-50 p-4 rounded-lg mb-4">
-              <p className="text-sm text-blue-800">
-                <strong>API Usage:</strong> {usageInfo.percentageUsed}% used (
-                {usageInfo.remainingCalls} remaining)
-              </p>
-              <p className="text-sm text-blue-700">
-                <strong>Cache Strategy:</strong>{' '}
-                {usageInfo.cacheStrategy.duration} cache,{' '}
-                {usageInfo.cacheStrategy.method}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* News Grid */}
@@ -346,7 +318,7 @@ export default function Home() {
 
         {/* Footer */}
         <div className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>Powered by NewsAPI.org and OpenAI.</p>
+          <p>Powered by NewsAPI.org, OpenAI and Eleven Labs.</p>
         </div>
       </div>
     </div>
