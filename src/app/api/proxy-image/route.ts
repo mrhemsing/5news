@@ -5,6 +5,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const imageUrl = searchParams.get('url');
 
+    // Add a simple test endpoint
+    if (imageUrl === 'test') {
+      return NextResponse.json({ message: 'Proxy image route is working!' });
+    }
+
     if (!imageUrl) {
       console.error('Proxy image error: No URL provided');
       return NextResponse.json(
