@@ -64,8 +64,10 @@ export async function POST(request: Request) {
     }
 
     const audioBuffer = await response.arrayBuffer();
-    const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-    const audioUrl = URL.createObjectURL(audioBlob);
+    
+    // Convert to base64 for client-side access
+    const base64Audio = Buffer.from(audioBuffer).toString('base64');
+    const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
 
     console.log('Successfully generated speech audio');
 
