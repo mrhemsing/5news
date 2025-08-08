@@ -61,7 +61,9 @@ export default function NewsCard({
         generateCartoon(article.title, retryCount + 1);
       }, 2000); // Wait 2 seconds before retry
     } else {
-      console.log('Max retries reached, giving up on cartoon for this headline');
+      console.log(
+        'Max retries reached, giving up on cartoon for this headline'
+      );
     }
   };
 

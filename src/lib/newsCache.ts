@@ -22,9 +22,8 @@ export async function getCachedNews(
 
     const { data, error } = await supabase
       .from('news_cache')
-      .select('articles, created_at, page')
+      .select('articles, created_at')
       .eq('date', date)
-      .eq('page', page)
       .single();
 
     if (error || !data) {
@@ -61,16 +60,15 @@ export async function setCachedNews(
       return;
     }
 
-    // Use upsert to handle duplicate dates and pages gracefully
+    // Use upsert to handle duplicate dates gracefully (removed page from conflict)
     const { error } = await supabase.from('news_cache').upsert(
       {
         date,
         articles,
-        page,
         created_at: new Date().toISOString()
       },
       {
-        onConflict: 'date,page',
+        onConflict: 'date',
         ignoreDuplicates: false
       }
     );
@@ -118,14 +116,15 @@ export async function getAllCachedPages(date: string): Promise<number[]> {
 
     const { data, error } = await supabase
       .from('news_cache')
-      .select('page')
+      .select('date')
       .eq('date', date);
 
     if (error || !data) {
       return [];
     }
 
-    return data.map(item => item.page || 1);
+    // Since we're not using page column, just return [1] if we have cached data
+    return data.length > 0 ? [1] : [];
   } catch (error) {
     console.error('Error getting cached pages:', error);
     return [];

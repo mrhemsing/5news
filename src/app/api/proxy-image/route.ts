@@ -29,7 +29,9 @@ export async function GET(request: Request) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.error(`Proxy image error: Failed to fetch image - Status: ${response.status}, URL: ${imageUrl}`);
+      console.error(
+        `Proxy image error: Failed to fetch image - Status: ${response.status}, URL: ${imageUrl}`
+      );
       return NextResponse.json(
         { error: `Failed to fetch image: ${response.status}` },
         { status: response.status }
@@ -38,7 +40,9 @@ export async function GET(request: Request) {
 
     // Get the image data
     const imageBuffer = await response.arrayBuffer();
-    console.log(`Successfully proxied image: ${imageUrl} (${imageBuffer.byteLength} bytes)`);
+    console.log(
+      `Successfully proxied image: ${imageUrl} (${imageBuffer.byteLength} bytes)`
+    );
 
     // Return the image with proper headers
     return new NextResponse(imageBuffer, {
@@ -52,7 +56,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error proxying image:', error);
-    
+
     // Check if it's a timeout error
     if (error instanceof Error && error.name === 'AbortError') {
       return NextResponse.json(
@@ -60,7 +64,7 @@ export async function GET(request: Request) {
         { status: 408 }
       );
     }
-    
+
     return NextResponse.json(
       { error: 'Failed to proxy image' },
       { status: 500 }
