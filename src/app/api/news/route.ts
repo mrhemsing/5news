@@ -96,15 +96,37 @@ export async function GET(request: Request) {
         articleUrl.includes('smbc-comics.com') ||
         articleUrl.includes('sportingnews.com')
       ) {
-        console.log('Filtered out source:', article.source?.name, 'URL:', article.url);
+        console.log(
+          'Filtered out source:',
+          article.source?.name,
+          'URL:',
+          article.url
+        );
         return false;
       }
 
       // Only filter out very specific sports/finance content
       const verySpecificKeywords = [
-        'nfl', 'nba', 'mlb', 'nhl', 'ncaa', 'championship', 'tournament', 'playoff',
-        'bitcoin', 'crypto', 'cryptocurrency', 'ethereum', 'nasdaq', 'dow', 's&p',
-        'bachelor', 'bachelorette', 'survivor', 'big brother', 'american idol'
+        'nfl',
+        'nba',
+        'mlb',
+        'nhl',
+        'ncaa',
+        'championship',
+        'tournament',
+        'playoff',
+        'bitcoin',
+        'crypto',
+        'cryptocurrency',
+        'ethereum',
+        'nasdaq',
+        'dow',
+        's&p',
+        'bachelor',
+        'bachelorette',
+        'survivor',
+        'big brother',
+        'american idol'
       ];
 
       // Check if any very specific keywords are in the title, description, or content
