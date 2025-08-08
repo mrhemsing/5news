@@ -26,7 +26,7 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setInitialLoading(false);
       fetchNews();
-      
+
       // Fetch usage info
       try {
         const response = await fetch('/api/usage');
@@ -72,7 +72,11 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [hasMore, loadingMore, loading]); // Removed 'page' from dependencies
 
-  const fetchNews = async (pageNum = 1, append = false, forceRefresh = false) => {
+  const fetchNews = async (
+    pageNum = 1,
+    append = false,
+    forceRefresh = false
+  ) => {
     try {
       if (pageNum === 1) {
         setLoading(true);
@@ -247,7 +251,10 @@ export default function Home() {
           {usageInfo && (
             <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
               <div className="flex items-center justify-center space-x-4">
-                <span>API Usage: {usageInfo.percentageUsed}% ({usageInfo.remainingCalls} remaining)</span>
+                <span>
+                  API Usage: {usageInfo.percentageUsed}% (
+                  {usageInfo.remainingCalls} remaining)
+                </span>
                 <span>•</span>
                 <span>Cache: {usageInfo.cacheStrategy.duration}</span>
               </div>
