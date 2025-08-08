@@ -19,9 +19,13 @@ export async function GET(request: Request) {
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
 
+    // Fetch from multiple non-sports categories to get more diverse content
+    const categories = ['general', 'world', 'technology', 'science', 'health'];
+    const category = categories[page % categories.length]; // Rotate through categories
+
     // Try to get cached news first (for any page, unless force refresh)
     if (!forceRefresh) {
-      const cachedArticles = await getCachedNews(today, page);
+      const cachedArticles = await getCachedNews(today, page, category);
       if (cachedArticles) {
         console.log(`Returning cached news data for page ${page}`);
         return NextResponse.json({
@@ -51,10 +55,10 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log(`Making GNews API request for page ${page} (API calls remaining: ~${100 - Math.floor(Date.now() / (24 * 60 * 60 * 1000))} today)`);
+    console.log(`Making GNews API request for page ${page} (category: ${category}) (API calls remaining: ~${100 - Math.floor(Date.now() / (24 * 60 * 60 * 1000))} today)`);
 
     const response = await fetch(
-      `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=100&apikey=${apiKey}`
+      `https://gnews.io/api/v4/top-headlines?category=${category}&lang=en&country=us&max=100&apikey=${apiKey}`
     );
 
     if (!response.ok) {
@@ -148,7 +152,31 @@ export async function GET(request: Request) {
         'bachelorette',
         'survivor',
         'big brother',
-        'american idol'
+        'american idol',
+        // Enhanced sports filtering
+        'football',
+        'basketball',
+        'baseball',
+        'hockey',
+        'soccer',
+        'tennis',
+        'golf',
+        'olympics',
+        'world cup',
+        'super bowl',
+        'final four',
+        'march madness',
+        'playoffs',
+        'championship game',
+        'all-star',
+        'draft pick',
+        'free agent',
+        'trade deadline',
+        'injury report',
+        'coach fired',
+        'team owner',
+        'stadium',
+        'arena'
       ];
 
       // Check if any very specific keywords are in the title, description, or content
@@ -185,7 +213,7 @@ export async function GET(request: Request) {
     );
 
     // Cache the results for the current page
-    await setCachedNews(today, articlesWithIds, page);
+    await setCachedNews(today, articlesWithIds, page, category);
 
     // More flexible logic: if we got articles and haven't reached the total, there might be more
     const hasMore = articlesWithIds.length > 0 && articlesWithIds.length >= 20;
