@@ -46,6 +46,7 @@ The app is automatically deployed to Vercel when changes are pushed to the main 
 ## Troubleshooting
 
 If Vercel isn't deploying automatically:
+
 1. Check Vercel project settings
 2. Verify GitHub integration
 3. Manually trigger deployment from Vercel dashboard

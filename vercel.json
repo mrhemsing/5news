@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/generate-cartoons",
-      "schedule": "0 12 * * *"
-    }
-  ]
-}
+
