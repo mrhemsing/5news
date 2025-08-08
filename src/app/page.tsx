@@ -6,6 +6,7 @@ import NewsCard from '@/components/NewsCard';
 import Logo from '@/components/Logo';
 
 export default function Home() {
+  // Test deployment - 2025-01-07
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
