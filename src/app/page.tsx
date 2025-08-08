@@ -17,6 +17,7 @@ export default function Home() {
   const [validArticles, setValidArticles] = useState<NewsArticle[]>([]);
   const [validatingArticles, setValidatingArticles] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -27,6 +28,19 @@ export default function Home() {
     };
 
     initializeApp();
+  }, []);
+
+  // Set up automatic background refresh every hour
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('Auto-refreshing headlines...');
+      setBackgroundRefreshing(true);
+      fetchNews(1, false, true).finally(() => {
+        setBackgroundRefreshing(false);
+      });
+    }, 60 * 60 * 1000); // 1 hour in milliseconds
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -90,11 +104,6 @@ export default function Home() {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
-
-  const handleRefresh = () => {
-    console.log('Refreshing headlines...');
-    fetchNews(1, false, true);
   };
 
   const handleExplain = (articleId: string, explanation: string) => {
@@ -217,13 +226,12 @@ export default function Home() {
             <span className="hidden md:inline"> </span>
             MADE KID FRIENDLY
           </p>
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center justify-center mx-auto">
-            <span className="mr-2">🔄</span>
-            {loading ? 'Refreshing...' : 'Get New Headlines'}
-          </button>
+          {backgroundRefreshing && (
+            <div className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center justify-center">
+              <span className="animate-spin mr-1">🔄</span>
+              Refreshing headlines...
+            </div>
+          )}
         </div>
 
         {/* News Grid */}
