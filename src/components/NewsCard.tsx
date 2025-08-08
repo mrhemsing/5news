@@ -46,7 +46,11 @@ export default function NewsCard({
       return; // Don't clear cartoonUrl, let it retry with direct URL
     }
 
-    setCartoonUrl(null); // Clear the URL to prevent further attempts
+    // If direct URL also failed, clear the URL
+    if (!useProxy && cartoonUrl) {
+      console.log('Direct URL also failed, clearing cartoon URL');
+      setCartoonUrl(null);
+    }
 
     // Retry cartoon generation if we haven't exceeded max retries
     if (retryCount < 2) {
@@ -56,6 +60,8 @@ export default function NewsCard({
         setUseProxy(true); // Reset to use proxy for next attempt
         generateCartoon(article.title, retryCount + 1);
       }, 2000); // Wait 2 seconds before retry
+    } else {
+      console.log('Max retries reached, giving up on cartoon for this headline');
     }
   };
 
