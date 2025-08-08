@@ -6,6 +6,23 @@ import {
   getAllCachedPages
 } from '@/lib/newsCache';
 
+// Helper function to calculate string similarity
+function calculateSimilarity(str1: string, str2: string): number {
+  if (str1 === str2) return 1.0;
+  if (str1.length === 0 || str2.length === 0) return 0.0;
+  
+  // Simple similarity based on common words
+  const words1 = str1.split(' ').filter(w => w.length > 2);
+  const words2 = str2.split(' ').filter(w => w.length > 2);
+  
+  if (words1.length === 0 || words2.length === 0) return 0.0;
+  
+  const commonWords = words1.filter(word => words2.includes(word));
+  const totalWords = Math.max(words1.length, words2.length);
+  
+  return commonWords.length / totalWords;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -207,14 +224,124 @@ export async function GET(request: Request) {
 
     console.log('After filtering:', filteredArticles.length, 'articles');
 
-    // Remove duplicate articles by URL
-    const uniqueArticles = filteredArticles.filter(
-      (article, index, self) =>
-        index === self.findIndex(a => a.url === article.url)
-    );
+    // Enhanced deduplication - remove similar articles by title and content
+    const uniqueArticles = filteredArticles.filter((article, index, self) => {
+      // First, remove exact URL duplicates
+      const urlDuplicate = self.findIndex(a => a.url === article.url);
+      if (urlDuplicate < index) {
+        console.log('Removing URL duplicate:', article.title);
+        return false;
+      }
+
+      // Then, remove similar headlines (using title similarity)
+      const currentTitle = article.title.toLowerCase()
+        .replace(/[^\w\s]/g, '') // Remove punctuation
+        .replace(/\s+/g, ' ') // Normalize spaces
+        .trim();
+
+      const similarTitle = self.findIndex(a => {
+        if (a.url === article.url) return false; // Skip self
+        const otherTitle = a.title.toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        // Check if titles are very similar (90% similarity)
+        const similarity = calculateSimilarity(currentTitle, otherTitle);
+        return similarity > 0.9;
+      });
+
+      if (similarTitle < index) {
+        console.log('Removing similar headline:', article.title);
+        return false;
+      }
+
+      // Finally, remove articles with very similar content
+      const currentContent = (article.content || article.description || '').toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const similarContent = self.findIndex(a => {
+        if (a.url === article.url) return false; // Skip self
+        const otherContent = (a.content || a.description || '').toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        // Check if content is very similar (85% similarity)
+        const similarity = calculateSimilarity(currentContent, otherContent);
+        return similarity > 0.85;
+      });
+
+      if (similarContent < index) {
+        console.log('Removing similar content:', article.title);
+        return false;
+      }
+
+      return true;
+    });
+
+    // Additional deduplication: prefer certain sources over others for similar stories
+    const preferredSources = [
+      'reuters',
+      'associated press',
+      'bbc',
+      'cnn',
+      'nbc news',
+      'abc news',
+      'cbs news',
+      'fox news',
+      'usa today',
+      'the washington post',
+      'the new york times',
+      'the wall street journal',
+      'time',
+      'newsweek'
+    ];
+
+    const finalArticles = uniqueArticles.filter((article, index, self) => {
+      const currentTitle = article.title.toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Check if there's a similar story from a preferred source
+      const preferredDuplicate = self.findIndex(a => {
+        if (a.url === article.url) return false;
+        
+        const otherTitle = a.title.toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        const similarity = calculateSimilarity(currentTitle, otherTitle);
+        if (similarity > 0.8) {
+          // If we have a similar story, prefer the one from a preferred source
+          const currentSource = (article.source?.name || '').toLowerCase();
+          const otherSource = (a.source?.name || '').toLowerCase();
+          
+          const currentIsPreferred = preferredSources.some(source => 
+            currentSource.includes(source)
+          );
+          const otherIsPreferred = preferredSources.some(source => 
+            otherSource.includes(source)
+          );
+          
+          // If the other article is from a preferred source and this one isn't, remove this one
+          if (otherIsPreferred && !currentIsPreferred) {
+            console.log(`Removing duplicate in favor of preferred source: ${article.title}`);
+            return true;
+          }
+        }
+        return false;
+      });
+
+      return preferredDuplicate === -1;
+    });
 
     // Add unique IDs to articles
-    const articlesWithIds: NewsArticle[] = uniqueArticles.map(
+    const articlesWithIds: NewsArticle[] = finalArticles.map(
       (article, index) => ({
         ...article,
         id: `article-${index}-${Date.now()}`,
