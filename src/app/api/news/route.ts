@@ -104,6 +104,24 @@ export async function GET(request: Request) {
           return false;
         }
 
+        // Skip headlines containing "LIVE UPDATES"
+        if (cleanTitle.toLowerCase().includes('live updates')) {
+          console.log('Filtered out live updates:', article.title);
+          return false;
+        }
+
+        // Skip headlines containing "LATEST NEWS"
+        if (cleanTitle.toLowerCase().includes('latest news')) {
+          console.log('Filtered out latest news:', article.title);
+          return false;
+        }
+
+        // Skip headlines containing "FRESH AIR"
+        if (cleanTitle.toLowerCase().includes('fresh air')) {
+          console.log('Filtered out fresh air:', article.title);
+          return false;
+        }
+
         // Check if the article is from an approved source
         const sourceName = (article.source?.name || '').toLowerCase();
         const articleUrl = (article.url || '').toLowerCase();
@@ -156,7 +174,14 @@ export async function GET(request: Request) {
           'bbc',
           'bbc.com',
           'al jazeera',
-          'aljazeera'
+          'aljazeera',
+          'cbs news',
+          'ars technica',
+          'the verge',
+          'ap news',
+          'cnn',
+          'reuters',
+          'the hollywood reporter'
         ];
 
         // Check if the source name matches any approved source
@@ -170,8 +195,26 @@ export async function GET(request: Request) {
             return true;
           }
 
-          // Check URL matching for domain-based sources
-          return articleUrl.includes(approvedSource.replace(/\s+/g, ''));
+          // Check URL matching for domain-based sources (only for exact domain matches)
+          const domainMatch = articleUrl.includes(
+            approvedSource.replace(/\s+/g, '')
+          );
+          if (domainMatch) {
+            // Additional check to ensure it's not a partial match (e.g., "times" matching "prince william times")
+            const urlParts = articleUrl.split('.');
+            const sourceParts = approvedSource.replace(/\s+/g, '').split('.');
+
+            // Only allow if the main domain part matches exactly
+            if (urlParts.length > 0 && sourceParts.length > 0) {
+              const urlDomain = urlParts[0].replace('www', '');
+              const sourceDomain = sourceParts[0];
+              if (urlDomain === sourceDomain) {
+                return true;
+              }
+            }
+          }
+
+          return false;
         });
 
         if (!isApprovedSource) {
@@ -597,7 +640,14 @@ function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
     'bbc',
     'bbc.com',
     'al jazeera',
-    'aljazeera'
+    'aljazeera',
+    'cbs news',
+    'ars technica',
+    'the verge',
+    'ap news',
+    'cnn',
+    'reuters',
+    'the hollywood reporter'
   ];
 
   articles.forEach(article => {
@@ -605,6 +655,24 @@ function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
     const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
     if (cleanTitle.split(' ').length <= 1) {
       console.log('Filtered out single word:', article.title);
+      return;
+    }
+
+    // Skip headlines containing "LIVE UPDATES"
+    if (cleanTitle.toLowerCase().includes('live updates')) {
+      console.log('Filtered out live updates:', article.title);
+      return;
+    }
+
+    // Skip headlines containing "LATEST NEWS"
+    if (cleanTitle.toLowerCase().includes('latest news')) {
+      console.log('Filtered out latest news:', article.title);
+      return;
+    }
+
+    // Skip headlines containing "FRESH AIR"
+    if (cleanTitle.toLowerCase().includes('fresh air')) {
+      console.log('Filtered out fresh air:', article.title);
       return;
     }
 
@@ -638,8 +706,26 @@ function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
         return true;
       }
 
-      // Check URL matching for domain-based sources
-      return articleUrl.includes(approvedSource.replace(/\s+/g, ''));
+      // Check URL matching for domain-based sources (only for exact domain matches)
+      const domainMatch = articleUrl.includes(
+        approvedSource.replace(/\s+/g, '')
+      );
+      if (domainMatch) {
+        // Additional check to ensure it's not a partial match (e.g., "times" matching "prince william times")
+        const urlParts = articleUrl.split('.');
+        const sourceParts = approvedSource.replace(/\s+/g, '').split('.');
+
+        // Only allow if the main domain part matches exactly
+        if (urlParts.length > 0 && sourceParts.length > 0) {
+          const urlDomain = urlParts[0].replace('www', '');
+          const sourceDomain = sourceParts[0];
+          if (urlDomain === sourceDomain) {
+            return true;
+          }
+        }
+      }
+
+      return false;
     });
 
     if (isApprovedSource) {
