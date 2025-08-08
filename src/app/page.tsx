@@ -20,6 +20,7 @@ export default function Home() {
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
   const [usageInfo, setUsageInfo] = useState<any>(null);
   const [generatingCartoons, setGeneratingCartoons] = useState(false);
+  const [testingAPI, setTestingAPI] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -203,6 +204,26 @@ export default function Home() {
     }
   };
 
+  const handleTestAPI = async () => {
+    setTestingAPI(true);
+    try {
+      const response = await fetch('/api/test-replicate');
+      const data = await response.json();
+      console.log('Replicate API test result:', data);
+      
+      if (data.success) {
+        alert('✅ Replicate API is working!');
+      } else {
+        alert(`❌ Replicate API error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error testing API:', error);
+      alert('❌ Error testing API');
+    } finally {
+      setTestingAPI(false);
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -275,7 +296,10 @@ export default function Home() {
           {usageInfo && (
             <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
               <div className="flex items-center justify-center space-x-4">
-                <span>API Usage: {usageInfo.percentageUsed}% ({usageInfo.remainingCalls} remaining)</span>
+                <span>
+                  API Usage: {usageInfo.percentageUsed}% (
+                  {usageInfo.remainingCalls} remaining)
+                </span>
                 <span>•</span>
                 <span>Cache: {usageInfo.cacheStrategy.duration}</span>
               </div>
@@ -286,7 +310,16 @@ export default function Home() {
             disabled={generatingCartoons}
             className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center justify-center mx-auto">
             <span className="mr-2">🎨</span>
-            {generatingCartoons ? 'Generating Cartoons...' : 'Generate Cartoons'}
+            {generatingCartoons
+              ? 'Generating Cartoons...'
+              : 'Generate Cartoons'}
+          </button>
+          <button
+            onClick={handleTestAPI}
+            disabled={testingAPI}
+            className="mt-4 ml-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center justify-center">
+            <span className="mr-2">🔍</span>
+            {testingAPI ? 'Testing API...' : 'Test Replicate API'}
           </button>
         </div>
 

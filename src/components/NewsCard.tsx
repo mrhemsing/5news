@@ -73,6 +73,7 @@ export default function NewsCard({
         body: JSON.stringify({ headline })
       });
 
+      console.log(`Cartoon API response status: ${response.status}`);
       if (response.ok) {
         const data = await response.json();
         console.log('Cartoon response:', data);
@@ -85,11 +86,13 @@ export default function NewsCard({
           }
         } else {
           // No cartoon URL returned, try to retry
+          console.error('No cartoon URL returned from API');
           throw new Error('No cartoon URL returned');
         }
       } else {
-        console.error('Cartoon API error:', response.status);
-        throw new Error(`Cartoon API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Cartoon API error:', response.status, errorText);
+        throw new Error(`Cartoon API error: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error(
