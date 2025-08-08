@@ -24,7 +24,7 @@ export async function GET() {
       remainingCalls,
       percentageUsed,
       cacheStrategy: {
-        duration: '6 hours',
+        duration: '30 minutes',
         method: 'Google News RSS',
         benefits: 'Unlimited requests, high-quality sources, less duplicates'
       }

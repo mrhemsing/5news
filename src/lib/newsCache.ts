@@ -30,13 +30,13 @@ export async function getCachedNews(
       return null;
     }
 
-    // Check if cache is less than 6 hours old (extended from 2 hours to save API calls)
+    // Check if cache is less than 30 minutes old (for refresh frequency)
     const cacheAge = Date.now() - new Date(data.created_at).getTime();
-    const sixHours = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+    const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-    if (cacheAge > sixHours) {
+    if (cacheAge > thirtyMinutes) {
       console.log(
-        `News cache for page ${page} is too old, fetching fresh data`
+        `News cache for page ${page} is older than 30 minutes, fetching fresh data`
       );
       return null;
     }
