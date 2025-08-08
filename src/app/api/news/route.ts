@@ -108,7 +108,23 @@ export async function GET(request: Request) {
         const sourceName = (article.source?.name || '').toLowerCase();
         const articleUrl = (article.url || '').toLowerCase();
 
-        // Whitelist of approved news sources
+        // Specifically exclude Yahoo Finance articles
+        if (
+          sourceName.includes('yahoo finance') ||
+          sourceName.includes('yahoo.finance') ||
+          articleUrl.includes('finance.yahoo.com') ||
+          articleUrl.includes('uk.finance.yahoo.com')
+        ) {
+          console.log(
+            'Filtered out Yahoo Finance article:',
+            article.source?.name,
+            'URL:',
+            article.url
+          );
+          return false;
+        }
+
+        // Whitelist of approved news sources (exact matches only)
         const approvedSources = [
           'the washington post',
           'washington post',
@@ -127,8 +143,6 @@ export async function GET(request: Request) {
           'space.com',
           'daily mail',
           'dailymail',
-          'yahoo.com',
-          'yahoo',
           'wired',
           'wired.com',
           'usa today',
@@ -146,11 +160,19 @@ export async function GET(request: Request) {
         ];
 
         // Check if the source name matches any approved source
-        const isApprovedSource = approvedSources.some(
-          approvedSource =>
-            sourceName.includes(approvedSource) ||
-            articleUrl.includes(approvedSource.replace(/\s+/g, ''))
-        );
+        const isApprovedSource = approvedSources.some(approvedSource => {
+          // Normalize both strings for comparison
+          const normalizedSourceName = sourceName.toLowerCase().trim();
+          const normalizedApprovedSource = approvedSource.toLowerCase().trim();
+
+          // Use exact match only - no partial matching
+          if (normalizedSourceName === normalizedApprovedSource) {
+            return true;
+          }
+
+          // Check URL matching for domain-based sources
+          return articleUrl.includes(approvedSource.replace(/\s+/g, ''));
+        });
 
         if (!isApprovedSource) {
           console.log(
@@ -543,7 +565,7 @@ function mergeArticles(
 function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
   const filteredArticles: NewsArticle[] = [];
 
-  // Whitelist of approved news sources
+  // Whitelist of approved news sources (exact matches only)
   const approvedSources = [
     'the washington post',
     'washington post',
@@ -562,8 +584,6 @@ function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
     'space.com',
     'daily mail',
     'dailymail',
-    'yahoo.com',
-    'yahoo',
     'wired',
     'wired.com',
     'usa today',
@@ -591,12 +611,36 @@ function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
     const sourceName = (article.source?.name || '').toLowerCase();
     const articleUrl = (article.url || '').toLowerCase();
 
+    // Specifically exclude Yahoo Finance articles
+    if (
+      sourceName.includes('yahoo finance') ||
+      sourceName.includes('yahoo.finance') ||
+      articleUrl.includes('finance.yahoo.com') ||
+      articleUrl.includes('uk.finance.yahoo.com')
+    ) {
+      console.log(
+        'Filtered out Yahoo Finance article:',
+        article.source?.name,
+        'URL:',
+        article.url
+      );
+      return;
+    }
+
     // Check if the source name matches any approved source
-    const isApprovedSource = approvedSources.some(
-      approvedSource =>
-        sourceName.includes(approvedSource) ||
-        articleUrl.includes(approvedSource.replace(/\s+/g, ''))
-    );
+    const isApprovedSource = approvedSources.some(approvedSource => {
+      // Normalize both strings for comparison
+      const normalizedSourceName = sourceName.toLowerCase().trim();
+      const normalizedApprovedSource = approvedSource.toLowerCase().trim();
+
+      // Use exact match only - no partial matching
+      if (normalizedSourceName === normalizedApprovedSource) {
+        return true;
+      }
+
+      // Check URL matching for domain-based sources
+      return articleUrl.includes(approvedSource.replace(/\s+/g, ''));
+    });
 
     if (isApprovedSource) {
       filteredArticles.push(article);
