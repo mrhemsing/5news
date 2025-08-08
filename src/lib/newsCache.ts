@@ -7,10 +7,12 @@ export interface NewsCache {
   date: string;
   articles: NewsArticle[];
   created_at: string;
+  page?: number;
 }
 
 export async function getCachedNews(
-  date: string
+  date: string,
+  page: number = 1
 ): Promise<NewsArticle[] | null> {
   try {
     if (!supabase) {
@@ -20,24 +22,25 @@ export async function getCachedNews(
 
     const { data, error } = await supabase
       .from('news_cache')
-      .select('articles, created_at')
+      .select('articles, created_at, page')
       .eq('date', date)
+      .eq('page', page)
       .single();
 
     if (error || !data) {
       return null;
     }
 
-    // Check if cache is less than 2 hours old
+    // Check if cache is less than 6 hours old (extended from 2 hours to save API calls)
     const cacheAge = Date.now() - new Date(data.created_at).getTime();
-    const twoHours = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+    const sixHours = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
 
-    if (cacheAge > twoHours) {
-      console.log('News cache is too old, fetching fresh data');
+    if (cacheAge > sixHours) {
+      console.log(`News cache for page ${page} is too old, fetching fresh data`);
       return null;
     }
 
-    console.log('Using cached news data');
+    console.log(`Using cached news data for page ${page}`);
     return data.articles;
   } catch (error) {
     console.error('Error fetching cached news:', error);
@@ -47,7 +50,8 @@ export async function getCachedNews(
 
 export async function setCachedNews(
   date: string,
-  articles: NewsArticle[]
+  articles: NewsArticle[],
+  page: number = 1
 ): Promise<void> {
   try {
     if (!supabase) {
@@ -55,15 +59,16 @@ export async function setCachedNews(
       return;
     }
 
-    // Use upsert to handle duplicate dates gracefully
+    // Use upsert to handle duplicate dates and pages gracefully
     const { error } = await supabase.from('news_cache').upsert(
       {
         date,
         articles,
+        page,
         created_at: new Date().toISOString()
       },
       {
-        onConflict: 'date',
+        onConflict: 'date,page',
         ignoreDuplicates: false
       }
     );
@@ -71,7 +76,7 @@ export async function setCachedNews(
     if (error) {
       console.error('Error caching news:', error);
     } else {
-      console.log('News cached successfully');
+      console.log(`News cached successfully for page ${page}`);
     }
   } catch (error) {
     console.error('Error setting cached news:', error);
@@ -99,5 +104,28 @@ export async function clearExpiredNewsCache(): Promise<void> {
     }
   } catch (error) {
     console.error('Error clearing expired news cache:', error);
+  }
+}
+
+// New function to get all cached pages for a date
+export async function getAllCachedPages(date: string): Promise<number[]> {
+  try {
+    if (!supabase) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('news_cache')
+      .select('page')
+      .eq('date', date);
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data.map(item => item.page || 1);
+  } catch (error) {
+    console.error('Error getting cached pages:', error);
+    return [];
   }
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { NewsApiResponse, NewsArticle } from '@/types/news';
-import { getCachedNews, setCachedNews } from '@/lib/newsCache';
+import { getCachedNews, setCachedNews, getAllCachedPages } from '@/lib/newsCache';
 
 export async function GET(request: Request) {
   try {
@@ -19,18 +19,39 @@ export async function GET(request: Request) {
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
 
-    // Try to get cached news first (only for page 1, unless force refresh)
-    if (page === 1 && !forceRefresh) {
-      const cachedArticles = await getCachedNews(today);
+    // Try to get cached news first (for any page, unless force refresh)
+    if (!forceRefresh) {
+      const cachedArticles = await getCachedNews(today, page);
       if (cachedArticles) {
-        console.log('Returning cached news data');
+        console.log(`Returning cached news data for page ${page}`);
         return NextResponse.json({
           articles: cachedArticles,
           totalResults: cachedArticles.length,
-          hasMore: false
+          hasMore: cachedArticles.length >= 20 // Assume there might be more if we got 20+ articles
         });
       }
     }
+
+    // If we're requesting page 1 and don't have it cached, check if we have other pages
+    // This helps when users refresh and we can serve from cache instead of making new API calls
+    if (page === 1 && !forceRefresh) {
+      const cachedPages = await getAllCachedPages(today);
+      if (cachedPages.length > 0) {
+        console.log('Found cached pages, serving from cache instead of making API call');
+        // Return the first cached page we have
+        const firstCachedPage = Math.min(...cachedPages);
+        const cachedArticles = await getCachedNews(today, firstCachedPage);
+        if (cachedArticles) {
+          return NextResponse.json({
+            articles: cachedArticles,
+            totalResults: cachedArticles.length,
+            hasMore: cachedPages.length > 1 || cachedArticles.length >= 20
+          });
+        }
+      }
+    }
+
+    console.log(`Making GNews API request for page ${page} (API calls remaining: ~${100 - Math.floor(Date.now() / (24 * 60 * 60 * 1000))} today)`);
 
     const response = await fetch(
       `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=100&apikey=${apiKey}`
@@ -163,10 +184,8 @@ export async function GET(request: Request) {
       })
     );
 
-    // Cache the results for page 1
-    if (page === 1) {
-      await setCachedNews(today, articlesWithIds);
-    }
+    // Cache the results for the current page
+    await setCachedNews(today, articlesWithIds, page);
 
     // More flexible logic: if we got articles and haven't reached the total, there might be more
     const hasMore = articlesWithIds.length > 0 && articlesWithIds.length >= 20;

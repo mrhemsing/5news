@@ -18,6 +18,7 @@ export default function Home() {
   const [validatingArticles, setValidatingArticles] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<any>(null);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -25,12 +26,23 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setInitialLoading(false);
       fetchNews();
+      
+      // Fetch usage info
+      try {
+        const response = await fetch('/api/usage');
+        if (response.ok) {
+          const data = await response.json();
+          setUsageInfo(data);
+        }
+      } catch (error) {
+        console.error('Error fetching usage info:', error);
+      }
     };
 
     initializeApp();
   }, []);
 
-  // Set up automatic background refresh every hour
+  // Set up automatic background refresh every 6 hours (reduced from 1 hour to save API calls)
   useEffect(() => {
     const interval = setInterval(() => {
       console.log('Auto-refreshing headlines...');
@@ -38,7 +50,7 @@ export default function Home() {
       fetchNews(1, false, true).finally(() => {
         setBackgroundRefreshing(false);
       });
-    }, 60 * 60 * 1000); // 1 hour in milliseconds
+    }, 6 * 60 * 60 * 1000); // 6 hours in milliseconds
 
     return () => clearInterval(interval);
   }, []);
@@ -230,6 +242,15 @@ export default function Home() {
             <div className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center justify-center">
               <span className="animate-spin mr-1">🔄</span>
               Refreshing headlines...
+            </div>
+          )}
+          {usageInfo && (
+            <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center justify-center space-x-4">
+                <span>API Usage: {usageInfo.percentageUsed}% ({usageInfo.remainingCalls} remaining)</span>
+                <span>•</span>
+                <span>Cache: {usageInfo.cacheStrategy.duration}</span>
+              </div>
             </div>
           )}
         </div>
