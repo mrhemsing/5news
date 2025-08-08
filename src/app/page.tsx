@@ -18,6 +18,7 @@ export default function Home() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
   const [usageInfo, setUsageInfo] = useState<any>(null);
+  const [testRSSMode, setTestRSSMode] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -139,6 +140,22 @@ export default function Home() {
     });
   };
 
+  const handleTestRSS = async () => {
+    setTestRSSMode(true);
+    try {
+      const response = await fetch('/api/news?test=true');
+      const data = await response.json();
+      if (data.articles) {
+        setArticles(data.articles);
+        console.log('RSS Test Results:', data);
+      }
+    } catch (error) {
+      console.error('Error testing RSS:', error);
+    } finally {
+      setTestRSSMode(false);
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -196,7 +213,8 @@ export default function Home() {
           <div className="flex justify-center mb-4">
             <Logo />
           </div>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">5News</h1>
+          <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
             TODAY&apos;S TOP HEADLINES
             <br className="block md:hidden" />
             <span className="hidden md:inline"> </span>
@@ -209,17 +227,24 @@ export default function Home() {
             </div>
           )}
           {usageInfo && (
-            <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-              <div className="flex items-center justify-center space-x-4">
-                <span>
-                  API Usage: {usageInfo.percentageUsed}% (
-                  {usageInfo.remainingCalls} remaining)
-                </span>
-                <span>•</span>
-                <span>Cache: {usageInfo.cacheStrategy.duration}</span>
-              </div>
+            <div className="bg-blue-50 p-4 rounded-lg mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>API Usage:</strong> {usageInfo.percentageUsed}% used (
+                {usageInfo.remainingCalls} remaining)
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>Cache Strategy:</strong>{' '}
+                {usageInfo.cacheStrategy.duration} cache,{' '}
+                {usageInfo.cacheStrategy.method}
+              </p>
             </div>
           )}
+          <button
+            onClick={handleTestRSS}
+            disabled={testRSSMode}
+            className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white px-4 py-2 rounded-lg text-sm mb-4">
+            {testRSSMode ? 'Testing RSS...' : 'Test RSS Parsing'}
+          </button>
         </div>
 
         {/* News Grid */}

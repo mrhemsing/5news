@@ -11,40 +11,46 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const forceRefresh = searchParams.get('refresh') === 'true';
+    const testRSS = searchParams.get('test') === 'true'; // Add test parameter
 
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
 
-    // Try to get cached news first (for any page, unless force refresh)
-    if (!forceRefresh) {
-      const cachedArticles = await getCachedNews(today, page);
-      if (cachedArticles) {
-        console.log(`Returning cached news data for page ${page}`);
-        return NextResponse.json({
-          articles: cachedArticles,
-          totalResults: cachedArticles.length,
-          hasMore: cachedArticles.length >= 20 // Assume there might be more if we got 20+ articles
-        });
-      }
-    }
-
-    // If we're requesting page 1 and don't have it cached, check if we have other pages
-    // This helps when users refresh and we can serve from cache instead of making new API calls
-    if (page === 1 && !forceRefresh) {
-      const cachedPages = await getAllCachedPages(today);
-      if (cachedPages.length > 0) {
-        console.log(
-          'Found cached pages, serving from cache instead of making API call'
-        );
-        // Return the first cached page we have
-        const firstCachedPage = Math.min(...cachedPages);
-        const cachedArticles = await getCachedNews(today, firstCachedPage);
+    // If test mode, skip cache entirely
+    if (testRSS) {
+      console.log('TEST MODE: Bypassing cache to test RSS parsing');
+    } else {
+      // Try to get cached news first (for any page, unless force refresh)
+      if (!forceRefresh) {
+        const cachedArticles = await getCachedNews(today, page);
         if (cachedArticles) {
+          console.log(`Returning cached news data for page ${page}`);
           return NextResponse.json({
             articles: cachedArticles,
             totalResults: cachedArticles.length,
-            hasMore: cachedPages.length > 1 || cachedArticles.length >= 20
+            hasMore: cachedArticles.length >= 20 // Assume there might be more if we got 20+ articles
           });
+        }
+      }
+
+      // If we're requesting page 1 and don't have it cached, check if we have other pages
+      // This helps when users refresh and we can serve from cache instead of making new API calls
+      if (page === 1 && !forceRefresh) {
+        const cachedPages = await getAllCachedPages(today);
+        if (cachedPages.length > 0) {
+          console.log(
+            'Found cached pages, serving from cache instead of making API call'
+          );
+          // Return the first cached page we have
+          const firstCachedPage = Math.min(...cachedPages);
+          const cachedArticles = await getCachedNews(today, firstCachedPage);
+          if (cachedArticles) {
+            return NextResponse.json({
+              articles: cachedArticles,
+              totalResults: cachedArticles.length,
+              hasMore: cachedPages.length > 1 || cachedArticles.length >= 20
+            });
+          }
         }
       }
     }
