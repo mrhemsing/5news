@@ -12,8 +12,9 @@ async function getLatestHeadlines() {
       throw new Error('GNEWS_API_KEY not found');
     }
 
+    // Use the same API endpoint as the main news API
     const response = await fetch(
-      `https://gnews.io/api/v4/search?q=news&lang=en&country=us&max=30&apikey=${apiKey}`
+      `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=100&apikey=${apiKey}`
     );
 
     if (!response.ok) {
@@ -25,7 +26,7 @@ async function getLatestHeadlines() {
     // GNews returns articles directly, not wrapped in a response object
     const articles = data.articles || data;
 
-    // Filter out sports and finance articles (same logic as API)
+    // Use the same filtering logic as the main news API
     const filteredArticles = articles.filter(article => {
       const title = article.title.toLowerCase();
       const description = (article.description || '').toLowerCase();
@@ -37,33 +38,29 @@ async function getLatestHeadlines() {
         return false;
       }
 
-      // Skip headlines containing specific words
-      if (cleanTitle.toLowerCase().includes('rail')) {
-        return false;
-      }
-
-      // Skip articles from specific sources
+      // Skip articles from specific sources that are not kid-friendly
       const sourceName = (article.source?.name || '').toLowerCase();
+      const articleUrl = (article.url || '').toLowerCase();
+
       if (
+        sourceName.includes('breitbart') ||
         sourceName.includes('risbb.cc') ||
         sourceName.includes('cult of mac') ||
         sourceName.includes('bleeding cool') ||
         sourceName.includes('smbc-comics.com') ||
-        sourceName.includes('sporting news')
+        sourceName.includes('sporting news') ||
+        articleUrl.includes('breitbart.com') ||
+        articleUrl.includes('risbb.cc') ||
+        articleUrl.includes('cultofmac.com') ||
+        articleUrl.includes('bleedingcool.com') ||
+        articleUrl.includes('smbc-comics.com') ||
+        articleUrl.includes('sportingnews.com')
       ) {
         return false;
       }
 
-      // Keywords to exclude
-      const sportsKeywords = [
-        'sport',
-        'football',
-        'basketball',
-        'baseball',
-        'soccer',
-        'tennis',
-        'golf',
-        'hockey',
+      // Only filter out very specific sports/finance content (same as main API)
+      const verySpecificKeywords = [
         'nfl',
         'nba',
         'mlb',
@@ -72,35 +69,6 @@ async function getLatestHeadlines() {
         'championship',
         'tournament',
         'playoff',
-        'coach',
-        'player',
-        'team',
-        'game',
-        'match',
-        'score',
-        'win',
-        'loss',
-        'victory',
-        'league',
-        'season',
-        'draft',
-        'trade',
-        'contract',
-        'salary',
-        'transfer'
-      ];
-
-      const financeKeywords = [
-        'stock',
-        'market',
-        'trading',
-        'investment',
-        'finance',
-        'financial',
-        'economy',
-        'dollar',
-        'euro',
-        'currency',
         'bitcoin',
         'crypto',
         'cryptocurrency',
@@ -108,81 +76,50 @@ async function getLatestHeadlines() {
         'nasdaq',
         'dow',
         's&p',
-        'federal reserve',
-        'interest rate',
-        'inflation',
-        'earnings',
-        'revenue',
-        'profit',
-        'loss',
-        'quarterly',
-        'annual',
-        'dividend',
-        'portfolio',
-        'fund',
-        'etf',
-        'mutual fund',
-        'hedge fund',
-        'wall street'
-      ];
-
-      const tvShowKeywords = [
-        'tv show',
-        'television show',
-        'reality show',
-        'sitcom',
-        'drama series',
-        'netflix show',
-        'hulu show',
-        'amazon prime show',
-        'disney+ show',
-        'hbo show',
-        'season finale',
-        'series finale',
-        'episode',
-        'cast member',
-        'tv star',
-        'television star',
-        'reality star',
-        'celebrity',
-        'actor',
-        'actress',
-        'host',
-        'contestant',
-        'eliminated',
-        'voted off',
-        'winner',
-        'runner-up',
-        'audition',
-        'premiere',
-        'ratings',
-        'viewership',
-        'nielsen',
         'bachelor',
         'bachelorette',
         'survivor',
         'big brother',
         'american idol',
-        'the voice',
-        'dancing with the stars',
-        'masked singer',
-        'talent show',
-        'game show'
+        // Enhanced sports filtering
+        'football',
+        'basketball',
+        'baseball',
+        'hockey',
+        'soccer',
+        'tennis',
+        'golf',
+        'olympics',
+        'world cup',
+        'super bowl',
+        'final four',
+        'march madness',
+        'playoffs',
+        'championship game',
+        'all-star',
+        'draft pick',
+        'free agent',
+        'trade deadline',
+        'injury report',
+        'coach fired',
+        'team owner',
+        'stadium',
+        'arena'
       ];
 
-      const allKeywords = [
-        ...sportsKeywords,
-        ...financeKeywords,
-        ...tvShowKeywords
-      ];
-
-      // Check if any keywords are in the title, description, or content
-      return !allKeywords.some(
+      // Check if any very specific keywords are in the title, description, or content
+      const hasExcludedKeyword = verySpecificKeywords.some(
         keyword =>
           title.includes(keyword) ||
           description.includes(keyword) ||
           content.includes(keyword)
       );
+
+      if (hasExcludedKeyword) {
+        return false;
+      }
+
+      return true;
     });
 
     return filteredArticles.map(

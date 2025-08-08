@@ -19,6 +19,7 @@ export default function Home() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
   const [usageInfo, setUsageInfo] = useState<any>(null);
+  const [generatingCartoons, setGeneratingCartoons] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -26,7 +27,7 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setInitialLoading(false);
       fetchNews();
-
+      
       // Fetch usage info
       try {
         const response = await fetch('/api/usage');
@@ -179,6 +180,29 @@ export default function Home() {
     }
   };
 
+  const handleGenerateCartoons = async () => {
+    setGeneratingCartoons(true);
+    try {
+      const response = await fetch('/api/generate-cartoons', {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Cartoon generation results:', data);
+        
+        // Refresh the page to show new cartoons
+        window.location.reload();
+      } else {
+        console.error('Failed to generate cartoons');
+      }
+    } catch (error) {
+      console.error('Error generating cartoons:', error);
+    } finally {
+      setGeneratingCartoons(false);
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -251,15 +275,19 @@ export default function Home() {
           {usageInfo && (
             <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
               <div className="flex items-center justify-center space-x-4">
-                <span>
-                  API Usage: {usageInfo.percentageUsed}% (
-                  {usageInfo.remainingCalls} remaining)
-                </span>
+                <span>API Usage: {usageInfo.percentageUsed}% ({usageInfo.remainingCalls} remaining)</span>
                 <span>•</span>
                 <span>Cache: {usageInfo.cacheStrategy.duration}</span>
               </div>
             </div>
           )}
+          <button
+            onClick={handleGenerateCartoons}
+            disabled={generatingCartoons}
+            className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center justify-center mx-auto">
+            <span className="mr-2">🎨</span>
+            {generatingCartoons ? 'Generating Cartoons...' : 'Generate Cartoons'}
+          </button>
         </div>
 
         {/* News Grid */}

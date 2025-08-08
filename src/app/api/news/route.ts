@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { NewsApiResponse, NewsArticle } from '@/types/news';
-import { getCachedNews, setCachedNews, getAllCachedPages } from '@/lib/newsCache';
+import {
+  getCachedNews,
+  setCachedNews,
+  getAllCachedPages
+} from '@/lib/newsCache';
 
 export async function GET(request: Request) {
   try {
@@ -41,7 +45,9 @@ export async function GET(request: Request) {
     if (page === 1 && !forceRefresh) {
       const cachedPages = await getAllCachedPages(today);
       if (cachedPages.length > 0) {
-        console.log('Found cached pages, serving from cache instead of making API call');
+        console.log(
+          'Found cached pages, serving from cache instead of making API call'
+        );
         // Return the first cached page we have
         const firstCachedPage = Math.min(...cachedPages);
         const cachedArticles = await getCachedNews(today, firstCachedPage);
@@ -55,7 +61,11 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log(`Making GNews API request for page ${page} (category: ${category}) (API calls remaining: ~${100 - Math.floor(Date.now() / (24 * 60 * 60 * 1000))} today)`);
+    console.log(
+      `Making GNews API request for page ${page} (category: ${category}) (API calls remaining: ~${
+        100 - Math.floor(Date.now() / (24 * 60 * 60 * 1000))
+      } today)`
+    );
 
     const response = await fetch(
       `https://gnews.io/api/v4/top-headlines?category=${category}&lang=en&country=us&max=100&apikey=${apiKey}`
