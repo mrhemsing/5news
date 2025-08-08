@@ -30,12 +30,22 @@ export default function NewsCard({
     null
   );
   const [isStopping, setIsStopping] = useState(false);
+  const [useProxy, setUseProxy] = useState(true);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Clear cartoon URL when image fails to load
   const handleImageError = () => {
     console.log('Cartoon image failed to load:', cartoonUrl);
     setImageError(true);
+    
+    // If we're using proxy, try direct URL as fallback
+    if (useProxy && cartoonUrl) {
+      console.log('Trying direct URL as fallback');
+      setUseProxy(false);
+      setImageError(false);
+      return; // Don't clear cartoonUrl, let it retry with direct URL
+    }
+    
     setCartoonUrl(null); // Clear the URL to prevent further attempts
 
     // Retry cartoon generation if we haven't exceeded max retries
@@ -43,6 +53,7 @@ export default function NewsCard({
       console.log('Retrying cartoon generation due to image load failure');
       setTimeout(() => {
         setRetryCount(retryCount + 1);
+        setUseProxy(true); // Reset to use proxy for next attempt
         generateCartoon(article.title, retryCount + 1);
       }, 2000); // Wait 2 seconds before retry
     }
@@ -321,7 +332,7 @@ export default function NewsCard({
               )}
               {cartoonUrl && !imageError ? (
                 <Image
-                  src={cartoonUrl}
+                  src={useProxy ? `/api/proxy-image?url=${encodeURIComponent(cartoonUrl)}` : cartoonUrl}
                   alt={article.title}
                   width={120}
                   height={80}

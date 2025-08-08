@@ -28,7 +28,7 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setInitialLoading(false);
       fetchNews();
-      
+
       // Fetch usage info
       try {
         const response = await fetch('/api/usage');
@@ -187,11 +187,11 @@ export default function Home() {
       const response = await fetch('/api/generate-cartoons', {
         method: 'POST'
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('Cartoon generation results:', data);
-        
+
         // Refresh the page to show new cartoons
         window.location.reload();
       } else {
@@ -210,7 +210,7 @@ export default function Home() {
       const response = await fetch('/api/test-replicate');
       const data = await response.json();
       console.log('Replicate API test result:', data);
-      
+
       if (data.success) {
         alert('✅ Replicate API is working!');
       } else {

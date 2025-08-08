@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
-    
+
     if (!REPLICATE_API_TOKEN) {
       return NextResponse.json({
         success: false,
@@ -19,10 +19,13 @@ export async function GET() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        version: '39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b',
+        version:
+          '39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b',
         input: {
-          prompt: 'cartoon illustration, childlike drawing style, simple lines, bright vibrant colors, cute and friendly, showing: a happy sun, colorful background, fun and playful, kid-friendly art',
-          negative_prompt: 'realistic, photographic, adult, complex, dark, scary, blurry, text, words, letters',
+          prompt:
+            'cartoon illustration, childlike drawing style, simple lines, bright vibrant colors, cute and friendly, showing: a happy sun, colorful background, fun and playful, kid-friendly art',
+          negative_prompt:
+            'realistic, photographic, adult, complex, dark, scary, blurry, text, words, letters',
           num_inference_steps: 10,
           guidance_scale: 7.5,
           width: 512,
@@ -42,7 +45,7 @@ export async function GET() {
     }
 
     const prediction = await response.json();
-    
+
     return NextResponse.json({
       success: true,
       message: 'Replicate API is working',
