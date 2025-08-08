@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     }
 
     const response = await fetch(
-      `https://gnews.io/api/v4/top-headlines?lang=en&country=us&max=100&apikey=${apiKey}`
+      `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=100&apikey=${apiKey}`
     );
 
     if (!response.ok) {
@@ -65,8 +65,63 @@ export async function GET(request: Request) {
 
     console.log('Before filtering:', articles.length, 'articles');
 
-    // No filtering for now - return all articles
-    const filteredArticles = articles;
+    // Gentle filtering - only remove the most inappropriate content
+    const filteredArticles = articles.filter(article => {
+      const title = article.title.toLowerCase();
+      const description = (article.description || '').toLowerCase();
+      const content = (article.content || '').toLowerCase();
+
+      // Skip single word headlines
+      const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
+      if (cleanTitle.split(' ').length <= 1) {
+        console.log('Filtered out single word:', article.title);
+        return false;
+      }
+
+      // Skip articles from specific sources that are not kid-friendly
+      const sourceName = (article.source?.name || '').toLowerCase();
+      const articleUrl = (article.url || '').toLowerCase();
+
+      if (
+        sourceName.includes('breitbart') ||
+        sourceName.includes('risbb.cc') ||
+        sourceName.includes('cult of mac') ||
+        sourceName.includes('bleeding cool') ||
+        sourceName.includes('smbc-comics.com') ||
+        sourceName.includes('sporting news') ||
+        articleUrl.includes('breitbart.com') ||
+        articleUrl.includes('risbb.cc') ||
+        articleUrl.includes('cultofmac.com') ||
+        articleUrl.includes('bleedingcool.com') ||
+        articleUrl.includes('smbc-comics.com') ||
+        articleUrl.includes('sportingnews.com')
+      ) {
+        console.log('Filtered out source:', article.source?.name, 'URL:', article.url);
+        return false;
+      }
+
+      // Only filter out very specific sports/finance content
+      const verySpecificKeywords = [
+        'nfl', 'nba', 'mlb', 'nhl', 'ncaa', 'championship', 'tournament', 'playoff',
+        'bitcoin', 'crypto', 'cryptocurrency', 'ethereum', 'nasdaq', 'dow', 's&p',
+        'bachelor', 'bachelorette', 'survivor', 'big brother', 'american idol'
+      ];
+
+      // Check if any very specific keywords are in the title, description, or content
+      const hasExcludedKeyword = verySpecificKeywords.some(
+        keyword =>
+          title.includes(keyword) ||
+          description.includes(keyword) ||
+          content.includes(keyword)
+      );
+
+      if (hasExcludedKeyword) {
+        console.log('Filtered out keyword match:', article.title);
+        return false;
+      }
+
+      return true;
+    });
 
     console.log('After filtering:', filteredArticles.length, 'articles');
 
