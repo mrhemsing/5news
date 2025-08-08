@@ -143,46 +143,7 @@ export async function GET(request: Request) {
         }
 
         // Whitelist of approved news sources (exact matches only)
-        const approvedSources = [
-          'the washington post',
-          'washington post',
-          'washingtonpost',
-          'the new york times',
-          'new york times',
-          'nytimes',
-          'los angeles times',
-          'latimes',
-          'abc news',
-          'abcnews',
-          'npr',
-          'nbc news',
-          'nbcnews',
-          'space',
-          'space.com',
-          'daily mail',
-          'dailymail',
-          'wired',
-          'wired.com',
-          'usa today',
-          'usatoday',
-          'msn',
-          'msn.com',
-          'fox news',
-          'foxnews',
-          'the guardian',
-          'guardian',
-          'bbc',
-          'bbc.com',
-          'al jazeera',
-          'aljazeera',
-          'cbs news',
-          'ars technica',
-          'the verge',
-          'ap news',
-          'cnn',
-          'reuters',
-          'the hollywood reporter'
-        ];
+        const approvedSources = ['abc news', 'abcnews'];
 
         // Check if the source name matches any approved source
         const isApprovedSource = approvedSources.some(approvedSource => {
@@ -609,46 +570,7 @@ function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
   const filteredArticles: NewsArticle[] = [];
 
   // Whitelist of approved news sources (exact matches only)
-  const approvedSources = [
-    'the washington post',
-    'washington post',
-    'washingtonpost',
-    'the new york times',
-    'new york times',
-    'nytimes',
-    'los angeles times',
-    'latimes',
-    'abc news',
-    'abcnews',
-    'npr',
-    'nbc news',
-    'nbcnews',
-    'space',
-    'space.com',
-    'daily mail',
-    'dailymail',
-    'wired',
-    'wired.com',
-    'usa today',
-    'usatoday',
-    'msn',
-    'msn.com',
-    'fox news',
-    'foxnews',
-    'the guardian',
-    'guardian',
-    'bbc',
-    'bbc.com',
-    'al jazeera',
-    'aljazeera',
-    'cbs news',
-    'ars technica',
-    'the verge',
-    'ap news',
-    'cnn',
-    'reuters',
-    'the hollywood reporter'
-  ];
+  const approvedSources = ['abc news', 'abcnews'];
 
   articles.forEach(article => {
     // Skip single word headlines
