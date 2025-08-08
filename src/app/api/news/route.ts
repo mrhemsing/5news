@@ -21,7 +21,8 @@ export async function GET(request: Request) {
       const cachedArticles = await getCachedNews(today, page);
       if (cachedArticles) {
         console.log(`Returning cached news data for page ${page}`);
-        existingArticles = cachedArticles;
+        // Apply whitelist filtering to cached articles as well
+        existingArticles = filterByWhitelist(cachedArticles);
       }
     }
 
@@ -37,7 +38,8 @@ export async function GET(request: Request) {
         const firstCachedPage = Math.min(...cachedPages);
         const cachedArticles = await getCachedNews(today, firstCachedPage);
         if (cachedArticles) {
-          existingArticles = cachedArticles;
+          // Apply whitelist filtering to cached articles as well
+          existingArticles = filterByWhitelist(cachedArticles);
         }
       }
     }
@@ -93,7 +95,7 @@ export async function GET(request: Request) {
         mergedArticles.length
       );
 
-      // Gentle filtering - only remove the most inappropriate content
+      // Whitelist filtering - only allow articles from approved news sources
       const filteredArticles = mergedArticles.filter(article => {
         // Skip single word headlines
         const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
@@ -102,26 +104,57 @@ export async function GET(request: Request) {
           return false;
         }
 
-        // Skip articles from specific sources that are not kid-friendly
+        // Check if the article is from an approved source
         const sourceName = (article.source?.name || '').toLowerCase();
         const articleUrl = (article.url || '').toLowerCase();
 
-        if (
-          sourceName.includes('breitbart') ||
-          sourceName.includes('risbb.cc') ||
-          sourceName.includes('cult of mac') ||
-          sourceName.includes('bleeding cool') ||
-          sourceName.includes('smbc-comics.com') ||
-          sourceName.includes('sporting news') ||
-          articleUrl.includes('breitbart.com') ||
-          articleUrl.includes('risbb.cc') ||
-          articleUrl.includes('cultofmac.com') ||
-          articleUrl.includes('bleedingcool.com') ||
-          articleUrl.includes('smbc-comics.com') ||
-          articleUrl.includes('sportingnews.com')
-        ) {
+        // Whitelist of approved news sources
+        const approvedSources = [
+          'the washington post',
+          'washington post',
+          'washingtonpost',
+          'the new york times',
+          'new york times',
+          'nytimes',
+          'los angeles times',
+          'latimes',
+          'abc news',
+          'abcnews',
+          'npr',
+          'nbc news',
+          'nbcnews',
+          'space',
+          'space.com',
+          'daily mail',
+          'dailymail',
+          'yahoo.com',
+          'yahoo',
+          'wired',
+          'wired.com',
+          'usa today',
+          'usatoday',
+          'msn',
+          'msn.com',
+          'fox news',
+          'foxnews',
+          'the guardian',
+          'guardian',
+          'bbc',
+          'bbc.com',
+          'al jazeera',
+          'aljazeera'
+        ];
+
+        // Check if the source name matches any approved source
+        const isApprovedSource = approvedSources.some(
+          approvedSource =>
+            sourceName.includes(approvedSource) ||
+            articleUrl.includes(approvedSource.replace(/\s+/g, ''))
+        );
+
+        if (!isApprovedSource) {
           console.log(
-            'Filtered out source:',
+            'Filtered out non-approved source:',
             article.source?.name,
             'URL:',
             article.url
@@ -504,4 +537,78 @@ function mergeArticles(
   );
 
   return mergedArticles;
+}
+
+// Function to filter articles by whitelist of approved news sources
+function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
+  const filteredArticles: NewsArticle[] = [];
+
+  // Whitelist of approved news sources
+  const approvedSources = [
+    'the washington post',
+    'washington post',
+    'washingtonpost',
+    'the new york times',
+    'new york times',
+    'nytimes',
+    'los angeles times',
+    'latimes',
+    'abc news',
+    'abcnews',
+    'npr',
+    'nbc news',
+    'nbcnews',
+    'space',
+    'space.com',
+    'daily mail',
+    'dailymail',
+    'yahoo.com',
+    'yahoo',
+    'wired',
+    'wired.com',
+    'usa today',
+    'usatoday',
+    'msn',
+    'msn.com',
+    'fox news',
+    'foxnews',
+    'the guardian',
+    'guardian',
+    'bbc',
+    'bbc.com',
+    'al jazeera',
+    'aljazeera'
+  ];
+
+  articles.forEach(article => {
+    // Skip single word headlines
+    const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
+    if (cleanTitle.split(' ').length <= 1) {
+      console.log('Filtered out single word:', article.title);
+      return;
+    }
+
+    const sourceName = (article.source?.name || '').toLowerCase();
+    const articleUrl = (article.url || '').toLowerCase();
+
+    // Check if the source name matches any approved source
+    const isApprovedSource = approvedSources.some(
+      approvedSource =>
+        sourceName.includes(approvedSource) ||
+        articleUrl.includes(approvedSource.replace(/\s+/g, ''))
+    );
+
+    if (isApprovedSource) {
+      filteredArticles.push(article);
+    } else {
+      console.log(
+        'Filtered out non-approved source:',
+        article.source?.name,
+        'URL:',
+        article.url
+      );
+    }
+  });
+
+  return filteredArticles;
 }
