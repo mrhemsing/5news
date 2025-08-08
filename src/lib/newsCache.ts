@@ -8,13 +8,11 @@ export interface NewsCache {
   articles: NewsArticle[];
   created_at: string;
   page?: number;
-  category?: string;
 }
 
 export async function getCachedNews(
   date: string,
-  page: number = 1,
-  category?: string
+  page: number = 1
 ): Promise<NewsArticle[] | null> {
   try {
     if (!supabase) {
@@ -24,7 +22,7 @@ export async function getCachedNews(
 
     const { data, error } = await supabase
       .from('news_cache')
-      .select('articles, created_at, page, category')
+      .select('articles, created_at, page')
       .eq('date', date)
       .eq('page', page)
       .single();
@@ -42,7 +40,7 @@ export async function getCachedNews(
       return null;
     }
 
-    console.log(`Using cached news data for page ${page} (category: ${data.category || 'unknown'})`);
+    console.log(`Using cached news data for page ${page}`);
     return data.articles;
   } catch (error) {
     console.error('Error fetching cached news:', error);
@@ -53,8 +51,7 @@ export async function getCachedNews(
 export async function setCachedNews(
   date: string,
   articles: NewsArticle[],
-  page: number = 1,
-  category?: string
+  page: number = 1
 ): Promise<void> {
   try {
     if (!supabase) {
@@ -68,7 +65,6 @@ export async function setCachedNews(
         date,
         articles,
         page,
-        category,
         created_at: new Date().toISOString()
       },
       {
@@ -80,7 +76,7 @@ export async function setCachedNews(
     if (error) {
       console.error('Error caching news:', error);
     } else {
-      console.log(`News cached successfully for page ${page} (category: ${category || 'unknown'})`);
+      console.log(`News cached successfully for page ${page}`);
     }
   } catch (error) {
     console.error('Error setting cached news:', error);
