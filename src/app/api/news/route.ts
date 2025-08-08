@@ -20,10 +20,12 @@ export async function GET(request: Request) {
       const cachedArticles = await getCachedNews(today, page);
       if (cachedArticles) {
         console.log(`Returning cached news data for page ${page}`);
+
+        // Return all cached articles - let frontend handle pagination
         return NextResponse.json({
           articles: cachedArticles,
           totalResults: cachedArticles.length,
-          hasMore: cachedArticles.length >= 20 // Assume there might be more if we got 20+ articles
+          hasMore: false // Google News RSS doesn't support pagination
         });
       }
     }
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
           return NextResponse.json({
             articles: cachedArticles,
             totalResults: cachedArticles.length,
-            hasMore: cachedPages.length > 1 || cachedArticles.length >= 20
+            hasMore: false // Google News RSS doesn't support pagination
           });
         }
       }
@@ -323,13 +325,11 @@ export async function GET(request: Request) {
     // Cache the results for the current page
     await setCachedNews(today, articlesWithIds, page);
 
-    // More flexible logic: if we got articles and haven't reached the total, there might be more
-    const hasMore = articlesWithIds.length > 0 && articlesWithIds.length >= 20;
-
+    // Return all articles - let frontend handle pagination
     return NextResponse.json({
       articles: articlesWithIds,
       totalResults: articlesWithIds.length,
-      hasMore
+      hasMore: false // Google News RSS doesn't support pagination
     });
   } catch (error) {
     console.error('Error fetching news:', error);
@@ -380,14 +380,48 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
           itemMatches.forEach((item, itemIndex) => {
             // Extract link and text from <a> tags
             const linkMatch = item.match(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/);
-            const sourceMatch = item.match(/<font[^>]*>([^<]*)<\/font>/);
-
+            
             if (linkMatch) {
               const url = linkMatch[1];
               const title = decodeHtmlEntities(linkMatch[2].trim());
-              const sourceName = sourceMatch
-                ? decodeHtmlEntities(sourceMatch[1].trim())
-                : 'Google News';
+              
+              // Try multiple methods to extract source name
+              let sourceName = 'Google News';
+              
+              // Method 1: Look for <font> tags (common in Google News RSS)
+              const sourceMatch = item.match(/<font[^>]*>([^<]*)<\/font>/);
+              if (sourceMatch) {
+                sourceName = decodeHtmlEntities(sourceMatch[1].trim());
+              } else {
+                // Method 2: Look for source in the title (format: "Title - Source")
+                const titleParts = title.split(' - ');
+                if (titleParts.length > 1) {
+                  sourceName = titleParts[titleParts.length - 1].trim();
+                } else {
+                  // Method 3: Extract domain from URL
+                  try {
+                    const urlObj = new URL(url);
+                    const domain = urlObj.hostname.replace('www.', '');
+                    if (domain && domain !== 'news.google.com') {
+                      // Clean up domain name for display
+                      sourceName = domain
+                        .replace('.com', '')
+                        .replace('.org', '')
+                        .replace('.net', '')
+                        .replace('.co.uk', '')
+                        .replace('.io', '')
+                        .split('.')
+                        .pop() || domain;
+                    }
+                  } catch (e) {
+                    // If URL parsing fails, try to extract from the title
+                    const titleParts = title.split(' - ');
+                    if (titleParts.length > 1) {
+                      sourceName = titleParts[titleParts.length - 1].trim();
+                    }
+                  }
+                }
+              }
 
               // Skip if title is empty, just whitespace, or URL already processed
               if (title && title.length > 0 && !processedUrls.has(url)) {
@@ -437,6 +471,38 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                 )
               : '';
 
+            // Extract source name from URL or title
+            let sourceName = 'Google News';
+            
+            // Method 1: Look for source in the title (format: "Title - Source")
+            const titleParts = title.split(' - ');
+            if (titleParts.length > 1) {
+              sourceName = titleParts[titleParts.length - 1].trim();
+            } else {
+              // Method 2: Extract domain from URL
+              try {
+                const urlObj = new URL(url);
+                const domain = urlObj.hostname.replace('www.', '');
+                if (domain && domain !== 'news.google.com') {
+                  // Clean up domain name for display
+                  sourceName = domain
+                    .replace('.com', '')
+                    .replace('.org', '')
+                    .replace('.net', '')
+                    .replace('.co.uk', '')
+                    .replace('.io', '')
+                    .split('.')
+                    .pop() || domain;
+                }
+              } catch (e) {
+                // If URL parsing fails, try to extract from the title
+                const titleParts = title.split(' - ');
+                if (titleParts.length > 1) {
+                  sourceName = titleParts[titleParts.length - 1].trim();
+                }
+              }
+            }
+
             // Skip if URL already processed
             if (!processedUrls.has(url)) {
               processedUrls.add(url);
@@ -450,7 +516,7 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                 urlToImage: '',
                 source: {
                   id: null,
-                  name: 'Google News'
+                  name: sourceName
                 }
               });
             }
@@ -477,6 +543,38 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
               title.length > 0 &&
               !processedUrls.has(url)
             ) {
+              // Extract source name from URL or title
+              let sourceName = 'Google News';
+              
+              // Method 1: Look for source in the title (format: "Title - Source")
+              const titleParts = title.split(' - ');
+              if (titleParts.length > 1) {
+                sourceName = titleParts[titleParts.length - 1].trim();
+              } else {
+                // Method 2: Extract domain from URL
+                try {
+                  const urlObj = new URL(url);
+                  const domain = urlObj.hostname.replace('www.', '');
+                  if (domain && domain !== 'news.google.com') {
+                    // Clean up domain name for display
+                    sourceName = domain
+                      .replace('.com', '')
+                      .replace('.org', '')
+                      .replace('.net', '')
+                      .replace('.co.uk', '')
+                      .replace('.io', '')
+                      .split('.')
+                      .pop() || domain;
+                  }
+                } catch (e) {
+                  // If URL parsing fails, try to extract from the title
+                  const titleParts = title.split(' - ');
+                  if (titleParts.length > 1) {
+                    sourceName = titleParts[titleParts.length - 1].trim();
+                  }
+                }
+              }
+
               processedUrls.add(url);
               articles.push({
                 id: `link-${index}-${Date.now()}`,
@@ -488,7 +586,7 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                 urlToImage: '',
                 source: {
                   id: null,
-                  name: 'Google News'
+                  name: sourceName
                 }
               });
             }

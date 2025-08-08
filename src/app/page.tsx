@@ -69,6 +69,8 @@ export default function Home() {
       const threshold = documentHeight - 1000;
 
       if (scrollPosition >= threshold) {
+        // Set loadingMore to true immediately to prevent multiple requests
+        setLoadingMore(true);
         fetchNews(page + 1, true);
       }
     };
@@ -109,6 +111,12 @@ export default function Home() {
       const data = await response.json();
 
       if (append) {
+        // For pagination, we need to handle it on the frontend since API returns all articles
+        const articlesPerPage = 20;
+        const startIndex = (pageNum - 1) * articlesPerPage;
+        const endIndex = startIndex + articlesPerPage;
+        const newArticles = data.articles.slice(startIndex, endIndex);
+
         // Deduplicate articles before appending
         const existingUrls = new Set(articles.map(article => article.url));
         const existingTitles = new Set(
@@ -120,49 +128,65 @@ export default function Home() {
           )
         );
 
-        const newArticles = data.articles.filter((article: NewsArticle) => {
-          const url = article.url;
-          const cleanTitle = article.title
-            .toLowerCase()
-            .replace(/[^\w\s]/g, '')
-            .trim();
+        const filteredNewArticles = newArticles.filter(
+          (article: NewsArticle) => {
+            const url = article.url;
+            const cleanTitle = article.title
+              .toLowerCase()
+              .replace(/[^\w\s]/g, '')
+              .trim();
 
-          // Check if URL or title already exists
-          if (existingUrls.has(url)) {
-            console.log(
-              'Filtered out duplicate URL in frontend:',
-              article.title
-            );
-            return false;
+            // Check if URL or title already exists
+            if (existingUrls.has(url)) {
+              console.log(
+                'Filtered out duplicate URL in frontend:',
+                article.title
+              );
+              return false;
+            }
+
+            if (existingTitles.has(cleanTitle)) {
+              console.log(
+                'Filtered out duplicate title in frontend:',
+                article.title
+              );
+              return false;
+            }
+
+            return true;
           }
+        );
 
-          if (existingTitles.has(cleanTitle)) {
-            console.log(
-              'Filtered out duplicate title in frontend:',
-              article.title
-            );
-            return false;
-          }
+        setArticles(prev => [...prev, ...filteredNewArticles]);
+        setValidArticles(prev => [...prev, ...filteredNewArticles]);
 
-          return true;
-        });
-
-        setArticles(prev => [...prev, ...newArticles]);
-        setValidArticles(prev => [...prev, ...newArticles]);
-
-        // If no new articles were added, we've reached the end
-        if (newArticles.length === 0) {
+        // If no new articles were added or we've reached the end, we've reached the end
+        if (
+          filteredNewArticles.length === 0 ||
+          endIndex >= data.articles.length
+        ) {
           setHasMore(false);
+          setLoadingMore(false); // Reset loading state when no more articles
         }
       } else {
-        setArticles(data.articles);
-        setValidArticles(data.articles);
+        // For the first page, show the first 20 articles
+        const articlesPerPage = 20;
+        const initialArticles = data.articles.slice(0, articlesPerPage);
+        setArticles(initialArticles);
+        setValidArticles(initialArticles);
       }
 
-      // Only set hasMore to true if we actually got articles and there might be more
-      const hasMoreArticles =
-        data.articles && data.articles.length > 0 && data.hasMore;
+      // Set hasMore based on whether there are more articles available
+      const articlesPerPage = 20;
+      const currentEndIndex = pageNum * articlesPerPage;
+      const hasMoreArticles = currentEndIndex < data.articles.length;
       setHasMore(hasMoreArticles);
+
+      // If no articles returned and we're loading more, reset the loading state
+      if (append && (!data.articles || data.articles.length === 0)) {
+        setLoadingMore(false);
+      }
+
       setPage(pageNum);
     } catch (err) {
       setError('Failed to load news. Please try again later.');
@@ -248,7 +272,7 @@ export default function Home() {
           <div className="flex justify-center mb-4">
             <Logo />
           </div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">5News</h1>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">5+News</h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
             TODAY&apos;S TOP HEADLINES
             <br className="block md:hidden" />
