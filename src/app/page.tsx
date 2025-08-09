@@ -102,54 +102,12 @@ export default function Home() {
         const endIndex = startIndex + articlesPerPage;
         const newArticles = data.articles.slice(startIndex, endIndex);
 
-        // Deduplicate articles before appending
-        const existingUrls = new Set(articles.map(article => article.url));
-        const existingTitles = new Set(
-          articles.map(article =>
-            article.title
-              .toLowerCase()
-              .replace(/[^\w\s]/g, '')
-              .trim()
-          )
-        );
-
-        const filteredNewArticles = newArticles.filter(
-          (article: NewsArticle) => {
-            const url = article.url;
-            const cleanTitle = article.title
-              .toLowerCase()
-              .replace(/[^\w\s]/g, '')
-              .trim();
-
-            // Check if URL or title already exists
-            if (existingUrls.has(url)) {
-              console.log(
-                'Filtered out duplicate URL in frontend:',
-                article.title
-              );
-              return false;
-            }
-
-            if (existingTitles.has(cleanTitle)) {
-              console.log(
-                'Filtered out duplicate title in frontend:',
-                article.title
-              );
-              return false;
-            }
-
-            return true;
-          }
-        );
-
-        setArticles(prev => [...prev, ...filteredNewArticles]);
-        setValidArticles(prev => [...prev, ...filteredNewArticles]);
+        // Simply append new articles - API already handles deduplication and sorting
+        setArticles(prev => [...prev, ...newArticles]);
+        setValidArticles(prev => [...prev, ...newArticles]);
 
         // If no new articles were added or we've reached the end, we've reached the end
-        if (
-          filteredNewArticles.length === 0 ||
-          endIndex >= data.articles.length
-        ) {
+        if (newArticles.length === 0 || endIndex >= data.articles.length) {
           setHasMore(false);
           setLoadingMore(false); // Reset loading state when no more articles
         }
