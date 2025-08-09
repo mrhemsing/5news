@@ -266,7 +266,8 @@ export default function Home() {
                 background: 'linear-gradient(135deg, #2d3748 0%, #1a202c 100%)',
                 border: '3px solid #4a5568',
                 boxShadow:
-                  '0 4px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
+                  '0 4px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+                maxWidth: '90vw'
               }}>
               {/* Top left bolt */}
               <div className="absolute top-2 left-2 w-3 h-3 md:w-4 md:h-4 bg-gray-600 rounded-full shadow-lg flex items-center justify-center">
@@ -279,7 +280,7 @@ export default function Home() {
               </div>
 
               <span
-                className="chalk-text text-white font-bold text-lg md:text-xl tracking-wide"
+                className="chalk-text text-white font-bold text-base md:text-xl tracking-wide"
                 style={{
                   fontFamily:
                     '"Eraser", "Indie Flower", "Chalkduster", "Chalkboard", "Comic Sans MS", "Comic Sans", cursive',
@@ -354,6 +355,35 @@ export default function Home() {
                     transform: 'rotate(0.6deg)',
                     display: 'inline-block'
                   }}>
+                  T
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.2deg)',
+                    display: 'inline-block'
+                  }}>
+                  O
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.3deg)',
+                    display: 'inline-block'
+                  }}>
+                  P
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.4deg)',
+                    display: 'inline-block',
+                    marginRight: '0.3em'
+                  }}>
+                  {' '}
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.6deg)',
+                    display: 'inline-block'
+                  }}>
                   A
                 </span>
                 <span
@@ -406,6 +436,7 @@ export default function Home() {
                   }}>
                   S
                 </span>
+                <br className="block md:hidden" />
                 <span
                   style={{
                     transform: 'rotate(0.3deg)',
@@ -477,7 +508,6 @@ export default function Home() {
                   }}>
                   S
                 </span>
-                <br className="block md:hidden" />
                 <span
                   style={{
                     transform: 'rotate(-0.6deg)',
