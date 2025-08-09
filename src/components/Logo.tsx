@@ -19,7 +19,7 @@ export default function Logo() {
                 fontFamily:
                   'var(--font-comic-neue), "Comic Neue", "Comic Sans MS", cursive'
               }}>
-              NEWS
+              NEWZ
             </span>
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function Logo() {
                     'var(--font-architects-daughter), "Architects Daughter", cursive',
                   textShadow: '2px 2px 4px rgba(0,0,0,0.1)'
                 }}>
-                NEWS
+                NEWZ
               </span>
             </div>
           </div>
