@@ -713,7 +713,7 @@ export default function Home() {
 
         {/* Footer */}
         <div className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>Powered by NewsAPI.org, OpenAI and Eleven Labs.</p>
+          <p>Powered by Google News RSS, OpenAI and Eleven Labs.</p>
         </div>
       </div>
     </div>

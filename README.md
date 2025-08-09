@@ -14,7 +14,7 @@ A Next.js application that makes current news kid-friendly with AI-generated exp
 
 - **Next.js 14** - React framework
 - **Tailwind CSS** - Styling
-- **GNews API** - News headlines
+- **Google News RSS** - News headlines
 - **ElevenLabs** - Text-to-speech
 - **Replicate** - AI cartoon generation
 - **Supabase** - Database and caching
@@ -24,7 +24,7 @@ A Next.js application that makes current news kid-friendly with AI-generated exp
 
 Required environment variables:
 
-- `GNEWS_API_KEY` - GNews API key
+- No API key required - Uses Google News RSS feeds
 - `ELEVENLABS_API_KEY` - ElevenLabs API key
 - `REPLICATE_API_TOKEN` - Replicate API token
 - `SUPABASE_URL` - Supabase project URL

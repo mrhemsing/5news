@@ -5,121 +5,131 @@
 
 const fetch = require('node-fetch');
 
+// RSS parsing function
+function parseRSSFeed(xmlText) {
+  const articles = [];
+
+  // Simple regex-based parsing for RSS
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  const titleRegex = /<title>([^<]+)<\/title>/;
+  const linkRegex = /<link>([^<]+)<\/link>/;
+  const descriptionRegex = /<description>([^<]+)<\/description>/;
+  const sourceRegex = /<source[^>]*>([^<]+)<\/source>/;
+
+  let match;
+  while ((match = itemRegex.exec(xmlText)) !== null) {
+    const itemContent = match[1];
+
+    const titleMatch = itemContent.match(titleRegex);
+    const linkMatch = itemContent.match(linkRegex);
+    const descriptionMatch = itemContent.match(descriptionRegex);
+    const sourceMatch = itemContent.match(sourceRegex);
+
+    if (titleMatch && linkMatch) {
+      articles.push({
+        title: titleMatch[1].trim(),
+        url: linkMatch[1].trim(),
+        description: descriptionMatch ? descriptionMatch[1].trim() : '',
+        source: sourceMatch ? { name: sourceMatch[1].trim() } : { name: '' }
+      });
+    }
+  }
+
+  return articles;
+}
+
 async function getLatestHeadlines() {
   try {
-    const apiKey = process.env.GNEWS_API_KEY;
-    if (!apiKey) {
-      throw new Error('GNEWS_API_KEY not found');
+    // Use the same Google News RSS feeds as the main news API
+    const rssFeeds = [
+      'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en',
+      'https://news.google.com/rss/search?q=breaking+news&hl=en-US&gl=US&ceid=US:en',
+      'https://news.google.com/rss/search?q=latest+news&hl=en-US&gl=US&ceid=US:en'
+    ];
+
+    let allArticles = [];
+
+    for (const feedUrl of rssFeeds) {
+      try {
+        const response = await fetch(feedUrl);
+        if (!response.ok) {
+          console.warn(`Failed to fetch RSS feed: ${feedUrl}`);
+          continue;
+        }
+
+        const xmlText = await response.text();
+        const articles = parseRSSFeed(xmlText);
+        allArticles = allArticles.concat(articles);
+      } catch (error) {
+        console.warn(`Error fetching RSS feed ${feedUrl}:`, error);
+        continue;
+      }
     }
 
-    // Use the same API endpoint as the main news API
-    const response = await fetch(
-      `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=100&apikey=${apiKey}`
+    // Remove duplicates based on title
+    const uniqueArticles = allArticles.filter(
+      (article, index, self) =>
+        index === self.findIndex(a => a.title === article.title)
     );
 
-    if (!response.ok) {
-      throw new Error(`GNews API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // GNews returns articles directly, not wrapped in a response object
-    const articles = data.articles || data;
-
     // Use the same filtering logic as the main news API
-    const filteredArticles = articles.filter(article => {
-      const title = article.title.toLowerCase();
-      const description = (article.description || '').toLowerCase();
-      const content = (article.content || '').toLowerCase();
-
+    const filteredArticles = uniqueArticles.filter(article => {
       // Skip single word headlines
       const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
       if (cleanTitle.split(' ').length <= 1) {
         return false;
       }
 
-      // Skip articles from specific sources that are not kid-friendly
       const sourceName = (article.source?.name || '').toLowerCase();
       const articleUrl = (article.url || '').toLowerCase();
 
+      // Specifically exclude Yahoo Finance articles
       if (
-        sourceName.includes('breitbart') ||
-        sourceName.includes('risbb.cc') ||
-        sourceName.includes('cult of mac') ||
-        sourceName.includes('bleeding cool') ||
-        sourceName.includes('smbc-comics.com') ||
-        sourceName.includes('sporting news') ||
-        articleUrl.includes('breitbart.com') ||
-        articleUrl.includes('risbb.cc') ||
-        articleUrl.includes('cultofmac.com') ||
-        articleUrl.includes('bleedingcool.com') ||
-        articleUrl.includes('smbc-comics.com') ||
-        articleUrl.includes('sportingnews.com')
+        sourceName.includes('yahoo finance') ||
+        sourceName.includes('yahoo.finance') ||
+        articleUrl.includes('finance.yahoo.com') ||
+        articleUrl.includes('uk.finance.yahoo.com')
       ) {
         return false;
       }
 
-      // Only filter out very specific sports/finance content (same as main API)
-      const verySpecificKeywords = [
-        'nfl',
-        'nba',
-        'mlb',
-        'nhl',
-        'ncaa',
-        'championship',
-        'tournament',
-        'playoff',
-        'bitcoin',
-        'crypto',
-        'cryptocurrency',
-        'ethereum',
-        'nasdaq',
-        'dow',
-        's&p',
-        'bachelor',
-        'bachelorette',
-        'survivor',
-        'big brother',
-        'american idol',
-        // Enhanced sports filtering
-        'football',
-        'basketball',
-        'baseball',
-        'hockey',
-        'soccer',
-        'tennis',
-        'golf',
-        'olympics',
-        'world cup',
-        'super bowl',
-        'final four',
-        'march madness',
-        'playoffs',
-        'championship game',
-        'all-star',
-        'draft pick',
-        'free agent',
-        'trade deadline',
-        'injury report',
-        'coach fired',
-        'team owner',
-        'stadium',
-        'arena'
-      ];
+      // Whitelist of approved news sources (exact matches only)
+      const approvedSources = ['abc news', 'abcnews'];
 
-      // Check if any very specific keywords are in the title, description, or content
-      const hasExcludedKeyword = verySpecificKeywords.some(
-        keyword =>
-          title.includes(keyword) ||
-          description.includes(keyword) ||
-          content.includes(keyword)
-      );
+      // Check if the source name matches any approved source
+      const isApprovedSource = approvedSources.some(approvedSource => {
+        // Normalize both strings for comparison
+        const normalizedSourceName = sourceName.toLowerCase().trim();
+        const normalizedApprovedSource = approvedSource.toLowerCase().trim();
 
-      if (hasExcludedKeyword) {
+        // Use exact match only - no partial matching
+        if (normalizedSourceName === normalizedApprovedSource) {
+          return true;
+        }
+
+        // Check URL matching for domain-based sources (only for exact domain matches)
+        const domainMatch = articleUrl.includes(
+          approvedSource.replace(/\s+/g, '')
+        );
+        if (domainMatch) {
+          // Additional check to ensure it's not a partial match (e.g., "times" matching "prince william times")
+          const urlParts = articleUrl.split('.');
+          const sourceParts = approvedSource.replace(/\s+/g, '').split('.');
+
+          // Only allow if the main domain part matches exactly
+          if (urlParts.length > 0 && sourceParts.length > 0) {
+            const urlDomain = urlParts[0].replace('www', '');
+            const sourceDomain = sourceParts[0];
+            if (urlDomain === sourceDomain) {
+              return true;
+            }
+          }
+        }
+
         return false;
-      }
+      });
 
-      return true;
+      return isApprovedSource;
     });
 
     return filteredArticles.map(
