@@ -14,7 +14,7 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [failedArticles, setFailedArticles] = useState<Set<string>>(new Set());
-  const [validArticles, setValidArticles] = useState<NewsArticle[]>([]);
+  // Removed validArticles state - using only articles
   const [initialLoading, setInitialLoading] = useState(true);
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
 
@@ -23,11 +23,83 @@ export default function Home() {
       // Add 1-second fake delay on initial load
       await new Promise(resolve => setTimeout(resolve, 1000));
       setInitialLoading(false);
+
+      // Try to restore articles from localStorage first
+      const savedArticles = localStorage.getItem('5news-articles');
+      if (savedArticles) {
+        try {
+          const parsedData = JSON.parse(savedArticles);
+          // Check if data is recent (within last 2 hours) and has articles
+          const isRecent =
+            parsedData.timestamp &&
+            Date.now() - parsedData.timestamp < 2 * 60 * 60 * 1000;
+          if (
+            isRecent &&
+            Array.isArray(parsedData.articles) &&
+            parsedData.articles.length > 0
+          ) {
+            console.log(
+              'Restoring articles from localStorage:',
+              parsedData.articles.length
+            );
+            setArticles(parsedData.articles);
+            // Don't fetch if we have recent saved articles
+            return;
+          } else {
+            // Clean up old data
+            localStorage.removeItem('5news-articles');
+          }
+        } catch (error) {
+          console.error('Error parsing saved articles:', error);
+          localStorage.removeItem('5news-articles');
+        }
+      }
+
       fetchNews();
     };
 
     initializeApp();
   }, []);
+
+  // Save articles to localStorage whenever they change
+  useEffect(() => {
+    if (articles.length > 0) {
+      const articleData = {
+        articles,
+        timestamp: Date.now(),
+        count: articles.length
+      };
+      localStorage.setItem('5news-articles', JSON.stringify(articleData));
+    }
+  }, [articles]);
+
+  // Handle page visibility changes (when user returns to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && articles.length > 0) {
+        // Check if articles are stale (older than 1 hour)
+        const lastUpdate = localStorage.getItem('5news-articles');
+        if (lastUpdate) {
+          try {
+            const parsedData = JSON.parse(lastUpdate);
+            const isStale =
+              parsedData.timestamp &&
+              Date.now() - parsedData.timestamp > 60 * 60 * 1000;
+            if (isStale) {
+              console.log('Articles are stale, refreshing...');
+              fetchNews(1, false, true);
+            }
+          } catch (error) {
+            console.error('Error checking article freshness:', error);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [articles]);
 
   // Set up automatic background refresh every 6 hours (reduced from 1 hour to save API calls)
   useEffect(() => {
@@ -70,6 +142,12 @@ export default function Home() {
     forceRefresh = false
   ) => {
     try {
+      // Don't fetch if we already have articles and this isn't a force refresh
+      if (!forceRefresh && pageNum === 1 && articles.length > 0) {
+        console.log('Articles already loaded, skipping fetch');
+        return;
+      }
+
       if (pageNum === 1) {
         setLoading(true);
       } else {
@@ -102,21 +180,41 @@ export default function Home() {
         const endIndex = startIndex + articlesPerPage;
         const newArticles = data.articles.slice(startIndex, endIndex);
 
-        // Simply append new articles - API already handles deduplication and sorting
-        setArticles(prev => [...prev, ...newArticles]);
-        setValidArticles(prev => [...prev, ...newArticles]);
+        // Check if we already have these articles to prevent duplicates
+        const existingUrls = new Set(
+          articles.map((article: NewsArticle) => article.url)
+        );
+        const uniqueNewArticles = newArticles.filter(
+          (article: NewsArticle) => !existingUrls.has(article.url)
+        );
+
+        if (uniqueNewArticles.length > 0) {
+          // Simply append new articles - API already handles deduplication and sorting
+          setArticles(prev => [...prev, ...uniqueNewArticles]);
+        }
 
         // If no new articles were added or we've reached the end, we've reached the end
-        if (newArticles.length === 0 || endIndex >= data.articles.length) {
+        if (
+          uniqueNewArticles.length === 0 ||
+          endIndex >= data.articles.length
+        ) {
           setHasMore(false);
           setLoadingMore(false); // Reset loading state when no more articles
         }
       } else {
-        // For the first page, show the first 20 articles
+        // For the first page or force refresh, replace all articles
         const articlesPerPage = 20;
         const initialArticles = data.articles.slice(0, articlesPerPage);
         setArticles(initialArticles);
-        setValidArticles(initialArticles);
+
+        // Reset pagination state
+        setPage(1);
+        setHasMore(data.articles.length > articlesPerPage);
+
+        // Clear localStorage on force refresh to ensure fresh state
+        if (forceRefresh) {
+          localStorage.removeItem('5news-articles');
+        }
       }
 
       // Set hasMore based on whether there are more articles available
@@ -141,7 +239,7 @@ export default function Home() {
   };
 
   const handleExplain = (articleId: string, explanation: string) => {
-    setValidArticles(prevArticles =>
+    setArticles(prevArticles =>
       prevArticles.map(article =>
         article.id === articleId
           ? { ...article, simpleExplanation: explanation }
@@ -822,11 +920,26 @@ export default function Home() {
                 Refreshing headlines...
               </div>
             )}
+
+            {/* Manual Refresh Button */}
+            <div className="mt-2 flex justify-center">
+              <button
+                onClick={() => {
+                  setBackgroundRefreshing(true);
+                  fetchNews(1, false, true).finally(() => {
+                    setBackgroundRefreshing(false);
+                  });
+                }}
+                className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition-colors duration-200 flex items-center">
+                <span className="mr-1">🔄</span>
+                Refresh Headlines
+              </button>
+            </div>
           </div>
 
           {/* News Grid */}
           <div className="max-w-4xl mx-auto space-y-6">
-            {validArticles
+            {articles
               .filter(article => !failedArticles.has(article.id))
               .map(article => (
                 <NewsCard
