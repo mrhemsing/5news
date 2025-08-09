@@ -30,7 +30,7 @@ export default function Logo() {
             <div className="flex gap-1 md:gap-2">
               {/* Block A - Light Wood */}
               <div
-                className="w-16 h-16 md:w-24 md:h-24 rounded-lg shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-300 flex items-center justify-center border-2"
+                className="w-20 h-20 md:w-24 md:h-24 rounded-lg shadow-lg transform rotate-1 hover:rotate-0 transition-transform duration-300 flex items-center justify-center border-2"
                 style={{
                   background:
                     'linear-gradient(135deg, #D2B48C 0%, #DEB887 50%, #F5DEB3 100%)',
@@ -76,7 +76,7 @@ export default function Logo() {
 
               {/* Block B - Light Wood */}
               <div
-                className="w-16 h-16 md:w-24 md:h-24 rounded-lg shadow-lg transform -rotate-2 hover:rotate-0 transition-transform duration-300 flex items-center justify-center border-2"
+                className="w-20 h-20 md:w-24 md:h-24 rounded-lg shadow-lg transform -rotate-2 hover:rotate-0 transition-transform duration-300 flex items-center justify-center border-2"
                 style={{
                   background:
                     'linear-gradient(135deg, #D2B48C 0%, #DEB887 50%, #F5DEB3 100%)',
@@ -122,7 +122,7 @@ export default function Logo() {
 
               {/* Block C - Light Wood */}
               <div
-                className="w-16 h-16 md:w-24 md:h-24 rounded-lg shadow-lg transform rotate-1 hover:rotate-0 transition-transform duration-300 flex items-center justify-center border-2"
+                className="w-20 h-20 md:w-24 md:h-24 rounded-lg shadow-lg transform rotate-1 hover:rotate-0 transition-transform duration-300 flex items-center justify-center border-2"
                 style={{
                   background:
                     'linear-gradient(135deg, #D2B48C 0%, #DEB887 50%, #F5DEB3 100%)',
