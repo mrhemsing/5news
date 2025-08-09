@@ -8,29 +8,42 @@ import {
 } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  preload: true
+});
+
 const comicNeue = Comic_Neue({
   subsets: ['latin'],
   weight: ['300', '400', '700'],
-  variable: '--font-comic-neue'
+  variable: '--font-comic-neue',
+  display: 'swap',
+  preload: true
 });
 
 const architectsDaughter = Architects_Daughter({
   subsets: ['latin'],
   weight: ['400'],
-  variable: '--font-architects-daughter'
+  variable: '--font-architects-daughter',
+  display: 'swap',
+  preload: true
 });
 
 const bubblegumSans = Bubblegum_Sans({
   subsets: ['latin'],
   weight: ['400'],
-  variable: '--font-bubblegum-sans'
+  variable: '--font-bubblegum-sans',
+  display: 'swap',
+  preload: true
 });
 
 const indieFlower = Indie_Flower({
   subsets: ['latin'],
   weight: ['400'],
-  variable: '--font-indie-flower'
+  variable: '--font-indie-flower',
+  display: 'swap',
+  preload: true
 });
 
 export const metadata: Metadata = {
@@ -48,6 +61,40 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Preload critical fonts */}
+        <link
+          rel="preload"
+          href="/fonts/EraserRegular.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        {/* Font loading optimization script */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Font loading optimization
+              if ('fonts' in document) {
+                Promise.all([
+                  document.fonts.load('1em Eraser'),
+                  document.fonts.load('1em Comic Neue'),
+                  document.fonts.load('1em Architects Daughter'),
+                  document.fonts.load('1em Bubblegum Sans'),
+                  document.fonts.load('1em Indie Flower')
+                ]).then(() => {
+                  document.documentElement.classList.add('fonts-loaded');
+                });
+              } else {
+                // Fallback for older browsers
+                setTimeout(() => {
+                  document.documentElement.classList.add('fonts-loaded');
+                }, 100);
+              }
+            `
+          }}
+        />
+      </head>
       <body
         className={`${inter.className} ${comicNeue.variable} ${architectsDaughter.variable} ${bubblegumSans.variable} ${indieFlower.variable}`}>
         {children}

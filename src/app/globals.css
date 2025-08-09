@@ -11,9 +11,18 @@
   font-display: swap;
 }
 
+/* Font fallback system */
+@font-face {
+  font-family: 'EraserFallback';
+  src: local('Comic Sans MS'), local('Comic Neue'), local('cursive');
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --font-fallback: 'EraserFallback', 'Comic Sans MS', 'Comic Neue', 'Arial',
+    sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -26,6 +35,45 @@
 body {
   color: var(--foreground);
   background: var(--background);
+  /* Ensure fonts are loaded before rendering */
+  font-display: swap;
+}
+
+/* Font loading optimization */
+html:not(.fonts-loaded) {
+  /* Show fallback fonts while loading */
+  font-family: var(--font-fallback) !important;
+}
+
+html:not(.fonts-loaded) * {
+  /* Ensure all elements use fallback fonts during loading */
+  font-family: var(--font-fallback) !important;
+}
+
+html.fonts-loaded {
+  /* Smooth transition when fonts are loaded */
+  transition: all 0.3s ease;
+}
+
+/* Prevent layout shift during font loading */
+.kid-headline,
+.chalk-text,
+.news-text {
+  /* Use consistent line-height to prevent layout shift */
+  line-height: 1.2;
+  /* Ensure consistent spacing */
+  min-height: 1.2em;
+}
+
+/* Font loading states */
+.font-loading {
+  font-family: var(--font-fallback);
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.font-loaded {
+  opacity: 1;
 }
 
 @layer utilities {
