@@ -381,12 +381,12 @@ export default function NewsCard({
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
               <div className="flex-1 min-w-0">
                 <h3
-                  className="text-lg md:text-2xl font-semibold text-gray-900 dark:text-white mb-0 leading-tight"
+                  className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-0 leading-tight"
                   style={{
                     fontFamily:
                       'var(--font-architects-daughter), "Architects Daughter", "Comic Sans MS", cursive',
                     textTransform: 'uppercase',
-                    fontWeight: '700',
+                    fontWeight: '900',
                     letterSpacing: '-0.02em',
                     lineHeight: '1.1'
                   }}>
