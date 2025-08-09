@@ -4,9 +4,8 @@ import { getCachedCartoon } from '@/lib/cartoonCache';
 
 export async function POST() {
   try {
-    // Get today's headlines from cache
-    const today = new Date().toISOString().split('T')[0];
-    const headlines = await getCachedNews(today, 1);
+    // Get headlines from cache (last 48 hours)
+    const headlines = await getCachedNews();
 
     if (!headlines || headlines.length === 0) {
       return NextResponse.json({
