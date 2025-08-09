@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { NewsArticle } from '@/types/news';
 
-// News cache using Supabase
+// News cache using Supabase with 48-hour retention
 export interface NewsCache {
   id: string;
   date: string;
@@ -10,73 +10,82 @@ export interface NewsCache {
   page?: number;
 }
 
-export async function getCachedNews(
-  date: string,
-  page: number = 1
-): Promise<NewsArticle[] | null> {
+export async function getCachedNews(): Promise<NewsArticle[] | null> {
   try {
     if (!supabase) {
       console.log('Supabase not configured, skipping news cache lookup');
       return null;
     }
 
+    // Calculate 48 hours ago to get articles from the last 48 hours
+    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+    // Query for articles from the last 48 hours, not just today
     const { data, error } = await supabase
       .from('news_cache')
       .select('articles, created_at')
-      .eq('date', date)
-      .single();
+      .gte('created_at', fortyEightHoursAgo.toISOString())
+      .order('created_at', { ascending: false });
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
       return null;
     }
 
-    // Check if cache is less than 30 minutes old (for refresh frequency)
-    const cacheAge = Date.now() - new Date(data.created_at).getTime();
-    const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
+    // Merge all articles from the last 48 hours
+    let allArticles: NewsArticle[] = [];
+    data.forEach(cacheEntry => {
+      if (cacheEntry.articles && Array.isArray(cacheEntry.articles)) {
+        allArticles = [...allArticles, ...cacheEntry.articles];
+      }
+    });
 
-    if (cacheAge > thirtyMinutes) {
-      console.log(
-        `News cache for page ${page} is older than 30 minutes, fetching fresh data`
-      );
-      return null;
-    }
+    // Remove duplicates based on URL
+    const uniqueArticles = allArticles.filter(
+      (article, index, self) =>
+        index === self.findIndex(a => a.url === article.url)
+    );
 
-    console.log(`Using cached news data for page ${page}`);
-    return data.articles;
+    // Filter articles to only include those from the last 48 hours
+    const fortyEightHoursAgoDate = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const recentArticles = uniqueArticles.filter(article => {
+      const articleDate = new Date(article.publishedAt);
+      return articleDate > fortyEightHoursAgoDate;
+    });
+
+    // Sort by publishedAt (newest first)
+    recentArticles.sort(
+      (a, b) =>
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
+
+    console.log(
+      `Retrieved ${recentArticles.length} articles from last 48 hours`
+    );
+    return recentArticles;
   } catch (error) {
     console.error('Error fetching cached news:', error);
     return null;
   }
 }
 
-export async function setCachedNews(
-  date: string,
-  articles: NewsArticle[],
-  page: number = 1
-): Promise<void> {
+export async function setCachedNews(articles: NewsArticle[]): Promise<void> {
   try {
     if (!supabase) {
       console.log('Supabase not configured, skipping news cache storage');
       return;
     }
 
-    // Use upsert to handle duplicate dates gracefully (removed page from conflict)
-    const { error } = await supabase.from('news_cache').upsert(
-      {
-        date,
-        articles,
-        created_at: new Date().toISOString()
-      },
-      {
-        onConflict: 'date',
-        ignoreDuplicates: false
-      }
-    );
+    // Store articles with current timestamp for 48-hour retention
+    const { error } = await supabase.from('news_cache').insert({
+      date: new Date().toISOString().split('T')[0], // Keep date for organization
+      articles,
+      created_at: new Date().toISOString()
+    });
 
     if (error) {
       console.error('Error caching news:', error);
     } else {
-      console.log(`News cached successfully for page ${page}`);
+      console.log(`News cached successfully with ${articles.length} articles`);
     }
   } catch (error) {
     console.error('Error setting cached news:', error);

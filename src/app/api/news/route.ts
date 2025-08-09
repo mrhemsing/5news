@@ -12,13 +12,10 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const forceRefresh = searchParams.get('refresh') === 'true';
 
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0];
-
     // Try to get cached news first (for any page, unless force refresh)
     let existingArticles: NewsArticle[] = [];
     if (!forceRefresh) {
-      const cachedArticles = await getCachedNews(today, page);
+      const cachedArticles = await getCachedNews();
       if (cachedArticles) {
         console.log(`Returning cached news data for page ${page}`);
         // Apply whitelist filtering to cached articles as well
@@ -29,14 +26,13 @@ export async function GET(request: Request) {
     // If we're requesting page 1 and don't have it cached, check if we have other pages
     // This helps when users refresh and we can serve from cache instead of making new API calls
     if (page === 1 && !forceRefresh && existingArticles.length === 0) {
-      const cachedPages = await getAllCachedPages(today);
+      const cachedPages = await getAllCachedPages(new Date().toISOString().split('T')[0]);
       if (cachedPages.length > 0) {
         console.log(
           'Found cached pages, serving from cache instead of making API call'
         );
         // Return the first cached page we have
-        const firstCachedPage = Math.min(...cachedPages);
-        const cachedArticles = await getCachedNews(today, firstCachedPage);
+        const cachedArticles = await getCachedNews();
         if (cachedArticles) {
           // Apply whitelist filtering to cached articles as well
           existingArticles = filterByWhitelist(cachedArticles);
@@ -240,7 +236,7 @@ export async function GET(request: Request) {
       );
 
       // Cache the merged results
-      await setCachedNews(today, allArticles, page);
+      await setCachedNews(allArticles);
 
       // Return all articles - let frontend handle pagination
       return NextResponse.json({
