@@ -254,16 +254,9 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-5">
             <Logo />
           </div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">5+News</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
-            TODAY&apos;S TOP HEADLINES
-            <br className="block md:hidden" />
-            <span className="hidden md:inline"> </span>
-            MADE KID FRIENDLY
-          </p>
           {backgroundRefreshing && (
             <div className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center justify-center">
               <span className="animate-spin mr-1">🔄</span>

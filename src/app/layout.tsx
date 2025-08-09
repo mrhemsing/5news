@@ -3,7 +3,8 @@ import {
   Inter,
   Comic_Neue,
   Architects_Daughter,
-  Bubblegum_Sans
+  Bubblegum_Sans,
+  Indie_Flower
 } from 'next/font/google';
 import './globals.css';
 
@@ -26,6 +27,12 @@ const bubblegumSans = Bubblegum_Sans({
   variable: '--font-bubblegum-sans'
 });
 
+const indieFlower = Indie_Flower({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-indie-flower'
+});
+
 export const metadata: Metadata = {
   title: '5News - News Explained Simply',
   description: 'Get the top news headlines explained in simple terms',
@@ -42,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.className} ${comicNeue.variable} ${architectsDaughter.variable} ${bubblegumSans.variable}`}>
+        className={`${inter.className} ${comicNeue.variable} ${architectsDaughter.variable} ${bubblegumSans.variable} ${indieFlower.variable}`}>
         {children}
       </body>
     </html>

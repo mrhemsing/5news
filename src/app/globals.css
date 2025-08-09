@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Eraser Font - Hand-drawn chalk font */
+@font-face {
+  font-family: 'Eraser';
+  src: url('/fonts/EraserRegular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -24,7 +33,19 @@ body {
     text-wrap: balance;
   }
 }
-
+.blue-ball {
+  margin-bottom: -2.5rem;
+}
+.news-text {
+  margin-bottom: -1rem;
+}
+.blocks-wrapper {
+  margin-bottom: -2.5rem;
+}
+.chalkboard-wrapper {
+  padding-top: 2rem;
+  margin-bottom: 1.5rem;
+}
 /* Kid-friendly headline styles */
 .kid-headline {
   font-family: var(--font-comic-neue), 'Comic Neue', 'Comic Sans MS', cursive;
@@ -62,4 +83,27 @@ body {
 
 .shake-animation {
   animation: shake 0.3s infinite;
+}
+
+@keyframes bounce-twice {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  5%,
+  15% {
+    transform: translate3d(0, -25%, 0);
+  }
+  10%,
+  20% {
+    transform: translate3d(0, 0, 0);
+  }
+  25%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.bounce-twice {
+  animation: bounce-twice 12s infinite;
 }
