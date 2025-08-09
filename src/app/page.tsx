@@ -351,28 +351,64 @@ export default function Home() {
                 </span>
                 <span
                   style={{
-                    transform: 'rotate(0.4deg)',
+                    transform: 'rotate(0.6deg)',
                     display: 'inline-block'
                   }}>
-                  T
+                  A
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.2deg)',
+                    display: 'inline-block'
+                  }}>
+                  B
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.3deg)',
+                    display: 'inline-block'
+                  }}>
+                  C
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.4deg)',
+                    display: 'inline-block',
+                    marginRight: '0.3em'
+                  }}>
+                  {' '}
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.1deg)',
+                    display: 'inline-block'
+                  }}>
+                  N
                 </span>
                 <span
                   style={{
                     transform: 'rotate(-0.3deg)',
                     display: 'inline-block'
                   }}>
-                  O
+                  E
                 </span>
                 <span
                   style={{
-                    transform: 'rotate(0.2deg)',
+                    transform: 'rotate(0.5deg)',
                     display: 'inline-block'
                   }}>
-                  P
+                  W
                 </span>
                 <span
                   style={{
-                    transform: 'rotate(-0.5deg)',
+                    transform: 'rotate(-0.2deg)',
+                    display: 'inline-block'
+                  }}>
+                  S
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.3deg)',
                     display: 'inline-block',
                     marginRight: '0.3em'
                   }}>

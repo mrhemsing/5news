@@ -54,14 +54,14 @@ export default function Logo() {
                   }}></div>
                 {/* Colored square background for letter */}
                 <div
-                  className="w-10 h-10 md:w-14 md:h-14 bg-red-500 rounded flex items-center justify-center shadow-inner"
+                  className="w-12 h-12 md:w-14 md:h-14 bg-red-500 rounded flex items-center justify-center shadow-inner"
                   style={{
                     boxShadow:
                       'inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.2)',
                     border: '2px solid #dc2626'
                   }}>
                   <span
-                    className="text-white font-black text-3xl md:text-5xl"
+                    className="text-white font-black text-4xl md:text-5xl"
                     style={{
                       fontFamily:
                         'Arial Black, "Arial Black", "Helvetica Black", "Helvetica", sans-serif',
@@ -100,14 +100,14 @@ export default function Logo() {
                   }}></div>
                 {/* Colored square background for letter */}
                 <div
-                  className="w-10 h-10 md:w-14 md:h-14 bg-green-500 rounded flex items-center justify-center shadow-inner"
+                  className="w-12 h-12 md:w-14 md:h-14 bg-green-500 rounded flex items-center justify-center shadow-inner"
                   style={{
                     boxShadow:
                       'inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.2)',
                     border: '2px solid #16a34a'
                   }}>
                   <span
-                    className="text-white font-black text-3xl md:text-5xl"
+                    className="text-white font-black text-4xl md:text-5xl"
                     style={{
                       fontFamily:
                         'Arial Black, "Arial Black", "Helvetica Black", "Helvetica", sans-serif',
@@ -146,14 +146,14 @@ export default function Logo() {
                   }}></div>
                 {/* Colored square background for letter */}
                 <div
-                  className="w-10 h-10 md:w-14 md:h-14 bg-yellow-400 rounded flex items-center justify-center shadow-inner"
+                  className="w-12 h-12 md:w-14 md:h-14 bg-yellow-400 rounded flex items-center justify-center shadow-inner"
                   style={{
                     boxShadow:
                       'inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(255,255,255,0.2)',
                     border: '2px solid #ca8a04'
                   }}>
                   <span
-                    className="text-white font-black text-3xl md:text-5xl"
+                    className="text-white font-black text-4xl md:text-5xl"
                     style={{
                       fontFamily:
                         'Arial Black, "Arial Black", "Helvetica Black", "Helvetica", sans-serif',
