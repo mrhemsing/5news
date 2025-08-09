@@ -5,9 +5,9 @@ import { NewsArticle } from '@/types/news';
 export interface NewsCache {
   id: string;
   date: string;
+  page: number;
   articles: NewsArticle[];
   created_at: string;
-  page?: number;
 }
 
 export async function getCachedNews(): Promise<NewsArticle[] | null> {
@@ -45,7 +45,7 @@ export async function getCachedNews(): Promise<NewsArticle[] | null> {
         index === self.findIndex(a => a.url === article.url)
     );
 
-    // Filter articles to only include those from the last 48 hours
+    // Filter articles to only include those from the last 48 hours based on publishedAt
     const fortyEightHoursAgoDate = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const recentArticles = uniqueArticles.filter(article => {
       const articleDate = new Date(article.publishedAt);
@@ -68,7 +68,10 @@ export async function getCachedNews(): Promise<NewsArticle[] | null> {
   }
 }
 
-export async function setCachedNews(articles: NewsArticle[]): Promise<void> {
+export async function setCachedNews(
+  articles: NewsArticle[],
+  page: number = 1
+): Promise<void> {
   try {
     if (!supabase) {
       console.log('Supabase not configured, skipping news cache storage');
@@ -78,6 +81,7 @@ export async function setCachedNews(articles: NewsArticle[]): Promise<void> {
     // Store articles with current timestamp for 48-hour retention
     const { error } = await supabase.from('news_cache').insert({
       date: new Date().toISOString().split('T')[0], // Keep date for organization
+      page,
       articles,
       created_at: new Date().toISOString()
     });
@@ -85,7 +89,9 @@ export async function setCachedNews(articles: NewsArticle[]): Promise<void> {
     if (error) {
       console.error('Error caching news:', error);
     } else {
-      console.log(`News cached successfully with ${articles.length} articles`);
+      console.log(
+        `News cached successfully with ${articles.length} articles on page ${page}`
+      );
     }
   } catch (error) {
     console.error('Error setting cached news:', error);
@@ -116,7 +122,7 @@ export async function clearExpiredNewsCache(): Promise<void> {
   }
 }
 
-// New function to get all cached pages for a date
+// Function to get all cached pages for a date
 export async function getAllCachedPages(date: string): Promise<number[]> {
   try {
     if (!supabase) {
@@ -125,15 +131,15 @@ export async function getAllCachedPages(date: string): Promise<number[]> {
 
     const { data, error } = await supabase
       .from('news_cache')
-      .select('date')
-      .eq('date', date);
+      .select('page')
+      .eq('date', date)
+      .order('page', { ascending: true });
 
     if (error || !data) {
       return [];
     }
 
-    // Since we're not using page column, just return [1] if we have cached data
-    return data.length > 0 ? [1] : [];
+    return data.map(entry => entry.page);
   } catch (error) {
     console.error('Error getting cached pages:', error);
     return [];

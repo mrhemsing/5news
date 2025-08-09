@@ -26,7 +26,9 @@ export async function GET(request: Request) {
     // If we're requesting page 1 and don't have it cached, check if we have other pages
     // This helps when users refresh and we can serve from cache instead of making new API calls
     if (page === 1 && !forceRefresh && existingArticles.length === 0) {
-      const cachedPages = await getAllCachedPages(new Date().toISOString().split('T')[0]);
+      const cachedPages = await getAllCachedPages(
+        new Date().toISOString().split('T')[0]
+      );
       if (cachedPages.length > 0) {
         console.log(
           'Found cached pages, serving from cache instead of making API call'
@@ -235,8 +237,25 @@ export async function GET(request: Request) {
         `Merged articles: ${existingArticles.length} existing + ${newArticlesWithIds.length} new = ${allArticles.length} total`
       );
 
+      // Debug: Log article dates to verify 48-hour retention
+      if (allArticles.length > 0) {
+        const oldestArticle = allArticles[allArticles.length - 1];
+        const newestArticle = allArticles[0];
+        console.log(
+          `Date range: ${oldestArticle.publishedAt} to ${newestArticle.publishedAt}`
+        );
+
+        const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+        const articlesInRange = allArticles.filter(
+          article => new Date(article.publishedAt) > fortyEightHoursAgo
+        );
+        console.log(
+          `Articles within 48 hours: ${articlesInRange.length}/${allArticles.length}`
+        );
+      }
+
       // Cache the merged results
-      await setCachedNews(allArticles);
+      await setCachedNews(allArticles, page);
 
       // Return all articles - let frontend handle pagination
       return NextResponse.json({
@@ -537,20 +556,45 @@ function mergeArticles(
   // Calculate 48 hours ago
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
+  console.log(
+    `Merge: ${existingArticles.length} existing articles, ${newArticles.length} new articles`
+  );
+  console.log(`48 hours ago: ${fortyEightHoursAgo.toISOString()}`);
+
   // Add existing articles that are not in the new set AND are not older than 48 hours
+  let keptExisting = 0;
+  let filteredOutExisting = 0;
   existingArticles.forEach(article => {
     const articleDate = new Date(article.publishedAt);
     if (!newUrls.has(article.url) && articleDate > fortyEightHoursAgo) {
       mergedArticles.push(article);
+      keptExisting++;
+    } else {
+      filteredOutExisting++;
+      if (articleDate <= fortyEightHoursAgo) {
+        console.log(
+          `Filtered out old article: ${article.title} (${article.publishedAt})`
+        );
+      }
     }
   });
 
   // Add all new articles that are not in the existing set
+  let addedNew = 0;
+  let skippedNew = 0;
   newArticles.forEach(article => {
     if (!existingUrls.has(article.url)) {
       mergedArticles.push(article);
+      addedNew++;
+    } else {
+      skippedNew++;
+      console.log(`Skipped duplicate new article: ${article.title}`);
     }
   });
+
+  console.log(
+    `Merge results: kept ${keptExisting} existing, added ${addedNew} new, filtered out ${filteredOutExisting} old, skipped ${skippedNew} duplicates`
+  );
 
   // Sort by publishedAt (newest first) to maintain chronological order
   mergedArticles.sort(

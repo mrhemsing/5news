@@ -6,10 +6,11 @@ CREATE TABLE IF NOT EXISTS cartoon_cache (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create news_cache table
+-- Create news_cache table - Updated for 48-hour retention
 CREATE TABLE IF NOT EXISTS news_cache (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  date TEXT NOT NULL UNIQUE,
+  date TEXT NOT NULL, -- Removed UNIQUE constraint
+  page INTEGER NOT NULL DEFAULT 1, -- Added page column
   articles JSONB NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -20,14 +21,14 @@ CREATE TABLE IF NOT EXISTS tts_cache (
   text_hash TEXT NOT NULL,
   voice_id TEXT NOT NULL,
   audio_url TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(text_hash, voice_id)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_cartoon_cache_headline ON cartoon_cache(headline);
 CREATE INDEX IF NOT EXISTS idx_cartoon_cache_created_at ON cartoon_cache(created_at);
 CREATE INDEX IF NOT EXISTS idx_news_cache_date ON news_cache(date);
+CREATE INDEX IF NOT EXISTS idx_news_cache_page ON news_cache(page);
 CREATE INDEX IF NOT EXISTS idx_news_cache_created_at ON news_cache(created_at);
 CREATE INDEX IF NOT EXISTS idx_tts_cache_text_hash ON tts_cache(text_hash);
 CREATE INDEX IF NOT EXISTS idx_tts_cache_voice_id ON tts_cache(voice_id);
