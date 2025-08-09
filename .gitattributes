@@ -16,6 +16,11 @@
 *.xml text
 *.sql text
 
+# Specific files that were recently modified to ensure consistent line endings
+src/app/layout.tsx text
+src/app/globals.css text
+src/components/Logo.tsx text
+
 # Declare files that will always have CRLF line endings on checkout
 *.bat text eol=crlf
 

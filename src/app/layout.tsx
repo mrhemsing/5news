@@ -57,7 +57,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children
 }: {
-  children: React.ReactNode;
+  children: any;
 }) {
   return (
     <html lang="en">
@@ -70,6 +70,12 @@ export default function RootLayout({
           type="font/ttf"
           crossOrigin="anonymous"
         />
+        {/* Preload Google Fonts for Logo */}
+        <link
+          rel="preload"
+          href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&family=Architects+Daughter&display=swap"
+          as="style"
+        />
         {/* Font loading optimization script */}
         <script
           dangerouslySetInnerHTML={{
@@ -78,12 +84,19 @@ export default function RootLayout({
               if ('fonts' in document) {
                 Promise.all([
                   document.fonts.load('1em Eraser'),
-                  document.fonts.load('1em Comic Neue'),
-                  document.fonts.load('1em Architects Daughter'),
-                  document.fonts.load('1em Bubblegum Sans'),
-                  document.fonts.load('1em Indie Flower')
+                  document.fonts.load('300 1em Comic Neue'),
+                  document.fonts.load('400 1em Comic Neue'),
+                  document.fonts.load('700 1em Comic Neue'),
+                  document.fonts.load('400 1em Architects Daughter'),
+                  document.fonts.load('400 1em Bubblegum Sans'),
+                  document.fonts.load('400 1em Indie Flower')
                 ]).then(() => {
                   document.documentElement.classList.add('fonts-loaded');
+                }).catch(() => {
+                  // Fallback if any font fails to load
+                  setTimeout(() => {
+                    document.documentElement.classList.add('fonts-loaded');
+                  }, 100);
                 });
               } else {
                 // Fallback for older browsers

@@ -14,7 +14,7 @@ export default function Logo() {
           {/* Animated news indicator */}
           <div className="absolute -top-2 -right-1 w-5 h-5 md:w-7 md:h-7 bg-gradient-to-br from-red-500 to-pink-600 rounded-full flex items-center justify-center shadow-lg bounce-twice">
             <span
-              className="text-white text-[6px] md:text-[8px] font-black tracking-tight"
+              className="text-white text-[6px] md:text-[8px] font-black tracking-tight logo-newz-small"
               style={{
                 fontFamily:
                   'var(--font-comic-neue), "Comic Neue", "Comic Sans MS", cursive'
@@ -170,7 +170,7 @@ export default function Logo() {
             {/* NEWS text */}
             <div className="flex flex-col items-start ml-2 md:ml-3">
               <span
-                className="text-gray-900 dark:text-white font-black text-2xl md:text-4xl news-text"
+                className="text-gray-900 dark:text-white font-black text-2xl md:text-4xl news-text logo-newz"
                 style={{
                   fontFamily:
                     'var(--font-architects-daughter), "Architects Daughter", cursive',

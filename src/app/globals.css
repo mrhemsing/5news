@@ -65,6 +65,60 @@ html.fonts-loaded {
   min-height: 1.2em;
 }
 
+/* Logo-specific FOUT prevention */
+.logo-newz {
+  /* Prevent layout shift for the main NEWZ text */
+  line-height: 1.2;
+  min-height: 1.2em;
+  /* Ensure consistent font rendering */
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Font loading optimization - prevent text rendering until font is loaded */
+  font-display: optional;
+}
+
+.logo-newz-small {
+  /* Prevent layout shift for the small NEWZ text */
+  line-height: 1.2;
+  min-height: 1.2em;
+  /* Ensure consistent font rendering */
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Font loading optimization - prevent text rendering until font is loaded */
+  font-display: optional;
+}
+
+/* Font loading states for Logo */
+html:not(.fonts-loaded) .logo-newz,
+html:not(.fonts-loaded) .logo-newz-small {
+  /* Use fallback fonts while loading */
+  font-family: var(--font-fallback) !important;
+  /* Ensure consistent rendering */
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+html.fonts-loaded .logo-newz {
+  /* Smooth transition to custom font */
+  transition: font-family 0.3s ease;
+}
+
+html.fonts-loaded .logo-newz-small {
+  /* Smooth transition to custom font */
+  transition: font-family 0.3s ease;
+}
+
+/* Additional Logo optimizations */
+.logo-newz,
+.logo-newz-small {
+  /* Ensure text doesn't shift during font loading */
+  text-rendering: optimizeLegibility;
+  /* Prevent layout shift */
+  contain: layout style;
+}
+
 /* Font loading states */
 .font-loading {
   font-family: var(--font-fallback);
