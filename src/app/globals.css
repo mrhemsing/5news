@@ -43,7 +43,7 @@ body {
 .news-text {
   margin-bottom: -1rem;
   @media only screen and (max-width: 600px) {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0rem;
   }
 }
 .bounce-twice {
@@ -54,7 +54,7 @@ body {
 .blocks-wrapper {
   margin-bottom: -2.5rem;
   @media only screen and (max-width: 600px) {
-    margin-bottom: -2.9rem;
+    margin-bottom: -2.3rem;
   }
 }
 .chalkboard-wrapper {
@@ -64,7 +64,10 @@ body {
   }
 }
 .chalk-text {
-  padding: 1rem 0 0rem;
+  padding: 0.5rem 0 0rem;
+  @media only screen and (max-width: 600px) {
+    padding: 0.7rem 0 0rem;
+  }
 }
 /* Kid-friendly headline styles */
 .kid-headline {
