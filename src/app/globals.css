@@ -44,7 +44,7 @@ body {
 .news-text {
   margin-bottom: -1rem;
   @media only screen and (max-width: 600px) {
-    margin-bottom: 0rem;
+    margin-bottom: -0.5rem;
   }
 }
 .bounce-twice {
