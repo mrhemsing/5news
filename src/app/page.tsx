@@ -446,35 +446,40 @@ export default function Home() {
                   style={{
                     transform: 'rotate(-0.6deg)',
                     display: 'inline-block',
-                    marginRight: '0.3em'
+                    marginRight: '0.3em',
+                    lineHeight: '1.8'
                   }}>
                   {' '}
                 </span>
                 <span
                   style={{
                     transform: 'rotate(0.4deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   M
                 </span>
                 <span
                   style={{
                     transform: 'rotate(-0.1deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   A
                 </span>
                 <span
                   style={{
                     transform: 'rotate(0.3deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   D
                 </span>
                 <span
                   style={{
                     transform: 'rotate(-0.5deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   E
                 </span>
@@ -482,28 +487,32 @@ export default function Home() {
                   style={{
                     transform: 'rotate(0.2deg)',
                     display: 'inline-block',
-                    marginRight: '0.3em'
+                    marginRight: '0.3em',
+                    lineHeight: '1.8'
                   }}>
                   {' '}
                 </span>
                 <span
                   style={{
                     transform: 'rotate(-0.4deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   K
                 </span>
                 <span
                   style={{
                     transform: 'rotate(0.6deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   I
                 </span>
                 <span
                   style={{
                     transform: 'rotate(-0.3deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   D
                 </span>
@@ -511,63 +520,72 @@ export default function Home() {
                   style={{
                     transform: 'rotate(0.1deg)',
                     display: 'inline-block',
-                    marginRight: '0.3em'
+                    marginRight: '0.3em',
+                    lineHeight: '1.8'
                   }}>
                   {' '}
                 </span>
                 <span
                   style={{
                     transform: 'rotate(-0.7deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   F
                 </span>
                 <span
                   style={{
                     transform: 'rotate(0.4deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   R
                 </span>
                 <span
                   style={{
                     transform: 'rotate(-0.2deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   I
                 </span>
                 <span
                   style={{
                     transform: 'rotate(0.5deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   E
                 </span>
                 <span
                   style={{
                     transform: 'rotate(-0.3deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   N
                 </span>
                 <span
                   style={{
                     transform: 'rotate(0.2deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   D
                 </span>
                 <span
                   style={{
                     transform: 'rotate(-0.6deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   L
                 </span>
                 <span
                   style={{
                     transform: 'rotate(0.1deg)',
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    lineHeight: '1.8'
                   }}>
                   Y
                 </span>

@@ -48,7 +48,9 @@ export default function NewsCard({
 
     // If direct URL also failed, clear the URL and regenerate
     if (!useProxy && cartoonUrl) {
-      console.log('Direct URL also failed, clearing cartoon URL and regenerating');
+      console.log(
+        'Direct URL also failed, clearing cartoon URL and regenerating'
+      );
       setCartoonUrl(null);
       // Regenerate cartoon immediately since the URL is expired
       setTimeout(() => {
@@ -379,11 +381,14 @@ export default function NewsCard({
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
               <div className="flex-1 min-w-0">
                 <h3
-                  className="text-lg font-semibold text-gray-900 dark:text-white mb-0 leading-tight kid-headline"
+                  className="text-sm md:text-2xl font-semibold text-gray-900 dark:text-white mb-0 leading-tight"
                   style={{
                     fontFamily:
                       'var(--font-architects-daughter), "Architects Daughter", "Comic Sans MS", cursive',
-                    textTransform: 'uppercase'
+                    textTransform: 'uppercase',
+                    fontWeight: '700',
+                    letterSpacing: '-0.02em',
+                    lineHeight: '1.1'
                   }}>
                   {article.title.includes(' - ')
                     ? article.title.split(' - ')[0]

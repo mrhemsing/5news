@@ -43,7 +43,7 @@ body {
 .news-text {
   margin-bottom: -1rem;
   @media only screen and (max-width: 600px) {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
   }
 }
 .bounce-twice {
@@ -59,17 +59,19 @@ body {
 }
 .chalkboard-wrapper {
   margin-bottom: 3rem;
+  @media only screen and (max-width: 600px) {
+    margin-bottom: 1rem;
+  }
 }
 .chalk-text {
-  padding: 1.3rem 0 0.2rem;
+  padding: 1rem 0 0rem;
 }
 /* Kid-friendly headline styles */
 .kid-headline {
-  font-family: var(--font-comic-neue), 'Comic Neue', 'Comic Sans MS', cursive;
-  font-weight: 700;
-  font-size: 1.35em; /* 35% larger than base size */
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  font-family: var(--font-comic-neue), 'Comic Neue', 'Comic Sans MS', cursive !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.1 !important; /* Tightened from 1.2 */
 }
 
 /* Kid-friendly summary text styles */
