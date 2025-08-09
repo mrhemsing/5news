@@ -257,6 +257,324 @@ export default function Home() {
           <div className="flex justify-center mb-5">
             <Logo />
           </div>
+
+          {/* Chalkboard subtitle */}
+          <div className="w-full md:max-w-4xl md:mx-auto">
+            <div
+              className="mt-4 px-4 md:px-6 py-2 md:py-3 rounded-lg shadow-lg chalkboard-wrapper relative z-0 w-full md:w-fit md:mx-auto"
+              style={{
+                background: 'linear-gradient(135deg, #2d3748 0%, #1a202c 100%)',
+                border: '3px solid #4a5568',
+                boxShadow:
+                  '0 4px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
+              }}>
+              {/* Top left bolt */}
+              <div className="absolute top-2 left-2 w-3 h-3 md:w-4 md:h-4 bg-gray-600 rounded-full shadow-lg flex items-center justify-center">
+                <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-800 rounded-full"></div>
+              </div>
+
+              {/* Top right bolt */}
+              <div className="absolute top-2 right-2 w-3 h-3 md:w-4 md:h-4 bg-gray-600 rounded-full shadow-lg flex items-center justify-center">
+                <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-800 rounded-full"></div>
+              </div>
+
+              <span
+                className="chalk-text text-white font-bold text-lg md:text-xl tracking-wide"
+                style={{
+                  fontFamily:
+                    '"Eraser", "Indie Flower", "Chalkduster", "Chalkboard", "Comic Sans MS", "Comic Sans", cursive',
+                  textShadow:
+                    '2px 2px 4px rgba(0,0,0,0.8), 1px 1px 2px rgba(255,255,255,0.3), 0 0 8px rgba(255,255,255,0.1)',
+                  color: '#ffffff',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.08em',
+                  transform: 'rotate(-0.5deg)',
+                  display: 'inline-block',
+                  lineHeight: '1.2'
+                }}>
+                <span
+                  style={{
+                    transform: 'rotate(1deg)',
+                    display: 'inline-block'
+                  }}>
+                  T
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.8deg)',
+                    display: 'inline-block'
+                  }}>
+                  O
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.3deg)',
+                    display: 'inline-block'
+                  }}>
+                  D
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.2deg)',
+                    display: 'inline-block'
+                  }}>
+                  A
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.7deg)',
+                    display: 'inline-block'
+                  }}>
+                  Y
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.4deg)',
+                    display: 'inline-block'
+                  }}>
+                  &apos;
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.1deg)',
+                    display: 'inline-block'
+                  }}>
+                  S
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.6deg)',
+                    display: 'inline-block',
+                    marginRight: '0.3em'
+                  }}>
+                  {' '}
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.4deg)',
+                    display: 'inline-block'
+                  }}>
+                  T
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.3deg)',
+                    display: 'inline-block'
+                  }}>
+                  O
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.2deg)',
+                    display: 'inline-block'
+                  }}>
+                  P
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.5deg)',
+                    display: 'inline-block',
+                    marginRight: '0.3em'
+                  }}>
+                  {' '}
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.6deg)',
+                    display: 'inline-block'
+                  }}>
+                  H
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.2deg)',
+                    display: 'inline-block'
+                  }}>
+                  E
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.3deg)',
+                    display: 'inline-block'
+                  }}>
+                  A
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.4deg)',
+                    display: 'inline-block'
+                  }}>
+                  D
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.1deg)',
+                    display: 'inline-block'
+                  }}>
+                  L
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.7deg)',
+                    display: 'inline-block'
+                  }}>
+                  I
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.5deg)',
+                    display: 'inline-block'
+                  }}>
+                  N
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.3deg)',
+                    display: 'inline-block'
+                  }}>
+                  E
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.2deg)',
+                    display: 'inline-block'
+                  }}>
+                  S
+                </span>
+                <br className="block md:hidden" />
+                <span
+                  style={{
+                    transform: 'rotate(-0.6deg)',
+                    display: 'inline-block',
+                    marginRight: '0.3em'
+                  }}>
+                  {' '}
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.4deg)',
+                    display: 'inline-block'
+                  }}>
+                  M
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.1deg)',
+                    display: 'inline-block'
+                  }}>
+                  A
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.3deg)',
+                    display: 'inline-block'
+                  }}>
+                  D
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.5deg)',
+                    display: 'inline-block'
+                  }}>
+                  E
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.2deg)',
+                    display: 'inline-block',
+                    marginRight: '0.3em'
+                  }}>
+                  {' '}
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.4deg)',
+                    display: 'inline-block'
+                  }}>
+                  K
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.6deg)',
+                    display: 'inline-block'
+                  }}>
+                  I
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.3deg)',
+                    display: 'inline-block'
+                  }}>
+                  D
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.1deg)',
+                    display: 'inline-block',
+                    marginRight: '0.3em'
+                  }}>
+                  {' '}
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.7deg)',
+                    display: 'inline-block'
+                  }}>
+                  F
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.4deg)',
+                    display: 'inline-block'
+                  }}>
+                  R
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.2deg)',
+                    display: 'inline-block'
+                  }}>
+                  I
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.5deg)',
+                    display: 'inline-block'
+                  }}>
+                  E
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.3deg)',
+                    display: 'inline-block'
+                  }}>
+                  N
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.2deg)',
+                    display: 'inline-block'
+                  }}>
+                  D
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(-0.6deg)',
+                    display: 'inline-block'
+                  }}>
+                  L
+                </span>
+                <span
+                  style={{
+                    transform: 'rotate(0.1deg)',
+                    display: 'inline-block'
+                  }}>
+                  Y
+                </span>
+              </span>
+            </div>
+          </div>
+
           {backgroundRefreshing && (
             <div className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center justify-center">
               <span className="animate-spin mr-1">🔄</span>

@@ -35,16 +35,33 @@ body {
 }
 .blue-ball {
   margin-bottom: -2.5rem;
+  @media only screen and (max-width: 600px) {
+    margin-bottom: -1.5rem;
+    display: none;
+  }
 }
 .news-text {
   margin-bottom: -1rem;
+  @media only screen and (max-width: 600px) {
+    margin-bottom: 1rem;
+  }
+}
+.bounce-twice {
+  @media only screen and (max-width: 600px) {
+    display: none;
+  }
 }
 .blocks-wrapper {
   margin-bottom: -2.5rem;
+  @media only screen and (max-width: 600px) {
+    margin-bottom: -2.9rem;
+  }
 }
 .chalkboard-wrapper {
-  padding-top: 2rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 3rem;
+}
+.chalk-text {
+  padding: 1.3rem 0 0.2rem;
 }
 /* Kid-friendly headline styles */
 .kid-headline {
