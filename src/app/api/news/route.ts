@@ -304,11 +304,52 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
 
                 if (isABCSource) {
                   processedUrls.add(url);
+                  // Try to extract publication date from the item
+                  let publishedAt = new Date().toISOString();
+
+                  // Try multiple date formats that might be in Google News RSS
+                  const pubDateMatch = item.match(
+                    /<pubDate>([^<]*)<\/pubDate>/
+                  );
+                  const dateMatch = item.match(/<date>([^<]*)<\/date>/);
+                  const timeMatch = item.match(/<time>([^<]*)<\/time>/);
+
+                  // Google News RSS might also have dates in different formats
+                  const googleDateMatch = item.match(
+                    /<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]*)<\/span>/
+                  );
+                  const googleTimeMatch = item.match(
+                    /<span[^>]*class="[^"]*time[^"]*"[^>]*>([^<]*)<\/span>/
+                  );
+
+                  let dateString = null;
+                  if (pubDateMatch) dateString = pubDateMatch[1].trim();
+                  else if (dateMatch) dateString = dateMatch[1].trim();
+                  else if (timeMatch) dateString = timeMatch[1].trim();
+                  else if (googleDateMatch)
+                    dateString = googleDateMatch[1].trim();
+                  else if (googleTimeMatch)
+                    dateString = googleTimeMatch[1].trim();
+
+                  if (dateString) {
+                    try {
+                      const parsedDate = new Date(dateString);
+                      if (!isNaN(parsedDate.getTime())) {
+                        publishedAt = parsedDate.toISOString();
+                        console.log(
+                          `Parsed date for "${title}": ${publishedAt}`
+                        );
+                      }
+                    } catch (e) {
+                      console.log('Failed to parse date:', dateString);
+                    }
+                  }
+
                   articles.push({
                     id: `google-${listIndex}-${itemIndex}-${Date.now()}`,
                     title: title,
                     url: url,
-                    publishedAt: new Date().toISOString(),
+                    publishedAt: publishedAt,
                     description: title,
                     content: title,
                     urlToImage: '',
@@ -393,12 +434,43 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                 url.includes('abc.com');
 
               if (isABCSource) {
+                // Try to extract publication date from the item
+                let publishedAt = new Date().toISOString();
+
+                // Try multiple date formats that might be in RSS feeds
+                const pubDateMatch = item.match(/<pubDate>([^<]*)<\/pubDate>/);
+                const dateMatch = item.match(/<date>([^<]*)<\/date>/);
+                const timeMatch = item.match(/<time>([^<]*)<\/time>/);
+
+                // Also try some alternative date formats
+                const altDateMatch = item.match(/<dc:date>([^<]*)<\/dc:date>/);
+                const altTimeMatch = item.match(/<dc:time>([^<]*)<\/dc:time>/);
+
+                let dateString = null;
+                if (pubDateMatch) dateString = pubDateMatch[1].trim();
+                else if (dateMatch) dateString = dateMatch[1].trim();
+                else if (timeMatch) dateString = timeMatch[1].trim();
+                else if (altDateMatch) dateString = altDateMatch[1].trim();
+                else if (altTimeMatch) dateString = altTimeMatch[1].trim();
+
+                if (dateString) {
+                  try {
+                    const parsedDate = new Date(dateString);
+                    if (!isNaN(parsedDate.getTime())) {
+                      publishedAt = parsedDate.toISOString();
+                      console.log(`Parsed date for "${title}": ${publishedAt}`);
+                    }
+                  } catch (e) {
+                    console.log('Failed to parse date:', dateString);
+                  }
+                }
+
                 processedUrls.add(url);
                 articles.push({
                   id: `rss-${index}-${Date.now()}`,
                   title: title,
                   url: url,
-                  publishedAt: new Date().toISOString(),
+                  publishedAt: publishedAt,
                   description: description,
                   content: description,
                   urlToImage: '',
@@ -474,11 +546,17 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
 
               if (isABCSource) {
                 processedUrls.add(url);
+                // For simple link extraction, we don't have pubDate, so use current time
+                // but add a small offset based on index to maintain some ordering
+                const publishedAt = new Date(
+                  Date.now() - index * 1000
+                ).toISOString();
+
                 articles.push({
                   id: `link-${index}-${Date.now()}`,
                   title: title,
                   url: url,
-                  publishedAt: new Date().toISOString(),
+                  publishedAt: publishedAt,
                   description: title,
                   content: title,
                   urlToImage: '',
@@ -521,7 +599,17 @@ function mergeArticles(
   let keptExisting = 0;
   let filteredOutExisting = 0;
   existingArticles.forEach(article => {
-    const articleDate = new Date(article.publishedAt);
+    // Validate the date before processing
+    let articleDate = new Date(article.publishedAt);
+    if (isNaN(articleDate.getTime())) {
+      console.log(
+        `Warning: Invalid date for existing article "${article.title}": ${article.publishedAt}`
+      );
+      // Fix invalid dates by using current time
+      article.publishedAt = new Date().toISOString();
+      articleDate = new Date(article.publishedAt);
+    }
+
     if (!newUrls.has(article.url) && articleDate > fortyEightHoursAgo) {
       mergedArticles.push(article);
       keptExisting++;
@@ -540,6 +628,16 @@ function mergeArticles(
   let skippedNew = 0;
   newArticles.forEach(article => {
     if (!existingUrls.has(article.url)) {
+      // Validate the date before adding
+      const articleDate = new Date(article.publishedAt);
+      if (isNaN(articleDate.getTime())) {
+        console.log(
+          `Warning: Invalid date for article "${article.title}": ${article.publishedAt}`
+        );
+        // Fix invalid dates by using current time
+        article.publishedAt = new Date().toISOString();
+      }
+
       mergedArticles.push(article);
       addedNew++;
     } else {
@@ -552,11 +650,23 @@ function mergeArticles(
     `Merge results: kept ${keptExisting} existing, added ${addedNew} new, filtered out ${filteredOutExisting} old, skipped ${skippedNew} duplicates`
   );
 
+  // Log dates before sorting for debugging
+  console.log('Dates before sorting:');
+  mergedArticles.slice(0, 5).forEach((article, index) => {
+    console.log(`${index + 1}. "${article.title}" - ${article.publishedAt}`);
+  });
+
   // Sort by publishedAt (newest first) to maintain chronological order
   mergedArticles.sort(
     (a, b) =>
       new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   );
+
+  // Log dates after sorting for debugging
+  console.log('Dates after sorting (newest first):');
+  mergedArticles.slice(0, 5).forEach((article, index) => {
+    console.log(`${index + 1}. "${article.title}" - ${article.publishedAt}`);
+  });
 
   return mergedArticles;
 }
