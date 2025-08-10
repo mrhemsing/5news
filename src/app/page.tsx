@@ -16,7 +16,7 @@ export default function Home() {
   const [failedArticles, setFailedArticles] = useState<Set<string>>(new Set());
   // Removed validArticles state - using only articles
   const [initialLoading, setInitialLoading] = useState(true);
-  const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
+
   const [currentRequest, setCurrentRequest] = useState<AbortController | null>(
     null
   );
@@ -137,10 +137,7 @@ export default function Home() {
   useEffect(() => {
     const interval = setInterval(() => {
       console.log('Auto-refreshing headlines...');
-      setBackgroundRefreshing(true);
-      fetchNews(1, false, true).finally(() => {
-        setBackgroundRefreshing(false);
-      });
+      fetchNews(1, false, true);
     }, 6 * 60 * 60 * 1000); // 6 hours in milliseconds
 
     return () => clearInterval(interval);
@@ -965,28 +962,6 @@ export default function Home() {
                   </span>
                 </span>
               </div>
-            </div>
-
-            {backgroundRefreshing && (
-              <div className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center justify-center">
-                <span className="animate-spin mr-1">🔄</span>
-                Refreshing headlines...
-              </div>
-            )}
-
-            {/* Manual Refresh Button */}
-            <div className="mt-2 flex justify-center">
-              <button
-                onClick={() => {
-                  setBackgroundRefreshing(true);
-                  fetchNews(1, false, true).finally(() => {
-                    setBackgroundRefreshing(false);
-                  });
-                }}
-                className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition-colors duration-200 flex items-center">
-                <span className="mr-1">🔄</span>
-                Refresh Headlines
-              </button>
             </div>
           </div>
 
