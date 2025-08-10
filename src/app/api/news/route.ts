@@ -296,11 +296,12 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
               // Only include articles from ABC News sources
               if (title && title.length > 0 && !processedUrls.has(url)) {
                 // Check if the source is ABC News or related
-                const isABCSource = sourceName.toLowerCase().includes('abc') || 
-                                   sourceName.toLowerCase().includes('abc news') ||
-                                   url.includes('abcnews.go.com') ||
-                                   url.includes('abc.com');
-                
+                const isABCSource =
+                  sourceName.toLowerCase().includes('abc') ||
+                  sourceName.toLowerCase().includes('abc news') ||
+                  url.includes('abcnews.go.com') ||
+                  url.includes('abc.com');
+
                 if (isABCSource) {
                   processedUrls.add(url);
                   articles.push({
@@ -385,11 +386,12 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
             // Only include articles from ABC News sources
             if (!processedUrls.has(url)) {
               // Check if the source is ABC News or related
-              const isABCSource = sourceName.toLowerCase().includes('abc') || 
-                                 sourceName.toLowerCase().includes('abc news') ||
-                                 url.includes('abcnews.go.com') ||
-                                 url.includes('abc.com');
-              
+              const isABCSource =
+                sourceName.toLowerCase().includes('abc') ||
+                sourceName.toLowerCase().includes('abc news') ||
+                url.includes('abcnews.go.com') ||
+                url.includes('abc.com');
+
               if (isABCSource) {
                 processedUrls.add(url);
                 articles.push({
@@ -464,11 +466,12 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
               }
 
               // Only include articles from ABC News sources
-              const isABCSource = sourceName.toLowerCase().includes('abc') || 
-                                 sourceName.toLowerCase().includes('abc news') ||
-                                 url.includes('abcnews.go.com') ||
-                                 url.includes('abc.com');
-              
+              const isABCSource =
+                sourceName.toLowerCase().includes('abc') ||
+                sourceName.toLowerCase().includes('abc news') ||
+                url.includes('abcnews.go.com') ||
+                url.includes('abc.com');
+
               if (isABCSource) {
                 processedUrls.add(url);
                 articles.push({
