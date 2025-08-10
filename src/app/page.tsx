@@ -17,23 +17,22 @@ export default function Home() {
   // Removed validArticles state - using only articles
   const [initialLoading, setInitialLoading] = useState(true);
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
-  const [currentRequest, setCurrentRequest] = useState<AbortController | null>(null);
+  const [currentRequest, setCurrentRequest] = useState<AbortController | null>(
+    null
+  );
 
   useEffect(() => {
     const initializeApp = async () => {
       console.log('Initializing app...');
-      // Add 1-second fake delay on initial load
       await new Promise(resolve => setTimeout(resolve, 1000));
       setInitialLoading(false);
       console.log('Initial loading complete, checking localStorage...');
 
-      // Try to restore articles from localStorage first
       const savedArticles = localStorage.getItem('5news-articles');
       if (savedArticles) {
         try {
           const parsedData = JSON.parse(savedArticles);
           console.log('Found saved articles in localStorage:', parsedData);
-          // Check if data is recent (within last 2 hours) and has articles
           const isRecent =
             parsedData.timestamp &&
             Date.now() - parsedData.timestamp < 2 * 60 * 60 * 1000;
@@ -49,11 +48,10 @@ export default function Home() {
             setArticles(parsedData.articles);
             setLoading(false); // Set loading to false when restoring from localStorage
             console.log('Articles restored, loading state set to false');
-            // Don't fetch if we have recent saved articles
-            return;
+            // Return a flag indicating we restored articles
+            return true;
           } else {
             console.log('Saved articles are stale or invalid, cleaning up...');
-            // Clean up old data
             localStorage.removeItem('5news-articles');
           }
         } catch (error) {
@@ -66,6 +64,7 @@ export default function Home() {
 
       console.log('Proceeding to fetch news...');
       fetchNews();
+      return false;
     };
 
     // Add a safety timeout to prevent infinite loading
@@ -75,7 +74,15 @@ export default function Home() {
       setError('Loading timeout - please refresh the page');
     }, 30000); // 30 seconds
 
-    initializeApp();
+    initializeApp().then(articlesRestored => {
+      // If articles were restored from localStorage, clear the safety timeout
+      if (articlesRestored) {
+        console.log(
+          'Articles restored from localStorage, clearing safety timeout'
+        );
+        clearTimeout(safetyTimeout);
+      }
+    });
 
     return () => {
       clearTimeout(safetyTimeout);
@@ -84,7 +91,7 @@ export default function Home() {
         currentRequest.abort();
       }
     };
-  }, [currentRequest]);
+  }, [currentRequest]); // Dependency added for cleanup
 
   // Save articles to localStorage whenever they change
   useEffect(() => {
@@ -361,18 +368,6 @@ export default function Home() {
               GIVE ME ONE TEENY-TINY MOMENT —<br />
               YOUR STORIES ARE COMING!
             </p>
-            {/* Manual refresh button for stuck loading */}
-            <button 
-              onClick={() => {
-                console.log('Manual refresh clicked during initial loading');
-                setInitialLoading(false);
-                setLoading(false);
-                fetchNews(1, false, true);
-              }}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-            >
-              🔄 Force Load News
-            </button>
           </div>
         </div>
       </div>
@@ -438,17 +433,6 @@ export default function Home() {
                 style={{ fontFamily: 'Eraser, cursive' }}>
                 Loading the latest news...
               </p>
-              {/* Manual refresh button for stuck loading */}
-              <button 
-                onClick={() => {
-                  console.log('Manual refresh clicked during loading');
-                  setLoading(false);
-                  fetchNews(1, false, true);
-                }}
-                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-              >
-                🔄 Force Load News
-              </button>
             </div>
           </div>
         </div>
