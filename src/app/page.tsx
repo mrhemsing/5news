@@ -17,6 +17,7 @@ export default function Home() {
   // Removed validArticles state - using only articles
   const [initialLoading, setInitialLoading] = useState(true);
   const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
+  const [currentRequest, setCurrentRequest] = useState<AbortController | null>(null);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -76,8 +77,14 @@ export default function Home() {
 
     initializeApp();
 
-    return () => clearTimeout(safetyTimeout);
-  }, []);
+    return () => {
+      clearTimeout(safetyTimeout);
+      // Abort any ongoing request when component unmounts
+      if (currentRequest) {
+        currentRequest.abort();
+      }
+    };
+  }, [currentRequest]);
 
   // Save articles to localStorage whenever they change
   useEffect(() => {
@@ -159,11 +166,19 @@ export default function Home() {
     append = false,
     forceRefresh = false
   ) => {
-    console.log(`fetchNews called: pageNum=${pageNum}, append=${append}, forceRefresh=${forceRefresh}, currentArticles=${articles.length}`);
-    
+    console.log(
+      `fetchNews called: pageNum=${pageNum}, append=${append}, forceRefresh=${forceRefresh}, currentArticles=${articles.length}`
+    );
+
+    // Abort any existing request
+    if (currentRequest) {
+      currentRequest.abort();
+    }
+
     // Create an AbortController for this request
     const abortController = new AbortController();
-    
+    setCurrentRequest(abortController);
+
     try {
       // Don't fetch if we already have articles and this isn't a force refresh
       if (!forceRefresh && pageNum === 1 && articles.length > 0) {
@@ -346,6 +361,18 @@ export default function Home() {
               GIVE ME ONE TEENY-TINY MOMENT —<br />
               YOUR STORIES ARE COMING!
             </p>
+            {/* Manual refresh button for stuck loading */}
+            <button 
+              onClick={() => {
+                console.log('Manual refresh clicked during initial loading');
+                setInitialLoading(false);
+                setLoading(false);
+                fetchNews(1, false, true);
+              }}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              🔄 Force Load News
+            </button>
           </div>
         </div>
       </div>
@@ -411,6 +438,17 @@ export default function Home() {
                 style={{ fontFamily: 'Eraser, cursive' }}>
                 Loading the latest news...
               </p>
+              {/* Manual refresh button for stuck loading */}
+              <button 
+                onClick={() => {
+                  console.log('Manual refresh clicked during loading');
+                  setLoading(false);
+                  fetchNews(1, false, true);
+                }}
+                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              >
+                🔄 Force Load News
+              </button>
             </div>
           </div>
         </div>
