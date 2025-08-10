@@ -305,32 +305,44 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                 if (isABCSource) {
                   // Filter out headlines with "live" or "watch" words (and variations)
                   const titleLower = title.toLowerCase();
-                  const liveWatchPatterns = [
-                    'live',
-                    'watch',
-                    'livestream',
-                    'live stream',
-                    'live coverage',
-                    'live updates',
-                    'live breaking',
-                    'watch live',
-                    'live now',
-                    'breaking live',
-                    'live video',
-                    'live feed',
-                    'live event',
-                    'live broadcast',
-                    'live report',
-                    'live news',
-                    'live story',
-                    'live update',
-                    'live coverage',
-                    'live streaming'
-                  ];
+                  const titleUpper = title.toUpperCase();
 
-                  const shouldFilter = liveWatchPatterns.some(pattern =>
-                    titleLower.includes(pattern)
-                  );
+                  // Check for common patterns that indicate live content or video content
+                  const shouldFilter =
+                    // Check for "LIVE:" or "WATCH:" at the beginning of headlines
+                    titleUpper.startsWith('LIVE:') ||
+                    titleUpper.startsWith('WATCH:') ||
+                    titleUpper.startsWith('LIVE ') ||
+                    titleUpper.startsWith('WATCH ') ||
+                    titleUpper.startsWith('BREAKING:') ||
+                    titleUpper.startsWith('BREAKING ') ||
+                    titleUpper.startsWith('UPDATE:') ||
+                    titleUpper.startsWith('UPDATE ') ||
+                    // Check for other live/watch patterns anywhere in the title
+                    titleLower.includes('live') ||
+                    titleLower.includes('watch') ||
+                    titleLower.includes('livestream') ||
+                    titleLower.includes('live stream') ||
+                    titleLower.includes('live coverage') ||
+                    titleLower.includes('live updates') ||
+                    titleLower.includes('live breaking') ||
+                    titleLower.includes('watch live') ||
+                    titleLower.includes('live now') ||
+                    titleLower.includes('breaking live') ||
+                    titleLower.includes('live video') ||
+                    titleLower.includes('live feed') ||
+                    titleLower.includes('live event') ||
+                    titleLower.includes('live broadcast') ||
+                    titleLower.includes('live report') ||
+                    titleLower.includes('live news') ||
+                    titleLower.includes('live story') ||
+                    titleLower.includes('live update') ||
+                    titleLower.includes('live streaming') ||
+                    titleLower.includes('streaming') ||
+                    titleLower.includes('broadcast') ||
+                    titleLower.includes('coverage') ||
+                    titleLower.includes('updates') ||
+                    titleLower.includes('breaking');
 
                   if (shouldFilter) {
                     console.log(`Filtered out live/watch headline: "${title}"`);
@@ -605,22 +617,35 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
               if (isABCSource) {
                 // Filter out headlines with "live" or "watch" words (and variations)
                 const titleLower = title.toLowerCase();
-                const liveWatchPatterns = [
-                  'live',
-                  'watch',
-                  'livestream',
-                  'live stream',
-                  'live coverage',
-                  'live updates',
-                  'live breaking',
-                  'watch live',
-                  'live now',
-                  'breaking live'
-                ];
+                const titleUpper = title.toUpperCase();
 
-                const shouldFilter = liveWatchPatterns.some(pattern =>
-                  titleLower.includes(pattern)
-                );
+                // Check for common patterns that indicate live content or video content
+                const shouldFilter =
+                  // Check for "LIVE:" or "WATCH:" at the beginning of headlines
+                  titleUpper.startsWith('LIVE:') ||
+                  titleUpper.startsWith('WATCH:') ||
+                  titleUpper.startsWith('LIVE ') ||
+                  titleUpper.startsWith('WATCH ') ||
+                  titleUpper.startsWith('BREAKING:') ||
+                  titleUpper.startsWith('BREAKING ') ||
+                  titleUpper.startsWith('UPDATE:') ||
+                  titleUpper.startsWith('UPDATE ') ||
+                  // Check for other live/watch patterns anywhere in the title
+                  titleLower.includes('live') ||
+                  titleLower.includes('watch') ||
+                  titleLower.includes('livestream') ||
+                  titleLower.includes('live stream') ||
+                  titleLower.includes('live coverage') ||
+                  titleLower.includes('live updates') ||
+                  titleLower.includes('live breaking') ||
+                  titleLower.includes('watch live') ||
+                  titleLower.includes('live now') ||
+                  titleLower.includes('breaking live') ||
+                  titleLower.includes('streaming') ||
+                  titleLower.includes('broadcast') ||
+                  titleLower.includes('coverage') ||
+                  titleLower.includes('updates') ||
+                  titleLower.includes('breaking');
 
                 if (shouldFilter) {
                   console.log(`Filtered out live/watch headline: "${title}"`);
