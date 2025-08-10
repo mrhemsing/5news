@@ -48,7 +48,7 @@ const indieFlower = Indie_Flower({
 });
 
 const eraser = localFont({
-  src: '../fonts/EraserRegular.ttf',
+  src: '../../public/fonts/EraserRegular.ttf',
   variable: '--font-eraser',
   display: 'swap',
   preload: true
