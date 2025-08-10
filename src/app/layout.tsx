@@ -6,6 +6,7 @@ import {
   Bubblegum_Sans,
   Indie_Flower
 } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
 const inter = Inter({
@@ -46,6 +47,13 @@ const indieFlower = Indie_Flower({
   preload: true
 });
 
+const eraser = localFont({
+  src: '../fonts/EraserRegular.ttf',
+  variable: '--font-eraser',
+  display: 'swap',
+  preload: true
+});
+
 export const metadata: Metadata = {
   title: '5News - News Explained Simply',
   description: 'Get the top news headlines explained in simple terms',
@@ -54,28 +62,10 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({
-  children
-}: {
-  children: any;
-}) {
+export default function RootLayout({ children }: { children: any }) {
   return (
     <html lang="en">
       <head>
-        {/* Preload critical fonts */}
-        <link
-          rel="preload"
-          href="/fonts/EraserRegular.ttf"
-          as="font"
-          type="font/ttf"
-          crossOrigin="anonymous"
-        />
-        {/* Preload Google Fonts for Logo */}
-        <link
-          rel="preload"
-          href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&family=Architects+Daughter&display=swap"
-          as="style"
-        />
         {/* Font loading optimization script */}
         <script
           dangerouslySetInnerHTML={{
@@ -109,7 +99,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} ${comicNeue.variable} ${architectsDaughter.variable} ${bubblegumSans.variable} ${indieFlower.variable}`}>
+        className={`${inter.className} ${comicNeue.variable} ${architectsDaughter.variable} ${bubblegumSans.variable} ${indieFlower.variable} ${eraser.variable}`}>
         {children}
       </body>
     </html>
