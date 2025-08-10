@@ -303,6 +303,40 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                   url.includes('abc.com');
 
                 if (isABCSource) {
+                  // Filter out headlines with "live" or "watch" words (and variations)
+                  const titleLower = title.toLowerCase();
+                  const liveWatchPatterns = [
+                    'live',
+                    'watch',
+                    'livestream',
+                    'live stream',
+                    'live coverage',
+                    'live updates',
+                    'live breaking',
+                    'watch live',
+                    'live now',
+                    'breaking live',
+                    'live video',
+                    'live feed',
+                    'live event',
+                    'live broadcast',
+                    'live report',
+                    'live news',
+                    'live story',
+                    'live update',
+                    'live coverage',
+                    'live streaming'
+                  ];
+
+                  const shouldFilter = liveWatchPatterns.some(pattern =>
+                    titleLower.includes(pattern)
+                  );
+
+                  if (shouldFilter) {
+                    console.log(`Filtered out live/watch headline: "${title}"`);
+                    return; // Skip this article
+                  }
+
                   processedUrls.add(url);
                   // Try to extract publication date from the item
                   let publishedAt = new Date().toISOString();
@@ -434,6 +468,30 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                 url.includes('abc.com');
 
               if (isABCSource) {
+                // Filter out headlines with "live" or "watch" words (and variations)
+                const titleLower = title.toLowerCase();
+                const liveWatchPatterns = [
+                  'live',
+                  'watch',
+                  'livestream',
+                  'live stream',
+                  'live coverage',
+                  'live updates',
+                  'live breaking',
+                  'watch live',
+                  'live now',
+                  'breaking live'
+                ];
+
+                const shouldFilter = liveWatchPatterns.some(pattern =>
+                  titleLower.includes(pattern)
+                );
+
+                if (shouldFilter) {
+                  console.log(`Filtered out live/watch headline: "${title}"`);
+                  return; // Skip this article
+                }
+
                 // Try to extract publication date from the item
                 let publishedAt = new Date().toISOString();
 
@@ -545,6 +603,30 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                 url.includes('abc.com');
 
               if (isABCSource) {
+                // Filter out headlines with "live" or "watch" words (and variations)
+                const titleLower = title.toLowerCase();
+                const liveWatchPatterns = [
+                  'live',
+                  'watch',
+                  'livestream',
+                  'live stream',
+                  'live coverage',
+                  'live updates',
+                  'live breaking',
+                  'watch live',
+                  'live now',
+                  'breaking live'
+                ];
+
+                const shouldFilter = liveWatchPatterns.some(pattern =>
+                  titleLower.includes(pattern)
+                );
+
+                if (shouldFilter) {
+                  console.log(`Filtered out live/watch headline: "${title}"`);
+                  return; // Skip this article
+                }
+
                 processedUrls.add(url);
                 // For simple link extraction, we don't have pubDate, so use current time
                 // but add a small offset based on index to maintain some ordering
