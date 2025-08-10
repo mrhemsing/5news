@@ -50,15 +50,12 @@ export async function GET(request: Request) {
 
     if (shouldFetchFresh) {
       console.log(
-        `Making ABC News RSS request for page ${page} (API calls remaining: unlimited)`
+        `Making Google News RSS request for page ${page} (API calls remaining: unlimited)`
       );
 
-      // Use ABC News RSS feeds for reliable, direct content
+      // Use Google News RSS with ABC News whitelist
       const rssUrls = [
-        'https://abcnews.go.com/abcnews/topstories',
-        'https://abcnews.go.com/abcnews/politics',
-        'https://abcnews.go.com/abcnews/us',
-        'https://abcnews.go.com/abcnews/international'
+        'https://news.google.com/rss/search?q=ABC+News&hl=en-US&gl=US&ceid=US:en'
       ];
 
       let mergedArticles: NewsArticle[] = [];
@@ -296,22 +293,30 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                 }
               }
 
-              // Skip if title is empty, just whitespace, or URL already processed
+              // Only include articles from ABC News sources
               if (title && title.length > 0 && !processedUrls.has(url)) {
-                processedUrls.add(url);
-                articles.push({
-                  id: `google-${listIndex}-${itemIndex}-${Date.now()}`,
-                  title: title,
-                  url: url,
-                  publishedAt: new Date().toISOString(),
-                  description: title,
-                  content: title,
-                  urlToImage: '',
-                  source: {
-                    id: null,
-                    name: sourceName
-                  }
-                });
+                // Check if the source is ABC News or related
+                const isABCSource = sourceName.toLowerCase().includes('abc') || 
+                                   sourceName.toLowerCase().includes('abc news') ||
+                                   url.includes('abcnews.go.com') ||
+                                   url.includes('abc.com');
+                
+                if (isABCSource) {
+                  processedUrls.add(url);
+                  articles.push({
+                    id: `google-${listIndex}-${itemIndex}-${Date.now()}`,
+                    title: title,
+                    url: url,
+                    publishedAt: new Date().toISOString(),
+                    description: title,
+                    content: title,
+                    urlToImage: '',
+                    source: {
+                      id: null,
+                      name: 'ABC News'
+                    }
+                  });
+                }
               }
             }
           });
@@ -377,22 +382,30 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
               }
             }
 
-            // Skip if URL already processed
+            // Only include articles from ABC News sources
             if (!processedUrls.has(url)) {
-              processedUrls.add(url);
-              articles.push({
-                id: `rss-${index}-${Date.now()}`,
-                title: title,
-                url: url,
-                publishedAt: new Date().toISOString(),
-                description: description,
-                content: description,
-                urlToImage: '',
-                source: {
-                  id: null,
-                  name: sourceName
-                }
-              });
+              // Check if the source is ABC News or related
+              const isABCSource = sourceName.toLowerCase().includes('abc') || 
+                                 sourceName.toLowerCase().includes('abc news') ||
+                                 url.includes('abcnews.go.com') ||
+                                 url.includes('abc.com');
+              
+              if (isABCSource) {
+                processedUrls.add(url);
+                articles.push({
+                  id: `rss-${index}-${Date.now()}`,
+                  title: title,
+                  url: url,
+                  publishedAt: new Date().toISOString(),
+                  description: description,
+                  content: description,
+                  urlToImage: '',
+                  source: {
+                    id: null,
+                    name: 'ABC News'
+                  }
+                });
+              }
             }
           }
         });
@@ -450,20 +463,28 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                 }
               }
 
-              processedUrls.add(url);
-              articles.push({
-                id: `link-${index}-${Date.now()}`,
-                title: title,
-                url: url,
-                publishedAt: new Date().toISOString(),
-                description: title,
-                content: title,
-                urlToImage: '',
-                source: {
-                  id: null,
-                  name: sourceName
-                }
-              });
+              // Only include articles from ABC News sources
+              const isABCSource = sourceName.toLowerCase().includes('abc') || 
+                                 sourceName.toLowerCase().includes('abc news') ||
+                                 url.includes('abcnews.go.com') ||
+                                 url.includes('abc.com');
+              
+              if (isABCSource) {
+                processedUrls.add(url);
+                articles.push({
+                  id: `link-${index}-${Date.now()}`,
+                  title: title,
+                  url: url,
+                  publishedAt: new Date().toISOString(),
+                  description: title,
+                  content: title,
+                  urlToImage: '',
+                  source: {
+                    id: null,
+                    name: 'ABC News'
+                  }
+                });
+              }
             }
           }
         });
