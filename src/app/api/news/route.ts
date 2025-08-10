@@ -18,8 +18,7 @@ export async function GET(request: Request) {
       const cachedArticles = await getCachedNews();
       if (cachedArticles) {
         console.log(`Returning cached news data for page ${page}`);
-        // Apply whitelist filtering to cached articles as well
-        existingArticles = filterByWhitelist(cachedArticles);
+        existingArticles = cachedArticles;
       }
     }
 
@@ -36,8 +35,7 @@ export async function GET(request: Request) {
         // Return the first cached page we have
         const cachedArticles = await getCachedNews();
         if (cachedArticles) {
-          // Apply whitelist filtering to cached articles as well
-          existingArticles = filterByWhitelist(cachedArticles);
+          existingArticles = cachedArticles;
         }
       }
     }
@@ -52,21 +50,15 @@ export async function GET(request: Request) {
 
     if (shouldFetchFresh) {
       console.log(
-        `Making Google News RSS request for page ${page} (API calls remaining: unlimited)`
+        `Making ABC News RSS request for page ${page} (API calls remaining: unlimited)`
       );
 
-      // Use Google News RSS for high-quality, diverse content
-      // Try different RSS URLs to get more articles
+      // Use ABC News RSS feeds for reliable, direct content
       const rssUrls = [
-        // Direct ABC News RSS feeds (more reliable)
         'https://abcnews.go.com/abcnews/topstories',
         'https://abcnews.go.com/abcnews/politics',
         'https://abcnews.go.com/abcnews/us',
-        'https://abcnews.go.com/abcnews/international',
-        // Google News RSS feeds (as backup)
-        'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en',
-        'https://news.google.com/rss/search?q=breaking+news&hl=en-US&gl=US&ceid=US:en',
-        'https://news.google.com/rss/search?q=latest+news&hl=en-US&gl=US&ceid=US:en'
+        'https://abcnews.go.com/abcnews/international'
       ];
 
       let mergedArticles: NewsArticle[] = [];
@@ -99,7 +91,7 @@ export async function GET(request: Request) {
         mergedArticles.length
       );
 
-      // Whitelist filtering - only allow articles from approved news sources
+      // Simple content filtering - only filter out low-quality headlines
       const filteredArticles = mergedArticles.filter(article => {
         // Skip single word headlines
         const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
@@ -123,88 +115,6 @@ export async function GET(request: Request) {
         // Skip headlines containing "FRESH AIR"
         if (cleanTitle.toLowerCase().includes('fresh air')) {
           console.log('Filtered out fresh air:', article.title);
-          return false;
-        }
-
-        // Check if the article is from an approved source
-        const sourceName = (article.source?.name || '').toLowerCase();
-        const articleUrl = (article.url || '').toLowerCase();
-
-        // Specifically exclude Yahoo Finance articles
-        if (
-          sourceName.includes('yahoo finance') ||
-          sourceName.includes('yahoo.finance') ||
-          articleUrl.includes('finance.yahoo.com') ||
-          articleUrl.includes('uk.finance.yahoo.com')
-        ) {
-          console.log(
-            'Filtered out Yahoo Finance article:',
-            article.source?.name,
-            'URL:',
-            article.url
-          );
-          return false;
-        }
-
-        // Whitelist of approved news sources (exact matches only)
-        const approvedSources = [
-          'abc news',
-          'abcnews',
-          'abc',
-          'abc news network',
-          'abc news network',
-          'abcnews.com',
-          'abcnews.go.com'
-        ];
-
-        // Check if the source name matches any approved source
-        const isApprovedSource = approvedSources.some(approvedSource => {
-          // Normalize both strings for comparison
-          const normalizedSourceName = sourceName.toLowerCase().trim();
-          const normalizedApprovedSource = approvedSource.toLowerCase().trim();
-
-          // Use exact match first
-          if (normalizedSourceName === normalizedApprovedSource) {
-            return true;
-          }
-
-          // Check for partial matches (e.g., "abc news" in "ABC News Network")
-          if (
-            normalizedSourceName.includes(normalizedApprovedSource) ||
-            normalizedApprovedSource.includes(normalizedSourceName)
-          ) {
-            return true;
-          }
-
-          // Check URL matching for domain-based sources
-          const domainMatch = articleUrl.includes(
-            approvedSource.replace(/\s+/g, '')
-          );
-          if (domainMatch) {
-            // Additional check to ensure it's not a partial match (e.g., "times" matching "prince william times")
-            const urlParts = articleUrl.split('.');
-            const sourceParts = approvedSource.replace(/\s+/g, '').split('.');
-
-            // Only allow if the main domain part matches exactly
-            if (urlParts.length > 0 && sourceParts.length > 0) {
-              const urlDomain = urlParts[0].replace('www', '');
-              const sourceDomain = sourceParts[0];
-              if (urlDomain === sourceDomain) {
-                return true;
-              }
-            }
-          }
-
-          return false;
-        });
-
-        if (!isApprovedSource) {
-          console.log(
-            'Filtered out non-approved source:',
-            article.source?.name,
-            'URL:',
-            article.url
-          );
           return false;
         }
 
@@ -625,105 +535,4 @@ function mergeArticles(
   );
 
   return mergedArticles;
-}
-
-// Function to filter articles by whitelist of approved news sources
-function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
-  const filteredArticles: NewsArticle[] = [];
-
-  // Whitelist of approved news sources (exact matches only)
-  const approvedSources = [
-    'abc news',
-    'abcnews',
-    'abc',
-    'abc news network',
-    'abc news network',
-    'abcnews.com',
-    'abcnews.go.com'
-  ];
-
-  articles.forEach(article => {
-    // Skip single word headlines
-    const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
-    if (cleanTitle.split(' ').length <= 1) {
-      console.log('Filtered out single word:', article.title);
-      return;
-    }
-
-    // Skip headlines containing "LIVE UPDATES"
-    if (cleanTitle.toLowerCase().includes('live updates')) {
-      console.log('Filtered out live updates:', article.title);
-      return;
-    }
-
-    // Skip headlines containing "LATEST NEWS"
-    if (cleanTitle.toLowerCase().includes('latest news')) {
-      console.log('Filtered out latest news:', article.title);
-      return;
-    }
-
-    // Skip headlines containing "FRESH AIR"
-    if (cleanTitle.toLowerCase().includes('fresh air')) {
-      console.log('Filtered out fresh air:', article.title);
-      return;
-    }
-
-    const sourceName = (article.source?.name || '').toLowerCase();
-    const articleUrl = (article.url || '').toLowerCase();
-
-    // Specifically exclude Yahoo Finance articles
-    if (
-      sourceName.includes('yahoo finance') ||
-      sourceName.includes('yahoo.finance') ||
-      articleUrl.includes('finance.yahoo.com') ||
-      articleUrl.includes('uk.finance.yahoo.com')
-    ) {
-      console.log(
-        'Filtered out Yahoo Finance article:',
-        article.source?.name,
-        'URL:',
-        article.url
-      );
-      return;
-    }
-
-    // Check if the source matches any approved source
-    const isApprovedSource = approvedSources.some(approvedSource => {
-      const normalizedSourceName = sourceName.toLowerCase().trim();
-      const normalizedApprovedSource = approvedSource.toLowerCase().trim();
-
-      // Exact match
-      if (normalizedSourceName === normalizedApprovedSource) {
-        return true;
-      }
-
-      // Partial matches
-      if (
-        normalizedSourceName.includes(normalizedApprovedSource) ||
-        normalizedApprovedSource.includes(normalizedSourceName)
-      ) {
-        return true;
-      }
-
-      // URL matching
-      if (articleUrl.includes(approvedSource.replace(/\s+/g, ''))) {
-        return true;
-      }
-
-      return false;
-    });
-
-    if (isApprovedSource) {
-      filteredArticles.push(article);
-    } else {
-      console.log(
-        'Filtered out non-approved source:',
-        article.source?.name,
-        'URL:',
-        article.url
-      );
-    }
-  });
-
-  return filteredArticles;
 }
