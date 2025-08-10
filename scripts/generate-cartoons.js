@@ -94,7 +94,14 @@ async function getLatestHeadlines() {
       }
 
       // Whitelist of approved news sources (exact matches only)
-      const approvedSources = ['abc news', 'abcnews'];
+      const approvedSources = [
+        'abc news',
+        'abcnews',
+        'abc',
+        'abc news network',
+        'abcnews.com',
+        'abcnews.go.com'
+      ];
 
       // Check if the source name matches any approved source
       const isApprovedSource = approvedSources.some(approvedSource => {

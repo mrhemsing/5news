@@ -58,6 +58,12 @@ export async function GET(request: Request) {
       // Use Google News RSS for high-quality, diverse content
       // Try different RSS URLs to get more articles
       const rssUrls = [
+        // Direct ABC News RSS feeds (more reliable)
+        'https://abcnews.go.com/abcnews/topstories',
+        'https://abcnews.go.com/abcnews/politics',
+        'https://abcnews.go.com/abcnews/us',
+        'https://abcnews.go.com/abcnews/international',
+        // Google News RSS feeds (as backup)
         'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en',
         'https://news.google.com/rss/search?q=breaking+news&hl=en-US&gl=US&ceid=US:en',
         'https://news.google.com/rss/search?q=latest+news&hl=en-US&gl=US&ceid=US:en'
@@ -141,7 +147,15 @@ export async function GET(request: Request) {
         }
 
         // Whitelist of approved news sources (exact matches only)
-        const approvedSources = ['abc news', 'abcnews'];
+        const approvedSources = [
+          'abc news',
+          'abcnews',
+          'abc',
+          'abc news network',
+          'abc news network',
+          'abcnews.com',
+          'abcnews.go.com'
+        ];
 
         // Check if the source name matches any approved source
         const isApprovedSource = approvedSources.some(approvedSource => {
@@ -149,12 +163,20 @@ export async function GET(request: Request) {
           const normalizedSourceName = sourceName.toLowerCase().trim();
           const normalizedApprovedSource = approvedSource.toLowerCase().trim();
 
-          // Use exact match only - no partial matching
+          // Use exact match first
           if (normalizedSourceName === normalizedApprovedSource) {
             return true;
           }
 
-          // Check URL matching for domain-based sources (only for exact domain matches)
+          // Check for partial matches (e.g., "abc news" in "ABC News Network")
+          if (
+            normalizedSourceName.includes(normalizedApprovedSource) ||
+            normalizedApprovedSource.includes(normalizedSourceName)
+          ) {
+            return true;
+          }
+
+          // Check URL matching for domain-based sources
           const domainMatch = articleUrl.includes(
             approvedSource.replace(/\s+/g, '')
           );
@@ -610,7 +632,15 @@ function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
   const filteredArticles: NewsArticle[] = [];
 
   // Whitelist of approved news sources (exact matches only)
-  const approvedSources = ['abc news', 'abcnews'];
+  const approvedSources = [
+    'abc news',
+    'abcnews',
+    'abc',
+    'abc news network',
+    'abc news network',
+    'abcnews.com',
+    'abcnews.go.com'
+  ];
 
   articles.forEach(article => {
     // Skip single word headlines
@@ -657,34 +687,27 @@ function filterByWhitelist(articles: NewsArticle[]): NewsArticle[] {
       return;
     }
 
-    // Check if the source name matches any approved source
+    // Check if the source matches any approved source
     const isApprovedSource = approvedSources.some(approvedSource => {
-      // Normalize both strings for comparison
       const normalizedSourceName = sourceName.toLowerCase().trim();
       const normalizedApprovedSource = approvedSource.toLowerCase().trim();
 
-      // Use exact match only - no partial matching
+      // Exact match
       if (normalizedSourceName === normalizedApprovedSource) {
         return true;
       }
 
-      // Check URL matching for domain-based sources (only for exact domain matches)
-      const domainMatch = articleUrl.includes(
-        approvedSource.replace(/\s+/g, '')
-      );
-      if (domainMatch) {
-        // Additional check to ensure it's not a partial match (e.g., "times" matching "prince william times")
-        const urlParts = articleUrl.split('.');
-        const sourceParts = approvedSource.replace(/\s+/g, '').split('.');
+      // Partial matches
+      if (
+        normalizedSourceName.includes(normalizedApprovedSource) ||
+        normalizedApprovedSource.includes(normalizedSourceName)
+      ) {
+        return true;
+      }
 
-        // Only allow if the main domain part matches exactly
-        if (urlParts.length > 0 && sourceParts.length > 0) {
-          const urlDomain = urlParts[0].replace('www', '');
-          const sourceDomain = sourceParts[0];
-          if (urlDomain === sourceDomain) {
-            return true;
-          }
-        }
+      // URL matching
+      if (articleUrl.includes(approvedSource.replace(/\s+/g, ''))) {
+        return true;
       }
 
       return false;
