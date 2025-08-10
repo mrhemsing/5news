@@ -20,15 +20,18 @@ export default function Home() {
 
   useEffect(() => {
     const initializeApp = async () => {
+      console.log('Initializing app...');
       // Add 1-second fake delay on initial load
       await new Promise(resolve => setTimeout(resolve, 1000));
       setInitialLoading(false);
+      console.log('Initial loading complete, checking localStorage...');
 
       // Try to restore articles from localStorage first
       const savedArticles = localStorage.getItem('5news-articles');
       if (savedArticles) {
         try {
           const parsedData = JSON.parse(savedArticles);
+          console.log('Found saved articles in localStorage:', parsedData);
           // Check if data is recent (within last 2 hours) and has articles
           const isRecent =
             parsedData.timestamp &&
@@ -43,9 +46,12 @@ export default function Home() {
               parsedData.articles.length
             );
             setArticles(parsedData.articles);
+            setLoading(false); // Set loading to false when restoring from localStorage
+            console.log('Articles restored, loading state set to false');
             // Don't fetch if we have recent saved articles
             return;
           } else {
+            console.log('Saved articles are stale or invalid, cleaning up...');
             // Clean up old data
             localStorage.removeItem('5news-articles');
           }
@@ -53,12 +59,24 @@ export default function Home() {
           console.error('Error parsing saved articles:', error);
           localStorage.removeItem('5news-articles');
         }
+      } else {
+        console.log('No saved articles found in localStorage');
       }
 
+      console.log('Proceeding to fetch news...');
       fetchNews();
     };
 
+    // Add a safety timeout to prevent infinite loading
+    const safetyTimeout = setTimeout(() => {
+      console.log('Safety timeout triggered - forcing loading to false');
+      setLoading(false);
+      setError('Loading timeout - please refresh the page');
+    }, 30000); // 30 seconds
+
     initializeApp();
+
+    return () => clearTimeout(safetyTimeout);
   }, []);
 
   // Save articles to localStorage whenever they change
@@ -141,10 +159,16 @@ export default function Home() {
     append = false,
     forceRefresh = false
   ) => {
+    console.log(`fetchNews called: pageNum=${pageNum}, append=${append}, forceRefresh=${forceRefresh}, currentArticles=${articles.length}`);
+    
+    // Create an AbortController for this request
+    const abortController = new AbortController();
+    
     try {
       // Don't fetch if we already have articles and this isn't a force refresh
       if (!forceRefresh && pageNum === 1 && articles.length > 0) {
         console.log('Articles already loaded, skipping fetch');
+        setLoading(false); // Ensure loading is set to false when skipping
         return;
       }
 
@@ -160,7 +184,9 @@ export default function Home() {
       }
 
       const refreshParam = forceRefresh ? '&refresh=true' : '';
-      const response = await fetch(`/api/news?page=${pageNum}${refreshParam}`);
+      const response = await fetch(`/api/news?page=${pageNum}${refreshParam}`, {
+        signal: abortController.signal
+      });
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -230,9 +256,14 @@ export default function Home() {
 
       setPage(pageNum);
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Fetch request was aborted');
+        return;
+      }
       setError('Failed to load news. Please try again later.');
       console.error('Error fetching news:', err);
     } finally {
+      console.log('fetchNews finally block: setting loading states to false');
       setLoading(false);
       setLoadingMore(false);
     }
