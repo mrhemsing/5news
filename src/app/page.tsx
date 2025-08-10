@@ -555,7 +555,7 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="relative z-10">
-        <div className="container mx-auto px-4 py-8 bg-gray-100 md:bg-transparent">
+        <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-5">
