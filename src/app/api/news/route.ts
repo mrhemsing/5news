@@ -346,6 +346,69 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&rdquo;/g, '"');
 }
 
+// Function to extract real ABC News URL from Google News article page
+async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<string> {
+  try {
+    console.log(`Fetching Google News article page: ${googleNewsUrl}`);
+    
+    // Use a realistic User-Agent
+    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    
+    const response = await fetch(googleNewsUrl, {
+      headers: {
+        'User-Agent': userAgent,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      }
+    });
+    
+    if (!response.ok) {
+      console.log(`Failed to fetch Google News article: ${response.status}`);
+      return googleNewsUrl; // Return original URL if fetch fails
+    }
+    
+    const html = await response.text();
+    console.log(`Successfully fetched Google News article, length: ${html.length}`);
+    
+    // Look for ABC News URLs in the HTML content
+    const abcUrlPatterns = [
+      /https:\/\/abcnews\.go\.com\/[^\s"']+/g,
+      /https:\/\/abc\.com\/[^\s"']+/g,
+      /href="([^"]*abcnews\.go\.com[^"]*)"/g,
+      /href="([^"]*abc\.com[^"]*)"/g
+    ];
+    
+    for (const pattern of abcUrlPatterns) {
+      const matches = html.match(pattern);
+      if (matches && matches.length > 0) {
+        const realUrl = matches[0].replace(/href="([^"]*)"/, '$1');
+        if (realUrl.includes('abcnews.go.com') || realUrl.includes('abc.com')) {
+          console.log(`✓ Extracted real ABC News URL: ${realUrl}`);
+          return realUrl;
+        }
+      }
+    }
+    
+    // If no ABC News URL found, look for any external news URL
+    const externalUrlPattern = /href="(https:\/\/[^"]*\.com\/[^"]*)"/g;
+    const externalMatches = html.match(externalUrlPattern);
+    if (externalMatches && externalMatches.length > 0) {
+      const externalUrl = externalMatches[0].replace(/href="([^"]*)"/, '$1');
+      console.log(`⚠ Found external URL (not ABC): ${externalUrl}`);
+    }
+    
+    console.log(`No real ABC News URL found in Google News article`);
+    return googleNewsUrl; // Return original URL if no real URL found
+    
+  } catch (error) {
+    console.error(`Error fetching Google News article:`, error);
+    return googleNewsUrl; // Return original URL on error
+  }
+}
+
 // Function to parse Google News RSS feed
 async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
   const articles: NewsArticle[] = [];
@@ -467,11 +530,16 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                   const articleId = articleIdMatch[1];
                   console.log(`Found Google News article ID: ${articleId}`);
 
-                  // For now, construct a direct ABC News URL based on the article ID
-                  // This is a fallback since we can't decode the actual URL from the ID
-                  const fallbackUrl = `https://abcnews.go.com/articles/${articleId}`;
-                  directUrl = fallbackUrl;
-                  console.log(`⚠ Using fallback ABC News URL: ${directUrl}`);
+                  console.log(`Found Google News article ID: ${articleId}, attempting to extract real URL...`);
+                  
+                  // Fetch the actual Google News article page to extract the real ABC News URL
+                  const realUrl = await extractRealUrlFromGoogleNews(googleNewsUrl);
+                  if (realUrl !== googleNewsUrl) {
+                    directUrl = realUrl;
+                    console.log(`✓ Successfully extracted real URL: ${directUrl}`);
+                  } else {
+                    console.log(`⚠ Could not extract real URL, keeping Google News URL`);
+                  }
                 }
               }
 
@@ -831,13 +899,16 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 const articleId = articleIdMatch[1];
                 console.log(`Found Google News article ID (RSS): ${articleId}`);
 
-                // For now, construct a direct ABC News URL based on the article ID
-                // This is a fallback since we can't decode the actual URL from the ID
-                const fallbackUrl = `https://abcnews.go.com/articles/${articleId}`;
-                directUrl = fallbackUrl;
-                console.log(
-                  `⚠ Using fallback ABC News URL (RSS): ${fallbackUrl}`
-                );
+                console.log(`Found Google News article ID (RSS): ${articleId}, attempting to extract real URL...`);
+                
+                // Fetch the actual Google News article page to extract the real ABC News URL
+                const realUrl = await extractRealUrlFromGoogleNews(googleNewsUrl);
+                if (realUrl !== googleNewsUrl) {
+                  directUrl = realUrl;
+                  console.log(`✓ Successfully extracted real URL (RSS): ${directUrl}`);
+                } else {
+                  console.log(`⚠ Could not extract real URL (RSS), keeping Google News URL`);
+                }
               }
             }
 
