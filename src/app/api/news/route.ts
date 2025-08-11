@@ -371,6 +371,90 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               const googleNewsUrl = linkMatch[1];
               const title = decodeHtmlEntities(linkMatch[2].trim());
 
+              // Extract the actual ABC News URL from Google News redirect
+              let directUrl = googleNewsUrl;
+
+              // Method 1: Look for URL parameter that contains the actual article URL
+              const urlParamMatch = googleNewsUrl.match(/[?&]url=([^&]+)/);
+              if (urlParamMatch) {
+                try {
+                  const decodedUrl = decodeURIComponent(urlParamMatch[1]);
+                  if (
+                    decodedUrl.includes('abcnews.go.com') ||
+                    decodedUrl.includes('abc.com')
+                  ) {
+                    directUrl = decodedUrl;
+                    console.log(
+                      `✓ Extracted direct ABC News URL: ${directUrl}`
+                    );
+                  }
+                } catch (e) {
+                  // If decoding fails, keep the original URL
+                }
+              }
+
+              // Method 2: Look for the actual article URL in the Google News URL path
+              if (directUrl === googleNewsUrl) {
+                const articleUrlMatch =
+                  googleNewsUrl.match(/\/articles\/([^?]+)/);
+                if (articleUrlMatch) {
+                  const articlePath = articleUrlMatch[1];
+                  // Check if this looks like a direct ABC News path
+                  if (
+                    articlePath.includes('abc') ||
+                    articlePath.includes('news')
+                  ) {
+                    // Try to construct the direct ABC News URL
+                    const possibleDirectUrl = `https://abcnews.go.com/${articlePath}`;
+                    // We'll validate this URL later when we check if it's an ABC source
+                    directUrl = possibleDirectUrl;
+                  }
+                }
+              }
+
+              // Method 3: Look for redirect URLs in other parameters
+              if (directUrl === googleNewsUrl) {
+                const redirectMatch =
+                  googleNewsUrl.match(/[?&]redirect=([^&]+)/);
+                if (redirectMatch) {
+                  try {
+                    const decodedUrl = decodeURIComponent(redirectMatch[1]);
+                    if (
+                      decodedUrl.includes('abcnews.go.com') ||
+                      decodedUrl.includes('abc.com')
+                    ) {
+                      directUrl = decodedUrl;
+                      console.log(
+                        `✓ Extracted direct ABC News URL from redirect param: ${directUrl}`
+                      );
+                    }
+                  } catch (e) {
+                    // If decoding fails, keep the original URL
+                  }
+                }
+              }
+
+              // Method 4: Look for article URLs in other common patterns
+              if (directUrl === googleNewsUrl) {
+                const articleMatch = googleNewsUrl.match(/[?&]article=([^&]+)/);
+                if (articleMatch) {
+                  try {
+                    const decodedUrl = decodeURIComponent(articleMatch[1]);
+                    if (
+                      decodedUrl.includes('abcnews.go.com') ||
+                      decodedUrl.includes('abc.com')
+                    ) {
+                      directUrl = decodedUrl;
+                      console.log(
+                        `✓ Extracted direct ABC News URL from article param: ${directUrl}`
+                      );
+                    }
+                  } catch (e) {
+                    // If decoding fails, keep the original URL
+                  }
+                }
+              }
+
               // Try multiple methods to extract source name
               let sourceName = 'Google News';
 
@@ -414,7 +498,7 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               if (
                 title &&
                 title.length > 0 &&
-                !processedUrls.has(googleNewsUrl)
+                !processedUrls.has(directUrl) // Check against direct URL for deduplication
               ) {
                 // Check if the source is ABC News or related
                 const isABCSource =
@@ -590,12 +674,12 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                     );
                   }
 
-                  if (publishedAt && !processedUrls.has(googleNewsUrl)) {
-                    processedUrls.add(googleNewsUrl);
+                  if (publishedAt && !processedUrls.has(directUrl)) {
+                    processedUrls.add(directUrl); // Track direct URLs instead of Google News URLs
                     articles.push({
                       id: `google-${listIndex}-${itemIndex}-${Date.now()}`,
                       title: title,
-                      url: googleNewsUrl,
+                      url: directUrl, // Use direct ABC News URL instead of Google News redirect
                       publishedAt: publishedAt,
                       description: title,
                       content: title,
@@ -632,6 +716,90 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               titleMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/, '$1').trim()
             );
             const googleNewsUrl = linkMatch[1].trim();
+
+            // Extract the actual ABC News URL from Google News redirect (same logic as above)
+            let directUrl = googleNewsUrl;
+
+            // Method 1: Look for URL parameter that contains the actual article URL
+            const urlParamMatch = googleNewsUrl.match(/[?&]url=([^&]+)/);
+            if (urlParamMatch) {
+              try {
+                const decodedUrl = decodeURIComponent(urlParamMatch[1]);
+                if (
+                  decodedUrl.includes('abcnews.go.com') ||
+                  decodedUrl.includes('abc.com')
+                ) {
+                  directUrl = decodedUrl;
+                  console.log(
+                    `✓ Extracted direct ABC News URL (RSS): ${directUrl}`
+                  );
+                }
+              } catch (e) {
+                // If decoding fails, keep the original URL
+              }
+            }
+
+            // Method 2: Look for the actual article URL in the Google News URL path
+            if (directUrl === googleNewsUrl) {
+              const articleUrlMatch =
+                googleNewsUrl.match(/\/articles\/([^?]+)/);
+              if (articleUrlMatch) {
+                const articlePath = articleUrlMatch[1];
+                // Check if this looks like a direct ABC News path
+                if (
+                  articlePath.includes('abc') ||
+                  articlePath.includes('news')
+                ) {
+                  // Try to construct the direct ABC News URL
+                  const possibleDirectUrl = `https://abcnews.go.com/${articlePath}`;
+                  // We'll validate this URL later when we check if it's an ABC source
+                  directUrl = possibleDirectUrl;
+                }
+              }
+            }
+
+            // Method 3: Look for redirect URLs in other parameters
+            if (directUrl === googleNewsUrl) {
+              const redirectMatch = googleNewsUrl.match(/[?&]redirect=([^&]+)/);
+              if (redirectMatch) {
+                try {
+                  const decodedUrl = decodeURIComponent(redirectMatch[1]);
+                  if (
+                    decodedUrl.includes('abcnews.go.com') ||
+                    decodedUrl.includes('abc.com')
+                  ) {
+                    directUrl = decodedUrl;
+                    console.log(
+                      `✓ Extracted direct ABC News URL from redirect param (RSS): ${directUrl}`
+                    );
+                  }
+                } catch (e) {
+                  // If decoding fails, keep the original URL
+                }
+              }
+            }
+
+            // Method 4: Look for article URLs in other common patterns
+            if (directUrl === googleNewsUrl) {
+              const articleMatch = googleNewsUrl.match(/[?&]article=([^&]+)/);
+              if (articleMatch) {
+                try {
+                  const decodedUrl = decodeURIComponent(articleMatch[1]);
+                  if (
+                    decodedUrl.includes('abcnews.go.com') ||
+                    decodedUrl.includes('abc.com')
+                  ) {
+                    directUrl = decodedUrl;
+                    console.log(
+                      `✓ Extracted direct ABC News URL from article param (RSS): ${directUrl}`
+                    );
+                  }
+                } catch (e) {
+                  // If decoding fails, keep the original URL
+                }
+              }
+            }
+
             const description = descriptionMatch
               ? decodeHtmlEntities(
                   descriptionMatch[1]
@@ -674,7 +842,8 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
             }
 
             // Only include articles from ABC News sources
-            if (!processedUrls.has(googleNewsUrl)) {
+            if (!processedUrls.has(directUrl)) {
+              // Check against direct URL for deduplication
               // Check if the source is ABC News or related
               const isABCSource =
                 sourceName.toLowerCase().includes('abc') ||
@@ -806,11 +975,11 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 }
 
                 if (publishedAt) {
-                  processedUrls.add(googleNewsUrl);
+                  processedUrls.add(directUrl); // Track direct URLs instead of Google News URLs
                   articles.push({
                     id: `rss-${index}-${Date.now()}`,
                     title: title,
-                    url: googleNewsUrl,
+                    url: directUrl, // Use direct ABC News URL instead of Google News redirect
                     publishedAt: publishedAt,
                     description: description,
                     content: description,
