@@ -347,32 +347,38 @@ function decodeHtmlEntities(text: string): string {
 }
 
 // Function to extract real ABC News URL from Google News article page
-async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<string> {
+async function extractRealUrlFromGoogleNews(
+  googleNewsUrl: string
+): Promise<string> {
   try {
     console.log(`Fetching Google News article page: ${googleNewsUrl}`);
-    
+
     // Use a realistic User-Agent
-    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    
+    const userAgent =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
     const response = await fetch(googleNewsUrl, {
       headers: {
         'User-Agent': userAgent,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
         'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
         'Upgrade-Insecure-Requests': '1'
       }
     });
-    
+
     if (!response.ok) {
       console.log(`Failed to fetch Google News article: ${response.status}`);
       return googleNewsUrl; // Return original URL if fetch fails
     }
-    
+
     const html = await response.text();
-    console.log(`Successfully fetched Google News article, length: ${html.length}`);
-    
+    console.log(
+      `Successfully fetched Google News article, length: ${html.length}`
+    );
+
     // Look for ABC News URLs in the HTML content with multiple patterns
     const abcUrlPatterns = [
       // Direct ABC News URLs
@@ -388,35 +394,41 @@ async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<stri
       /onclick="[^"]*['"]([^'"]*abcnews\.go\.com[^'"]*)['"][^"]*"/g,
       /onclick="[^"]*['"]([^'"]*abc\.com[^'"]*)['"][^"]*"/g
     ];
-    
+
     for (const pattern of abcUrlPatterns) {
       const matches = html.match(pattern);
       if (matches && matches.length > 0) {
         for (const match of matches) {
           let realUrl = match;
-          
+
           // Clean up the URL if it's in an attribute
           if (realUrl.includes('href="')) {
             realUrl = realUrl.replace(/href="([^"]*)"/, '$1');
           } else if (realUrl.includes('data-url="')) {
             realUrl = realUrl.replace(/data-url="([^"]*)"/, '$1');
           } else if (realUrl.includes('onclick=')) {
-            realUrl = realUrl.replace(/onclick="[^"]*['"]([^'"]*)['"][^"]*"/, '$1');
+            realUrl = realUrl.replace(
+              /onclick="[^"]*['"]([^'"]*)['"][^"]*"/,
+              '$1'
+            );
           }
-          
+
           // Validate the URL
-          if (realUrl.includes('abcnews.go.com') || realUrl.includes('abc.com')) {
+          if (
+            realUrl.includes('abcnews.go.com') ||
+            realUrl.includes('abc.com')
+          ) {
             // Clean up any remaining HTML entities or fragments
             realUrl = realUrl.split('#')[0].split('?')[0]; // Remove fragments and query params
             realUrl = decodeHtmlEntities(realUrl);
-            
+
             console.log(`✓ Extracted real ABC News URL: ${realUrl}`);
             return realUrl;
           }
         }
       }
     }
-    
+
     // If no ABC News URL found, look for any external news URL
     const externalUrlPattern = /href="(https:\/\/[^"]*\.com\/[^"]*)"/g;
     const externalMatches = html.match(externalUrlPattern);
@@ -424,10 +436,9 @@ async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<stri
       const externalUrl = externalMatches[0].replace(/href="([^"]*)"/, '$1');
       console.log(`⚠ Found external URL (not ABC): ${externalUrl}`);
     }
-    
+
     console.log(`No real ABC News URL found in Google News article`);
     return googleNewsUrl; // Return original URL if no real URL found
-    
   } catch (error) {
     console.error(`Error fetching Google News article:`, error);
     return googleNewsUrl; // Return original URL on error
@@ -543,26 +554,23 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 }
               }
 
-              // Method 5: Handle Google News article ID format (like CBMiowFBVV95cUxQT1VZNXJXaE9YZFp2c1VVMjFhTlY4allIMHV0cnhNVnlOZHdMNG1PcHNtQUxBVDdla0tlenpwUmRxVlczdzRxNm5uYXRIWkdDcXI5TzJxNi1NRkNaZFEwNVI3TlpVN3dudnpLV2w5eTU0aWhGbkZYWk5jeG41TGNLR2tVaEMwMXY5RTBBaERTVzNpN2VlSjM4b2NzUnB4bHlLZ0JZ0gGoAUFVX3lxTE9QdlFwYWNBS0xsclZwd0N5dWszOHktRENvRlJuYzY1cnFUQ0lUODgySGpFWFozYlVadXhzWnJEc3RiUW5MSUR5RG5FZUE3TEFxbXRiNE5qbzhmS2lkMTFPN2pNVE8zV2FfQTdva0JxcUwzbW15NnZ0d2VVVWdQbmhzT2lTTUt1a25qY1Y5ZGo0OGdEM2FFZVdPZjM5X1BITlpqQXVGd2F4NA)
+              // Method 5: Handle Google News article ID format by fetching the real article page
               if (
                 directUrl === googleNewsUrl &&
                 googleNewsUrl.includes('/articles/')
               ) {
-                // Extract the article ID from the URL
-                const articleIdMatch =
-                  googleNewsUrl.match(/\/articles\/([^?]+)/);
-                if (articleIdMatch) {
-                  const articleId = articleIdMatch[1];
-                  console.log(`Found Google News article ID: ${articleId}`);
+                console.log(
+                  `Found Google News article ID format, attempting to extract real URL...`
+                );
+                console.log(`Original Google News URL: ${googleNewsUrl}`);
 
-                  console.log(
-                    `Found Google News article ID: ${articleId}, attempting to extract real URL...`
-                  );
-
+                try {
                   // Fetch the actual Google News article page to extract the real ABC News URL
                   const realUrl = await extractRealUrlFromGoogleNews(
                     googleNewsUrl
                   );
+                  console.log(`Real URL extraction result: ${realUrl}`);
+
                   if (realUrl !== googleNewsUrl) {
                     directUrl = realUrl;
                     console.log(
@@ -573,6 +581,9 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                       `⚠ Could not extract real URL, keeping Google News URL`
                     );
                   }
+                } catch (error) {
+                  console.error(`Error during real URL extraction:`, error);
+                  console.log(`⚠ Error occurred, keeping Google News URL`);
                 }
               }
 
@@ -797,6 +808,17 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
 
                   if (publishedAt && !processedUrls.has(directUrl)) {
                     processedUrls.add(directUrl); // Track direct URLs instead of Google News URLs
+
+                    // Debug: Log the URLs being used
+                    console.log(`=== Article Creation Debug ===`);
+                    console.log(`Title: "${title}"`);
+                    console.log(`Original Google News URL: ${googleNewsUrl}`);
+                    console.log(`Final direct URL: ${directUrl}`);
+                    console.log(
+                      `URLs are different: ${googleNewsUrl !== directUrl}`
+                    );
+                    console.log(`===============================`);
+
                     articles.push({
                       id: `google-${listIndex}-${itemIndex}-${Date.now()}`,
                       title: title,
@@ -1129,6 +1151,17 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
 
                 if (publishedAt) {
                   processedUrls.add(directUrl); // Track direct URLs instead of Google News URLs
+
+                  // Debug: Log the URLs being used
+                  console.log(`=== Article Creation Debug (RSS) ===`);
+                  console.log(`Title: "${title}"`);
+                  console.log(`Original Google News URL: ${googleNewsUrl}`);
+                  console.log(`Final direct URL: ${directUrl}`);
+                  console.log(
+                    `URLs are different: ${googleNewsUrl !== directUrl}`
+                  );
+                  console.log(`=====================================`);
+
                   articles.push({
                     id: `rss-${index}-${Date.now()}`,
                     title: title,
