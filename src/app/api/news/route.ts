@@ -258,20 +258,6 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
   const processedUrls = new Set<string>(); // Track processed URLs to avoid duplicates
 
   try {
-    // Extract RSS feed's lastBuildDate for fallback use
-    const lastBuildMatch = rssText.match(/<lastBuildDate>([^<]*)<\/lastBuildDate>/);
-    let feedLastBuildDate: Date | null = null;
-    if (lastBuildMatch) {
-      try {
-        feedLastBuildDate = new Date(lastBuildMatch[1].trim());
-        if (isNaN(feedLastBuildDate.getTime())) {
-          feedLastBuildDate = null;
-        }
-      } catch (e) {
-        feedLastBuildDate = null;
-      }
-    }
-
     // Method 1: Try parsing <ol> lists (Google News format)
     const listMatches = rssText.match(/<ol>([\s\S]*?)<\/ol>/g);
 
@@ -384,12 +370,10 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                     return; // Skip this article
                   }
 
-                  processedUrls.add(url);
-                  
-                  // Enhanced date extraction with priority order
+                  // ONLY extract date from the article URL - no fallbacks
                   let publishedAt: string | null = null;
 
-                  // Priority 1: Extract date from the article URL (most reliable)
+                  // Extract date from the article URL (most reliable)
                   const urlDateMatch =
                     url.match(/\/(\d{4})\/(\d{1,2})\/(\d{1,2})\//) ||
                     url.match(/\/(\d{4})-(\d{1,2})-(\d{1,2})\//) ||
@@ -412,82 +396,25 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                     }
                   }
 
-                  // Priority 2: Try RSS metadata dates
-                  if (!publishedAt) {
-                    const pubDateMatch = item.match(/<pubDate>([^<]*)<\/pubDate>/);
-                    const dateMatch = item.match(/<date>([^<]*)<\/date>/);
-                    const timeMatch = item.match(/<time>([^<]*)<\/time>/);
-
-                    // Google News RSS might also have dates in different formats
-                    const googleDateMatch = item.match(
-                      /<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]*)<\/span>/
-                    );
-                    const googleTimeMatch = item.match(
-                      /<span[^>]*class="[^"]*time[^"]*"[^>]*>([^<]*)<\/span>/
-                    );
-
-                    let dateString = null;
-                    if (pubDateMatch) dateString = pubDateMatch[1].trim();
-                    else if (dateMatch) dateString = dateMatch[1].trim();
-                    else if (timeMatch) dateString = timeMatch[1].trim();
-                    else if (googleDateMatch) dateString = googleDateMatch[1].trim();
-                    else if (googleTimeMatch) dateString = googleTimeMatch[1].trim();
-
-                    if (dateString) {
-                      try {
-                        const parsedDate = new Date(dateString);
-                        if (!isNaN(parsedDate.getTime())) {
-                          publishedAt = parsedDate.toISOString();
-                          console.log(
-                            `✓ Parsed RSS date for "${title}": ${publishedAt}`
-                          );
-                        }
-                      } catch (e) {
-                        console.log('Failed to parse RSS date:', dateString);
+                  // ONLY include articles where we successfully extracted a date from the URL
+                  if (publishedAt) {
+                    processedUrls.add(url);
+                    articles.push({
+                      id: `google-${listIndex}-${itemIndex}-${Date.now()}`,
+                      title: title,
+                      url: url,
+                      publishedAt: publishedAt,
+                      description: title,
+                      content: title,
+                      urlToImage: '',
+                      source: {
+                        id: null,
+                        name: 'ABC News'
                       }
-                    }
+                    });
+                  } else {
+                    console.log(`⚠ Skipped article without URL date: "${title}"`);
                   }
-
-                  // Priority 3: Use RSS feed's lastBuildDate with intelligent offset
-                  if (!publishedAt && feedLastBuildDate) {
-                    // Calculate offset based on position in the feed
-                    // Earlier articles (lower indices) get earlier dates
-                    const baseOffset = listIndex * 24 * 60 * 60 * 1000; // 1 day per list
-                    const itemOffset = itemIndex * 60 * 60 * 1000; // 1 hour per item
-                    const offsetDate = new Date(
-                      feedLastBuildDate.getTime() - baseOffset - itemOffset
-                    );
-                    publishedAt = offsetDate.toISOString();
-                    console.log(
-                      `⚠ Using lastBuildDate with offset for "${title}": ${publishedAt}`
-                    );
-                  }
-
-                  // Priority 4: Last resort - use current time with minimal offset
-                  if (!publishedAt) {
-                    // Use a very small offset to maintain order without creating artificial dates
-                    const offsetDate = new Date(
-                      Date.now() - (listIndex * 1000) - (itemIndex * 100)
-                    );
-                    publishedAt = offsetDate.toISOString();
-                    console.log(
-                      `⚠ Using fallback timestamp for "${title}": ${publishedAt}`
-                    );
-                  }
-
-                  articles.push({
-                    id: `google-${listIndex}-${itemIndex}-${Date.now()}`,
-                    title: title,
-                    url: url,
-                    publishedAt: publishedAt,
-                    description: title,
-                    content: title,
-                    urlToImage: '',
-                    source: {
-                      id: null,
-                      name: 'ABC News'
-                    }
-                  });
                 }
               }
             }
@@ -503,7 +430,7 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
       if (itemMatches) {
         itemMatches.forEach((item, index) => {
           const titleMatch = item.match(/<title>([\s\S]*?)<\/title>/);
-          const linkMatch = item.match(/<link>([\s\S]*?)<\/link>/);
+          const linkMatch = item.match(/<link>([^<]*)<\/link>/);
           const descriptionMatch = item.match(
             /<description>([\s\S]*?)<\/description>/
           );
@@ -588,10 +515,10 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                   return; // Skip this article
                 }
 
-                // Enhanced date extraction with priority order
+                // ONLY extract date from the article URL - no fallbacks
                 let publishedAt: string | null = null;
 
-                // Priority 1: Extract date from the article URL
+                // Extract date from the article URL
                 const urlDateMatch =
                   url.match(/\/(\d{4})\/(\d{1,2})\/(\d{1,2})\//) ||
                   url.match(/\/(\d{4})-(\d{1,2})-(\d{1,2})\//) ||
@@ -614,78 +541,25 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                   }
                 }
 
-                // Priority 2: Try RSS metadata dates
-                if (!publishedAt) {
-                  const pubDateMatch = item.match(
-                    /<pubDate>([^<]*)<\/pubDate>/
-                  );
-                  const dateMatch = item.match(/<date>([^<]*)<\/date>/);
-                  const timeMatch = item.match(/<time>([^<]*)<\/time>/);
-
-                  // Also try some alternative date formats
-                  const altDateMatch = item.match(
-                    /<dc:date>([^<]*)<\/dc:date>/
-                  );
-                  const altTimeMatch = item.match(
-                    /<dc:time>([^<]*)<\/dc:time>/
-                  );
-
-                  let dateString = null;
-                  if (pubDateMatch) dateString = pubDateMatch[1].trim();
-                  else if (dateMatch) dateString = dateMatch[1].trim();
-                  else if (timeMatch) dateString = timeMatch[1].trim();
-                  else if (altDateMatch) dateString = altDateMatch[1].trim();
-                  else if (altTimeMatch) dateString = altTimeMatch[1].trim();
-
-                  if (dateString) {
-                    try {
-                      const parsedDate = new Date(dateString);
-                      if (!isNaN(parsedDate.getTime())) {
-                        publishedAt = parsedDate.toISOString();
-                        console.log(
-                          `✓ Parsed RSS date for "${title}": ${publishedAt}`
-                        );
-                      }
-                    } catch (e) {
-                      console.log('Failed to parse RSS date:', dateString);
+                // ONLY include articles where we successfully extracted a date from the URL
+                if (publishedAt) {
+                  processedUrls.add(url);
+                  articles.push({
+                    id: `rss-${index}-${Date.now()}`,
+                    title: title,
+                    url: url,
+                    publishedAt: publishedAt,
+                    description: description,
+                    content: description,
+                    urlToImage: '',
+                    source: {
+                      id: null,
+                      name: 'ABC News'
                     }
-                  }
+                  });
+                } else {
+                  console.log(`⚠ Skipped article without URL date: "${title}"`);
                 }
-
-                // Priority 3: Use RSS feed's lastBuildDate with intelligent offset
-                if (!publishedAt && feedLastBuildDate) {
-                  const offsetDate = new Date(
-                    feedLastBuildDate.getTime() - index * 60 * 60 * 1000
-                  );
-                  publishedAt = offsetDate.toISOString();
-                  console.log(
-                    `⚠ Using lastBuildDate with offset for "${title}": ${publishedAt}`
-                  );
-                }
-
-                // Priority 4: Last resort - use current time with minimal offset
-                if (!publishedAt) {
-                  const offsetDate = new Date(Date.now() - index * 60000);
-                  publishedAt = offsetDate.toISOString();
-                  console.log(
-                    `⚠ Using fallback timestamp for "${title}": ${publishedAt}`
-                  );
-                }
-
-                processedUrls.add(url);
-                articles.push({
-                  id: `rss-${index}-${Date.now()}`,
-                  title: title,
-                  url: url,
-                  publishedAt: publishedAt,
-                  description: description,
-                  content: description,
-                  urlToImage: '',
-                  source: {
-                    id: null,
-                    name: 'ABC News'
-                  }
-                });
               }
             }
           }
@@ -789,12 +663,10 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                   return; // Skip this article
                 }
 
-                processedUrls.add(url);
-                
-                // Enhanced date extraction with priority order
+                // ONLY extract date from the article URL - no fallbacks
                 let publishedAt: string | null = null;
 
-                // Priority 1: Extract date from the article URL
+                // Extract date from the article URL
                 const urlDateMatch =
                   url.match(/\/(\d{4})\/(\d{1,2})\/(\d{1,2})\//) ||
                   url.match(/\/(\d{4})-(\d{1,2})-(\d{1,2})\//) ||
@@ -817,39 +689,25 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
                   }
                 }
 
-                // Priority 2: Use RSS feed's lastBuildDate with intelligent offset
-                if (!publishedAt && feedLastBuildDate) {
-                  const offsetDate = new Date(
-                    feedLastBuildDate.getTime() - index * 60 * 60 * 1000
-                  );
-                  publishedAt = offsetDate.toISOString();
-                  console.log(
-                    `⚠ Using lastBuildDate with offset for "${title}": ${publishedAt}`
-                  );
+                // ONLY include articles where we successfully extracted a date from the URL
+                if (publishedAt) {
+                  processedUrls.add(url);
+                  articles.push({
+                    id: `link-${index}-${Date.now()}`,
+                    title: title,
+                    url: url,
+                    publishedAt: publishedAt,
+                    description: title,
+                    content: title,
+                    urlToImage: '',
+                    source: {
+                      id: null,
+                      name: 'ABC News'
+                    }
+                  });
+                } else {
+                  console.log(`⚠ Skipped article without URL date: "${title}"`);
                 }
-
-                // Priority 3: Last resort - use current time with minimal offset
-                if (!publishedAt) {
-                  const offsetDate = new Date(Date.now() - index * 60000);
-                  publishedAt = offsetDate.toISOString();
-                  console.log(
-                    `⚠ Using fallback timestamp for "${title}": ${publishedAt}`
-                  );
-                }
-
-                articles.push({
-                  id: `link-${index}-${Date.now()}`,
-                  title: title,
-                  url: url,
-                  publishedAt: publishedAt,
-                  description: title,
-                  content: title,
-                  urlToImage: '',
-                  source: {
-                    id: null,
-                    name: 'ABC News'
-                  }
-                });
               }
             }
           }
@@ -867,7 +725,9 @@ function parseRSSFeed(rssText: string): NewsArticle[] {
     return dateB.getTime() - dateA.getTime(); // Newest first
   });
 
-  console.log(`Parsed ${articles.length} articles with enhanced date extraction`);
+  console.log(
+    `Parsed ${articles.length} articles with URL-only date extraction`
+  );
   if (articles.length > 0) {
     console.log('First 3 articles after parsing:');
     articles.slice(0, 3).forEach((article, index) => {
