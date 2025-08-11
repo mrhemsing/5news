@@ -50,17 +50,24 @@ export async function GET(request: Request) {
 
     if (shouldFetchFresh) {
       console.log(
-        `Making Google News RSS request for page ${page} (enhanced date extraction)`
+        `Making Google News RSS request for page ${page} (stealth mode)`
       );
+
+      // Add natural initial delay (simulate human opening browser)
+      const initialDelay = 1000 + Math.random() * 2000; // 1-3 seconds
+      console.log(
+        `Initial delay: ${Math.round(initialDelay / 1000)} seconds...`
+      );
+      await new Promise(resolve => setTimeout(resolve, initialDelay));
 
       // Focused Google News RSS strategy with enhanced date extraction
       let mergedArticles: NewsArticle[] = [];
 
       const rssUrls = [
-        'https://news.google.com/rss/search?q=ABC+News&hl=en-US&gl=US&ceid=US:en&num=50',
-        'https://news.google.com/rss/search?q=ABC+News&hl=en&gl=US&ceid=US:en&num=50',
-        'https://news.google.com/rss/search?q=ABC+News&hl=en-US&gl=US&num=50',
-        'https://news.google.com/rss/search?q=ABC+News&hl=en&gl=US&num=50'
+        'https://news.google.com/rss/search?q=ABC+News&hl=en-US&gl=US&ceid=US:en&num=20',
+        'https://news.google.com/rss/search?q=ABC+News&hl=en&gl=US&ceid=US:en&num=20',
+        'https://news.google.com/rss/search?q=ABC+News&hl=en-US&gl=US&num=20',
+        'https://news.google.com/rss/search?q=ABC+News&hl=en&gl=US&num=20'
       ];
 
       // Enhanced User-Agent rotation with more realistic patterns
@@ -78,38 +85,35 @@ export async function GET(request: Request) {
       for (const rssUrl of rssUrls) {
         if (googleNewsSuccess) break;
 
-        let retries = 3;
+        let retries = 2;
         while (retries > 0 && !googleNewsSuccess) {
           try {
             const userAgent =
               userAgents[Math.floor(Math.random() * userAgents.length)];
             console.log(
-              `Trying Google News RSS: ${rssUrl} (attempt ${4 - retries}/3)`
+              `Trying Google News RSS: ${rssUrl} (attempt ${3 - retries}/2)`
             );
+
+            // Add natural delay before request (simulate human thinking)
+            if (retries < 2) {
+              const naturalDelay = 2000 + Math.random() * 3000; // 2-5 seconds
+              console.log(
+                `Natural delay: ${Math.round(naturalDelay / 1000)} seconds...`
+              );
+              await new Promise(resolve => setTimeout(resolve, naturalDelay));
+            }
 
             // Enhanced headers to mimic real browser behavior
             const response = await fetch(rssUrl, {
               headers: {
                 'User-Agent': userAgent,
                 Accept:
-                  'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
+                  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
                 Connection: 'keep-alive',
                 'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-                'Cache-Control': 'max-age=0',
-                Pragma: 'no-cache',
-                DNT: '1',
-                Referer: 'https://www.google.com/',
-                Origin: 'https://www.google.com',
-                'Sec-Ch-Ua':
-                  '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                'Sec-Ch-Ua-Mobile': '?0',
-                'Sec-Ch-Ua-Platform': '"Windows"'
+                'Cache-Control': 'max-age=0'
               }
             });
 
@@ -152,8 +156,13 @@ export async function GET(request: Request) {
           !googleNewsSuccess &&
           rssUrls.indexOf(rssUrl) < rssUrls.length - 1
         ) {
-          console.log(`Waiting 5 seconds before trying next URL variation...`);
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          const naturalDelay = 8000 + Math.random() * 4000; // 8-12 seconds
+          console.log(
+            `Natural delay before next URL: ${Math.round(
+              naturalDelay / 1000
+            )} seconds...`
+          );
+          await new Promise(resolve => setTimeout(resolve, naturalDelay));
         }
       }
 
