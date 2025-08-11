@@ -440,9 +440,14 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 if (articleMatch) {
                   try {
                     const decodedUrl = decodeURIComponent(articleMatch[1]);
-                    if (decodedUrl.includes('abcnews.go.com') || decodedUrl.includes('abc.com')) {
+                    if (
+                      decodedUrl.includes('abcnews.go.com') ||
+                      decodedUrl.includes('abc.com')
+                    ) {
                       directUrl = decodedUrl;
-                      console.log(`✓ Extracted direct ABC News URL from article param: ${directUrl}`);
+                      console.log(
+                        `✓ Extracted direct ABC News URL from article param: ${directUrl}`
+                      );
                     }
                   } catch (e) {
                     // If decoding fails, keep the original URL
@@ -451,9 +456,13 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               }
 
               // Method 5: Handle Google News article ID format (like CBMiowFBVV95cUxQT1VZNXJXaE9YZFp2c1VVMjFhTlY4allIMHV0cnhNVnlOZHdMNG1PcHNtQUxBVDdla0tlenpwUmRxVlczdzRxNm5uYXRIWkdDcXI5TzJxNi1NRkNaZFEwNVI3TlpVN3dudnpLV2w5eTU0aWhGbkZYWk5jeG41TGNLR2tVaEMwMXY5RTBBaERTVzNpN2VlSjM4b2NzUnB4bHlLZ0JZ0gGoAUFVX3lxTE9QdlFwYWNBS0xsclZwd0N5dWszOHktRENvRlJuYzY1cnFUQ0lUODgySGpFWFozYlVadXhzWnJEc3RiUW5MSUR5RG5FZUE3TEFxbXRiNE5qbzhmS2lkMTFPN2pNVE8zV2FfQTdva0JxcUwzbW15NnZ0d2VVVWdQbmhzT2lTTUt1a25qY1Y5ZGo0OGdEM2FFZVdPZjM5X1BITlpqQXVGd2F4NA)
-              if (directUrl === googleNewsUrl && googleNewsUrl.includes('/articles/')) {
+              if (
+                directUrl === googleNewsUrl &&
+                googleNewsUrl.includes('/articles/')
+              ) {
                 // Extract the article ID from the URL
-                const articleIdMatch = googleNewsUrl.match(/\/articles\/([^?]+)/);
+                const articleIdMatch =
+                  googleNewsUrl.match(/\/articles\/([^?]+)/);
                 if (articleIdMatch) {
                   const articleId = articleIdMatch[1];
                   console.log(`Found Google News article ID: ${articleId}`);
@@ -810,20 +819,25 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 }
               }
             }
-            
+
             // Method 5: Handle Google News article ID format (like CBMiowFBVV95cUxQT1VZNXJXaE9YZFp2c1VVMjFhTlY4allIMHV0cnhNVnlOZHdMNG1PcHNtQUxBVDdla0tlenpwUmRxVlczdzRxNm5uYXRIWkdDcXI5TzJxNi1NRkNaZFEwNVI3TlpVN3dudnpLV2w5eTU0aWhGbkZYWk5jeG41TGNLR2tVaEMwMXY5RTBBaERTVzNpN2VlSjM4b2NzUnB4bHlLZ0JZ0gGoAUFVX3lxTE9QdlFwYWNBS0xsclZwd0N5dWszOHktRENvRlJuYzY1cnFUQ0lUODgySGpFWFozYlVadXhzWnJEc3RiUW5MSUR5RG5FZUE3TEFxbXRiNE5qbzhmS2lkMTFPN2pNVE8zV2FfQTdva0JxcUwzbW15NnZ0d2VVVWdQbmhzT2lTTUt1a25qY1Y5ZGo0OGdEM2FFZVdPZjM5X1BITlpqQXVGd2F4NA)
-            if (directUrl === googleNewsUrl && googleNewsUrl.includes('/articles/')) {
+            if (
+              directUrl === googleNewsUrl &&
+              googleNewsUrl.includes('/articles/')
+            ) {
               // Extract the article ID from the URL
               const articleIdMatch = googleNewsUrl.match(/\/articles\/([^?]+)/);
               if (articleIdMatch) {
                 const articleId = articleIdMatch[1];
                 console.log(`Found Google News article ID (RSS): ${articleId}`);
-                
+
                 // For now, construct a direct ABC News URL based on the article ID
                 // This is a fallback since we can't decode the actual URL from the ID
                 const fallbackUrl = `https://abcnews.go.com/articles/${articleId}`;
                 directUrl = fallbackUrl;
-                console.log(`⚠ Using fallback ABC News URL (RSS): ${fallbackUrl}`);
+                console.log(
+                  `⚠ Using fallback ABC News URL (RSS): ${fallbackUrl}`
+                );
               }
             }
 
