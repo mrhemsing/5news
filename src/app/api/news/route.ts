@@ -202,9 +202,23 @@ export async function GET(request: Request) {
               new Date(a.publishedAt).getTime()
           );
 
+          // Convert cached ABC News URLs to Google News redirect URLs before returning
+          const fallbackArticlesWithGoogleNewsUrls = sortedCachedArticles.map(article => {
+            if (article.url.includes('abcnews.go.com') || article.url.includes('abc.com')) {
+              // Create a Google News redirect URL that maintains the ABC News branding
+              const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(article.url)}&hl=en-US&gl=US&ceid=US:en`;
+              console.log(`🔗 Converting fallback article URL: ${article.url} -> ${googleNewsRedirectUrl}`);
+              return {
+                ...article,
+                url: googleNewsRedirectUrl
+              };
+            }
+            return article;
+          });
+
           return NextResponse.json({
-            articles: sortedCachedArticles,
-            totalResults: sortedCachedArticles.length,
+            articles: fallbackArticlesWithGoogleNewsUrls,
+            totalResults: fallbackArticlesWithGoogleNewsUrls.length,
             hasMore: false,
             fallback: true
           });
@@ -295,18 +309,32 @@ export async function GET(request: Request) {
         } articles with malformed URLs`
       );
 
-      // Cache the filtered results
-      await setCachedNews(validArticles, page);
+      // Convert all ABC News URLs to Google News redirect URLs before returning
+      const articlesWithGoogleNewsUrls = validArticles.map(article => {
+        if (article.url.includes('abcnews.go.com') || article.url.includes('abc.com')) {
+          // Create a Google News redirect URL that maintains the ABC News branding
+          const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(article.url)}&hl=en-US&gl=US&ceid=US:en`;
+          console.log(`🔗 Converting cached article URL: ${article.url} -> ${googleNewsRedirectUrl}`);
+          return {
+            ...article,
+            url: googleNewsRedirectUrl
+          };
+        }
+        return article;
+      });
 
-      console.log(`📤 Returning ${validArticles.length} articles to frontend:`);
-      validArticles.slice(0, 5).forEach((article, index) => {
+      // Cache the filtered results (with converted URLs)
+      await setCachedNews(articlesWithGoogleNewsUrls, page);
+
+      console.log(`📤 Returning ${articlesWithGoogleNewsUrls.length} articles to frontend:`);
+      articlesWithGoogleNewsUrls.slice(0, 5).forEach((article, index) => {
         const date = new Date(article.publishedAt);
         console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
       });
 
       // Add debug info to verify sorting
-      const firstArticle = validArticles[0];
-      const lastArticle = validArticles[validArticles.length - 1];
+      const firstArticle = articlesWithGoogleNewsUrls[0];
+      const lastArticle = articlesWithGoogleNewsUrls[articlesWithGoogleNewsUrls.length - 1];
       const debugInfo = {
         firstArticle: {
           title: firstArticle?.title,
@@ -322,7 +350,7 @@ export async function GET(request: Request) {
             ? new Date(lastArticle.publishedAt).getTime()
             : null
         },
-        totalArticles: validArticles.length,
+        totalArticles: articlesWithGoogleNewsUrls.length,
         sortingVerified:
           firstArticle && lastArticle
             ? new Date(firstArticle.publishedAt).getTime() >
@@ -337,49 +365,63 @@ export async function GET(request: Request) {
       );
 
       return NextResponse.json({
-        articles: validArticles,
-        totalResults: validArticles.length,
+        articles: articlesWithGoogleNewsUrls,
+        totalResults: articlesWithGoogleNewsUrls.length,
         hasMore: false,
         debug: debugInfo
       });
-    } else {
-      // Return existing cached articles
-      const sortedCachedArticles = [...existingArticles].sort(
-        (a, b) =>
-          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-      );
-
-      const validCachedArticles = sortedCachedArticles.filter(article => {
-        // Only filter out extremely long URLs (likely malformed)
-        if (article.url.length > 500) {
-          console.log(
-            `Filtered out cached article with extremely long URL (${article.url.length} chars): "${article.title}"`
-          );
-          return false;
-        }
-
-        // Accept any URL that looks like it could be valid
-        if (
-          article.url.includes('abcnews.go.com') ||
-          article.url.includes('abc.com') ||
-          article.url.includes('news.google.com')
-        ) {
-          return true;
-        }
-
-        // Log any other URLs for debugging
-        console.log(
-          `⚠️  Unknown cached URL format: ${article.url} for "${article.title}"`
+          } else {
+        // Return existing cached articles
+        const sortedCachedArticles = [...existingArticles].sort(
+          (a, b) =>
+            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
         );
-        return true; // Don't filter out, just log for debugging
-      });
 
-      return NextResponse.json({
-        articles: validCachedArticles,
-        totalResults: validCachedArticles.length,
-        hasMore: false
-      });
-    }
+        const validCachedArticles = sortedCachedArticles.filter(article => {
+          // Only filter out extremely long URLs (likely malformed)
+          if (article.url.length > 500) {
+            console.log(
+              `Filtered out cached article with extremely long URL (${article.url.length} chars): "${article.title}"`
+            );
+            return false;
+          }
+
+          // Accept any URL that looks like it could be valid
+          if (
+            article.url.includes('abcnews.go.com') ||
+            article.url.includes('abc.com') ||
+            article.url.includes('news.google.com')
+          ) {
+            return true;
+          }
+
+          // Log any other URLs for debugging
+          console.log(
+            `⚠️  Unknown cached URL format: ${article.url} for "${article.title}"`
+          );
+          return true; // Don't filter out, just log for debugging
+        });
+
+        // Convert cached ABC News URLs to Google News redirect URLs before returning
+        const cachedArticlesWithGoogleNewsUrls = validCachedArticles.map(article => {
+          if (article.url.includes('abcnews.go.com') || article.url.includes('abc.com')) {
+            // Create a Google News redirect URL that maintains the ABC News branding
+            const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(article.url)}&hl=en-US&gl=US&ceid=US:en`;
+            console.log(`🔗 Converting cached article URL: ${article.url} -> ${googleNewsRedirectUrl}`);
+            return {
+              ...article,
+              url: googleNewsRedirectUrl
+            };
+          }
+          return article;
+        });
+
+        return NextResponse.json({
+          articles: cachedArticlesWithGoogleNewsUrls,
+          totalResults: cachedArticlesWithGoogleNewsUrls.length,
+          hasMore: false
+        });
+      }
   } catch (error) {
     console.error('Error fetching news:', error);
     return NextResponse.json(
