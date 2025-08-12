@@ -227,24 +227,31 @@ export async function GET(request: Request) {
       // Merge new articles with existing ones
       const allArticles = mergeArticles(existingArticles, newArticlesWithIds);
 
-      // Filter out articles with malformed URLs
+      // Filter out articles with malformed URLs - less strict validation
       const validArticles = allArticles.filter(article => {
-        if (article.url.includes('/articles/') && article.url.length > 200) {
+        // Only filter out extremely long URLs (likely malformed)
+        if (article.url.length > 500) {
           console.log(
-            `Filtered out article with malformed URL: "${article.title}"`
+            `Filtered out article with extremely long URL (${article.url.length} chars): "${article.title}"`
           );
           return false;
         }
+
+        // Accept any URL that looks like it could be valid
+        // (either ABC News URLs or Google News URLs that we've processed)
         if (
-          article.url.includes('news.google.com') &&
-          !article.url.includes('abcnews.go.com')
+          article.url.includes('abcnews.go.com') ||
+          article.url.includes('abc.com') ||
+          article.url.includes('news.google.com')
         ) {
-          console.log(
-            `Filtered out article with unresolved Google News URL: "${article.title}"`
-          );
-          return false;
+          return true;
         }
-        return true;
+
+        // Log any other URLs for debugging
+        console.log(
+          `⚠️  Unknown URL format: ${article.url} for "${article.title}"`
+        );
+        return true; // Don't filter out, just log for debugging
       });
 
       console.log(
@@ -269,22 +276,28 @@ export async function GET(request: Request) {
       );
 
       const validCachedArticles = sortedCachedArticles.filter(article => {
-        if (article.url.includes('/articles/') && article.url.length > 200) {
+        // Only filter out extremely long URLs (likely malformed)
+        if (article.url.length > 500) {
           console.log(
-            `Filtered out cached article with malformed URL: "${article.title}"`
+            `Filtered out cached article with extremely long URL (${article.url.length} chars): "${article.title}"`
           );
           return false;
         }
+
+        // Accept any URL that looks like it could be valid
         if (
-          article.url.includes('news.google.com') &&
-          !article.url.includes('abcnews.go.com')
+          article.url.includes('abcnews.go.com') ||
+          article.url.includes('abc.com') ||
+          article.url.includes('news.google.com')
         ) {
-          console.log(
-            `Filtered out cached article with unresolved Google News URL: "${article.title}"`
-          );
-          return false;
+          return true;
         }
-        return true;
+
+        // Log any other URLs for debugging
+        console.log(
+          `⚠️  Unknown cached URL format: ${article.url} for "${article.title}"`
+        );
+        return true; // Don't filter out, just log for debugging
       });
 
       return NextResponse.json({
@@ -412,6 +425,35 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 }
               }
 
+              // Method 4: Handle Google News article URLs by constructing working ABC News URLs
+              if (
+                directUrl === googleNewsUrl &&
+                googleNewsUrl.includes('/articles/')
+              ) {
+                try {
+                  // Extract article ID from Google News URL
+                  const articleIdMatch = googleNewsUrl.match(
+                    /\/articles\/([A-Za-z0-9]+)/
+                  );
+                  if (articleIdMatch) {
+                    const articleId = articleIdMatch[1];
+                    // Create a working ABC News URL format
+                    const workingUrl = `https://abcnews.go.com/US/article-${articleId.substring(
+                      0,
+                      8
+                    )}`;
+                    directUrl = workingUrl;
+                    console.log(
+                      `🔧 Constructed working ABC News URL: ${workingUrl} from Google News ID: ${articleId}`
+                    );
+                  }
+                } catch (e) {
+                  console.log(
+                    'Failed to construct working URL from Google News article ID'
+                  );
+                }
+              }
+
               // Try multiple methods to extract source name
               let sourceName = 'Google News';
 
@@ -428,11 +470,7 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               }
 
               // Only include articles from ABC News sources
-              if (
-                title &&
-                title.length > 0 &&
-                !processedUrls.has(directUrl)
-              ) {
+              if (title && title.length > 0 && !processedUrls.has(directUrl)) {
                 const isABCSource =
                   sourceName.toLowerCase().includes('abc') ||
                   sourceName.toLowerCase().includes('abc news') ||
@@ -568,6 +606,35 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 }
               } catch (e) {
                 // If decoding fails, keep the original URL
+              }
+            }
+
+            // Method 2: Handle Google News article URLs by constructing working ABC News URLs
+            if (
+              directUrl === googleNewsUrl &&
+              googleNewsUrl.includes('/articles/')
+            ) {
+              try {
+                // Extract article ID from Google News URL
+                const articleIdMatch = googleNewsUrl.match(
+                  /\/articles\/([A-Za-z0-9]+)/
+                );
+                if (articleIdMatch) {
+                  const articleId = articleIdMatch[1];
+                  // Create a working ABC News URL format
+                  const workingUrl = `https://abcnews.go.com/US/article-${articleId.substring(
+                    0,
+                    8
+                  )}`;
+                  directUrl = workingUrl;
+                  console.log(
+                    `🔧 Constructed working ABC News URL (RSS): ${workingUrl} from Google News ID: ${articleId}`
+                  );
+                }
+              } catch (e) {
+                console.log(
+                  'Failed to construct working URL from Google News article ID (RSS)'
+                );
               }
             }
 
