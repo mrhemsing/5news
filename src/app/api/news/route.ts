@@ -388,70 +388,28 @@ async function extractRealUrlFromGoogleNews(
       }
     }
 
-    // Method 3: Skip Google News page fetch (it's being blocked) and go directly to fallback
+    // Method 3: Return original Google News URL (most reliable)
     if (googleNewsUrl.includes('/articles/')) {
+      console.log(`🔗 Using original Google News URL: ${googleNewsUrl}`);
       console.log(
-        `⚠️ Skipping Google News page fetch - it's being blocked by anti-bot measures`
+        `ℹ️ Users will be redirected to ABC News articles through Google News`
       );
-      console.log(`🔧 Going directly to fallback URL construction...`);
-    }
 
-    // Method 4: Construct working URLs from article IDs (this actually works)
-    if (googleNewsUrl.includes('/articles/')) {
-      try {
-        const articleIdMatch = googleNewsUrl.match(
-          /\/articles\/([A-Za-z0-9]+)/
-        );
-        if (articleIdMatch) {
-          const articleId = articleIdMatch[1];
-          console.log(`🔧 Article ID extracted: ${articleId}`);
+      // Extract timestamp from Google News URL if available for better dating
+      const urlTimestampMatch = googleNewsUrl.match(/[?&]t=(\d+)/);
+      let publishedAt: string | null = null;
 
-          // Try different ABC News URL patterns - more realistic ones
-          const possibleUrls = [
-            // Try to construct a more realistic URL structure
-            `https://abcnews.go.com/US/article-${articleId.substring(0, 8)}`,
-            `https://abcnews.go.com/article-${articleId.substring(0, 8)}`,
-            // Also try with the full article ID (sometimes this works)
-            `https://abcnews.go.com/US/article-${articleId}`,
-            `https://abcnews.go.com/article-${articleId}`,
-            // Try different sections
-            `https://abcnews.go.com/Politics/article-${articleId.substring(
-              0,
-              8
-            )}`,
-            `https://abcnews.go.com/International/article-${articleId.substring(
-              0,
-              8
-            )}`,
-            `https://abcnews.go.com/Technology/article-${articleId.substring(
-              0,
-              8
-            )}`
-          ];
-
+      if (urlTimestampMatch) {
+        const timestamp = parseInt(urlTimestampMatch[1]);
+        if (!isNaN(timestamp)) {
+          publishedAt = new Date(timestamp * 1000).toISOString();
           console.log(
-            `🔧 Constructing fallback URLs from article ID: ${articleId}`
+            `✓ Extracted timestamp from Google News URL: ${publishedAt}`
           );
-          console.log(
-            `🔧 Possible URLs: ${possibleUrls.slice(0, 3).join(', ')}...`
-          );
-
-          // Use the first URL as primary, but log all options for debugging
-          const selectedUrl = possibleUrls[0];
-          console.log(`🔧 Using fallback URL: ${selectedUrl}`);
-          console.log(
-            `🔧 Note: This is a constructed URL - actual article may be at different path`
-          );
-
-          return { url: selectedUrl, publishedAt: null };
-        } else {
-          console.log(`❌ Could not extract article ID from Google News URL`);
         }
-      } catch (e: any) {
-        console.log(
-          `❌ Failed to construct fallback URL from article ID: ${e.message}`
-        );
       }
+
+      return { url: googleNewsUrl, publishedAt: publishedAt };
     }
 
     // If all else fails, return the original URL
