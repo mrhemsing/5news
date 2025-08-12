@@ -76,13 +76,27 @@ export default function NewsCard({
     }
   };
 
-  // Generate cartoon when component mounts based on headline
+  // Generate cartoon when component mounts or when article changes
   useEffect(() => {
-    if (!cartoonUrl && !cartoonLoading) {
-      setRetryCount(0); // Reset retry count for new headline
+    // Clear any existing cartoon when article changes
+    setCartoonUrl(null);
+    setImageError(false);
+    setRetryCount(0);
+    setUseProxy(true);
+
+    // Generate new cartoon for this headline
+    if (!cartoonLoading) {
       generateCartoon(article.title);
     }
-  }, [article.title]);
+
+    // Cleanup function to reset state when component unmounts or article changes
+    return () => {
+      setCartoonUrl(null);
+      setImageError(false);
+      setRetryCount(0);
+      setUseProxy(true);
+    };
+  }, [article.id]); // Use article.id instead of article.title to detect new articles
 
   const generateCartoon = async (headline: string, retryAttempt = 0) => {
     if (cartoonUrl || cartoonLoading) return;

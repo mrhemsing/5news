@@ -389,7 +389,9 @@ export async function GET(request: Request) {
           article.url.includes('abcnews.go.com') ||
           article.url.includes('abc.com')
         ) {
-          console.log(`❌ Filtering out invalid cached ABC News URL: ${article.url}`);
+          console.log(
+            `❌ Filtering out invalid cached ABC News URL: ${article.url}`
+          );
           console.log(`⚠️ These should be converted to Google News RSS format`);
           return false;
         }
@@ -485,29 +487,44 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               console.log(`🔗 RSS feed provided URL: ${googleNewsUrl}`);
 
               // If the RSS feed provides direct ABC News URLs, convert them to Google News format
-              if (googleNewsUrl.includes('abcnews.go.com') || googleNewsUrl.includes('abc.com')) {
-                console.log(`⚠️ RSS feed provided direct ABC News URL: ${googleNewsUrl}`);
+              if (
+                googleNewsUrl.includes('abcnews.go.com') ||
+                googleNewsUrl.includes('abc.com')
+              ) {
+                console.log(
+                  `⚠️ RSS feed provided direct ABC News URL: ${googleNewsUrl}`
+                );
                 console.log(`🔄 Converting to Google News RSS format...`);
-                
+
                 // Extract the article ID from the ABC News URL
-                const articleIdMatch = googleNewsUrl.match(/\/article-([A-Za-z0-9]+)/);
+                const articleIdMatch = googleNewsUrl.match(
+                  /\/article-([A-Za-z0-9]+)/
+                );
                 if (articleIdMatch) {
                   const articleId = articleIdMatch[1];
                   // Create a proper Google News RSS URL
                   directUrl = `https://news.google.com/rss/articles/${articleId}?hl=en-US&gl=US&ceid=US:en`;
-                  console.log(`✅ Converted to Google News RSS URL: ${directUrl}`);
+                  console.log(
+                    `✅ Converted to Google News RSS URL: ${directUrl}`
+                  );
                 } else {
-                  console.log(`❌ Could not extract article ID from ABC News URL`);
+                  console.log(
+                    `❌ Could not extract article ID from ABC News URL`
+                  );
                   continue; // Skip this article if we can't convert it
                 }
-              } else if (googleNewsUrl.includes('news.google.com/rss/articles/')) {
+              } else if (
+                googleNewsUrl.includes('news.google.com/rss/articles/')
+              ) {
                 console.log(
                   `✅ RSS feed provided Google News RSS URL: ${googleNewsUrl}`
                 );
                 console.log(
                   `ℹ️ Users will be redirected to ABC News articles through Google News`
                 );
-              } else if (googleNewsUrl.includes('news.google.com/articles/redirect')) {
+              } else if (
+                googleNewsUrl.includes('news.google.com/articles/redirect')
+              ) {
                 console.log(
                   `❌ RSS feed provided invalid redirect URL: ${googleNewsUrl}`
                 );
@@ -664,29 +681,44 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
             console.log(`🔗 RSS feed provided URL: ${googleNewsUrl}`);
 
             // If the RSS feed provides direct ABC News URLs, convert them to Google News format
-            if (googleNewsUrl.includes('abcnews.go.com') || googleNewsUrl.includes('abc.com')) {
-              console.log(`⚠️ RSS feed provided direct ABC News URL: ${googleNewsUrl}`);
+            if (
+              googleNewsUrl.includes('abcnews.go.com') ||
+              googleNewsUrl.includes('abc.com')
+            ) {
+              console.log(
+                `⚠️ RSS feed provided direct ABC News URL: ${googleNewsUrl}`
+              );
               console.log(`🔄 Converting to Google News RSS format...`);
-              
+
               // Extract the article ID from the ABC News URL
-              const articleIdMatch = googleNewsUrl.match(/\/article-([A-Za-z0-9]+)/);
+              const articleIdMatch = googleNewsUrl.match(
+                /\/article-([A-Za-z0-9]+)/
+              );
               if (articleIdMatch) {
                 const articleId = articleIdMatch[1];
                 // Create a proper Google News RSS URL
                 directUrl = `https://news.google.com/rss/articles/${articleId}?hl=en-US&gl=US&ceid=US:en`;
-                console.log(`✅ Converted to Google News RSS URL: ${directUrl}`);
+                console.log(
+                  `✅ Converted to Google News RSS URL: ${directUrl}`
+                );
               } else {
-                console.log(`❌ Could not extract article ID from ABC News URL`);
+                console.log(
+                  `❌ Could not extract article ID from ABC News URL`
+                );
                 continue; // Skip this article if we can't convert it
               }
-            } else if (googleNewsUrl.includes('news.google.com/rss/articles/')) {
+            } else if (
+              googleNewsUrl.includes('news.google.com/rss/articles/')
+            ) {
               console.log(
                 `✅ RSS feed provided Google News RSS URL: ${googleNewsUrl}`
               );
               console.log(
                 `ℹ️ Users will be redirected to ABC News articles through Google News`
               );
-            } else if (googleNewsUrl.includes('news.google.com/articles/redirect')) {
+            } else if (
+              googleNewsUrl.includes('news.google.com/articles/redirect')
+            ) {
               console.log(
                 `❌ RSS feed provided invalid redirect URL: ${googleNewsUrl}`
               );
