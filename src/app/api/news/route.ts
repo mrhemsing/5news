@@ -272,10 +272,16 @@ export async function GET(request: Request) {
           return false;
         }
 
-        // Accept Google News URLs (which redirect to ABC News articles)
+        // Accept only proper Google News RSS URLs (which redirect to ABC News articles)
         if (article.url.includes('news.google.com/rss/articles/')) {
-          console.log(`✅ Valid Google News URL: ${article.url}`);
+          console.log(`✅ Valid Google News RSS URL: ${article.url}`);
           return true;
+        }
+        
+        // Filter out any redirect URLs that shouldn't exist
+        if (article.url.includes('news.google.com/articles/redirect')) {
+          console.log(`❌ Filtering out invalid redirect URL: ${article.url}`);
+          return false;
         }
 
         // Accept direct ABC News URLs as fallback
@@ -363,10 +369,16 @@ export async function GET(request: Request) {
           return false;
         }
 
-        // Accept Google News URLs (which redirect to ABC News articles)
+        // Accept only proper Google News RSS URLs (which redirect to ABC News articles)
         if (article.url.includes('news.google.com/rss/articles/')) {
-          console.log(`✅ Valid cached Google News URL: ${article.url}`);
+          console.log(`✅ Valid cached Google News RSS URL: ${article.url}`);
           return true;
+        }
+        
+        // Filter out any redirect URLs that shouldn't exist
+        if (article.url.includes('news.google.com/articles/redirect')) {
+          console.log(`❌ Filtering out invalid cached redirect URL: ${article.url}`);
+          return false;
         }
 
         // Accept direct ABC News URLs as fallback
@@ -430,10 +442,6 @@ function cleanHtmlTags(text: string): string {
     .trim();
 }
 
-
-
-
-
 // Function to parse Google News RSS feed
 async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
   const articles: NewsArticle[] = [];
@@ -472,12 +480,25 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               let directUrl = googleNewsUrl;
               console.log(`🔗 RSS feed provided URL: ${googleNewsUrl}`);
 
-              // Validate that this is a proper Google News URL
+              // Validate that this is a proper Google News RSS URL
               if (googleNewsUrl.includes('news.google.com/rss/articles/')) {
-                console.log(`✅ RSS feed provided Google News URL: ${googleNewsUrl}`);
-                console.log(`ℹ️ Users will be redirected to ABC News articles through Google News`);
+                console.log(
+                  `✅ RSS feed provided Google News RSS URL: ${googleNewsUrl}`
+                );
+                console.log(
+                  `ℹ️ Users will be redirected to ABC News articles through Google News`
+                );
+              } else if (googleNewsUrl.includes('news.google.com/articles/redirect')) {
+                console.log(
+                  `❌ RSS feed provided invalid redirect URL: ${googleNewsUrl}`
+                );
+                console.log(`⚠️ This URL format should not exist in RSS feeds`);
+                // Filter out these invalid URLs
+                continue;
               } else {
-                console.log(`⚠️ Unexpected URL format from RSS: ${googleNewsUrl}`);
+                console.log(
+                  `⚠️ Unexpected URL format from RSS: ${googleNewsUrl}`
+                );
                 // Still use it, but log for debugging
               }
 
@@ -623,12 +644,25 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
             let directUrl = googleNewsUrl;
             console.log(`🔗 RSS feed provided URL: ${googleNewsUrl}`);
 
-            // Validate that this is a proper Google News URL
+            // Validate that this is a proper Google News RSS URL
             if (googleNewsUrl.includes('news.google.com/rss/articles/')) {
-              console.log(`✅ RSS feed provided Google News URL: ${googleNewsUrl}`);
-              console.log(`ℹ️ Users will be redirected to ABC News articles through Google News`);
+              console.log(
+                `✅ RSS feed provided Google News RSS URL: ${googleNewsUrl}`
+              );
+              console.log(
+                `ℹ️ Users will be redirected to ABC News articles through Google News`
+              );
+            } else if (googleNewsUrl.includes('news.google.com/articles/redirect')) {
+              console.log(
+                `❌ RSS feed provided invalid redirect URL: ${googleNewsUrl}`
+              );
+              console.log(`⚠️ This URL format should not exist in RSS feeds`);
+              // Filter out these invalid URLs
+              continue;
             } else {
-              console.log(`⚠️ Unexpected URL format from RSS: ${googleNewsUrl}`);
+              console.log(
+                `⚠️ Unexpected URL format from RSS: ${googleNewsUrl}`
+              );
               // Still use it, but log for debugging
             }
 
