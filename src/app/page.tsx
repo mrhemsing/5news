@@ -172,10 +172,24 @@ export default function Home() {
       `fetchNews called: pageNum=${pageNum}, append=${append}, forceRefresh=${forceRefresh}, currentArticles=${articles.length}`
     );
 
-    // Prevent multiple simultaneous requests
+    // Don't fetch if we already have articles and this isn't a force refresh
+    if (!forceRefresh && pageNum === 1 && articles.length > 0) {
+      console.log('Articles already loaded, skipping fetch');
+      setLoading(false); // Ensure loading is set to false when skipping
+      return;
+    }
+
+    // Prevent multiple simultaneous requests (check before setting loading state)
     if (loading && !append) {
       console.log('Already loading, skipping duplicate request');
       return;
+    }
+
+    // Set loading state first
+    if (pageNum === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
     }
 
     // Abort any existing request
@@ -188,19 +202,6 @@ export default function Home() {
     currentRequestRef.current = abortController;
 
     try {
-      // Don't fetch if we already have articles and this isn't a force refresh
-      if (!forceRefresh && pageNum === 1 && articles.length > 0) {
-        console.log('Articles already loaded, skipping fetch');
-        setLoading(false); // Ensure loading is set to false when skipping
-        return;
-      }
-
-      if (pageNum === 1) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-
       // Add 1-second delay for lazy loading
       if (append) {
         await new Promise(resolve => setTimeout(resolve, 1000));
