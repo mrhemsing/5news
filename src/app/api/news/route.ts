@@ -424,45 +424,11 @@ async function extractRealUrlFromGoogleNews(
   googleNewsUrl: string
 ): Promise<{ url: string; publishedAt: string | null }> {
   try {
-    // Method 1: Try to extract from URL parameters first (fastest)
-    const urlParamMatch = googleNewsUrl.match(/[?&]url=([^&]+)/);
-    if (urlParamMatch) {
-      try {
-        const decodedUrl = decodeURIComponent(urlParamMatch[1]);
-        if (
-          decodedUrl.includes('abcnews.go.com') ||
-          decodedUrl.includes('abc.com')
-        ) {
-          console.log(
-            `✓ Fast extraction: Found direct ABC News URL in parameters: ${decodedUrl}`
-          );
-          return { url: decodedUrl, publishedAt: null };
-        }
-      } catch (e) {
-        console.log('Failed to decode URL parameter');
-      }
-    }
+    // DISABLED: We want to keep Google News redirect URLs, not extract direct ABC News URLs
+    // Method 1 & 2 disabled to preserve Google News redirect links
+    console.log(`🔗 Keeping Google News redirect URL: ${googleNewsUrl}`);
 
-    // Method 2: Try redirect parameter
-    const redirectMatch = googleNewsUrl.match(/[?&]redirect=([^&]+)/);
-    if (redirectMatch) {
-      try {
-        const decodedUrl = decodeURIComponent(redirectMatch[1]);
-        if (
-          decodedUrl.includes('abcnews.go.com') ||
-          decodedUrl.includes('abc.com')
-        ) {
-          console.log(
-            `✓ Fast extraction: Found direct ABC News URL in redirect parameter: ${decodedUrl}`
-          );
-          return { url: decodedUrl, publishedAt: null };
-        }
-      } catch (e) {
-        console.log('Failed to decode redirect parameter');
-      }
-    }
-
-        // Method 3: Return original Google News URL (most reliable)
+    // Method 3: Return original Google News URL (most reliable)
     if (googleNewsUrl.includes('/articles/')) {
       console.log(`🔗 Using original Google News URL: ${googleNewsUrl}`);
       console.log(
