@@ -51,8 +51,8 @@ export async function GET(request: Request) {
         `Making Google News RSS request for page ${page} (stealth mode)`
       );
 
-      // Add natural initial delay
-      const initialDelay = 1000 + Math.random() * 2000;
+      // Add minimal initial delay to avoid rate limiting
+      const initialDelay = 500 + Math.random() * 1000;
       console.log(
         `Initial delay: ${Math.round(initialDelay / 1000)} seconds...`
       );
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
             );
 
             if (retries < 2) {
-              const naturalDelay = 2000 + Math.random() * 3000;
+              const naturalDelay = 1000 + Math.random() * 2000;
               console.log(
                 `Natural delay: ${Math.round(naturalDelay / 1000)} seconds...`
               );
@@ -93,7 +93,7 @@ export async function GET(request: Request) {
             }
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
             try {
               const response = await fetch(rssUrl, {
