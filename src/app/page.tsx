@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NewsArticle } from '@/types/news';
 import NewsCard from '@/components/NewsCard';
 import Logo from '@/components/Logo';
@@ -17,9 +17,7 @@ export default function Home() {
   // Removed validArticles state - using only articles
   const [initialLoading, setInitialLoading] = useState(true);
 
-  const [currentRequest, setCurrentRequest] = useState<AbortController | null>(
-    null
-  );
+  const currentRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -87,11 +85,11 @@ export default function Home() {
     return () => {
       clearTimeout(safetyTimeout);
       // Abort any ongoing request when component unmounts
-      if (currentRequest) {
-        currentRequest.abort();
+      if (currentRequestRef.current) {
+        currentRequestRef.current.abort();
       }
     };
-  }, [currentRequest]); // Dependency added for cleanup
+  }, []); // Remove currentRequest dependency to prevent re-runs
 
   // Save articles to localStorage whenever they change
   useEffect(() => {
@@ -174,14 +172,20 @@ export default function Home() {
       `fetchNews called: pageNum=${pageNum}, append=${append}, forceRefresh=${forceRefresh}, currentArticles=${articles.length}`
     );
 
+    // Prevent multiple simultaneous requests
+    if (loading && !append) {
+      console.log('Already loading, skipping duplicate request');
+      return;
+    }
+
     // Abort any existing request
-    if (currentRequest) {
-      currentRequest.abort();
+    if (currentRequestRef.current) {
+      currentRequestRef.current.abort();
     }
 
     // Create an AbortController for this request
     const abortController = new AbortController();
-    setCurrentRequest(abortController);
+    currentRequestRef.current = abortController;
 
     try {
       // Don't fetch if we already have articles and this isn't a force refresh
