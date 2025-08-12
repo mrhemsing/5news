@@ -295,56 +295,53 @@ export async function GET(request: Request) {
         } articles with malformed URLs`
       );
 
-             // Cache the filtered results
-       await setCachedNews(validArticles, page);
+      // Cache the filtered results
+      await setCachedNews(validArticles, page);
 
-       console.log(
-         `📤 Returning ${validArticles.length} articles to frontend:`
-       );
-       validArticles.slice(0, 5).forEach((article, index) => {
-         const date = new Date(article.publishedAt);
-         console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
-       });
+      console.log(`📤 Returning ${validArticles.length} articles to frontend:`);
+      validArticles.slice(0, 5).forEach((article, index) => {
+        const date = new Date(article.publishedAt);
+        console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
+      });
 
-       // Add debug info to verify sorting
-       const firstArticle = validArticles[0];
-       const lastArticle =
-         validArticles[validArticles.length - 1];
-       const debugInfo = {
-         firstArticle: {
-           title: firstArticle?.title,
-           publishedAt: firstArticle?.publishedAt,
-           timestamp: firstArticle
-             ? new Date(firstArticle.publishedAt).getTime()
-             : null
-         },
-         lastArticle: {
-           title: lastArticle?.title,
-           publishedAt: lastArticle?.publishedAt,
-           timestamp: lastArticle
-             ? new Date(lastArticle.publishedAt).getTime()
-             : null
-         },
-         totalArticles: validArticles.length,
-         sortingVerified:
-           firstArticle && lastArticle
-             ? new Date(firstArticle.publishedAt).getTime() >
-               new Date(lastArticle.publishedAt).getTime()
-             : false
-       };
+      // Add debug info to verify sorting
+      const firstArticle = validArticles[0];
+      const lastArticle = validArticles[validArticles.length - 1];
+      const debugInfo = {
+        firstArticle: {
+          title: firstArticle?.title,
+          publishedAt: firstArticle?.publishedAt,
+          timestamp: firstArticle
+            ? new Date(firstArticle.publishedAt).getTime()
+            : null
+        },
+        lastArticle: {
+          title: lastArticle?.title,
+          publishedAt: lastArticle?.publishedAt,
+          timestamp: lastArticle
+            ? new Date(lastArticle.publishedAt).getTime()
+            : null
+        },
+        totalArticles: validArticles.length,
+        sortingVerified:
+          firstArticle && lastArticle
+            ? new Date(firstArticle.publishedAt).getTime() >
+              new Date(lastArticle.publishedAt).getTime()
+            : false
+      };
 
-       console.log(
-         `SORTING_VERIFICATION: ${
-           debugInfo.sortingVerified ? '✅' : '❌'
-         } Sorting verified - First article is newer than last article`
-       );
+      console.log(
+        `SORTING_VERIFICATION: ${
+          debugInfo.sortingVerified ? '✅' : '❌'
+        } Sorting verified - First article is newer than last article`
+      );
 
-       return NextResponse.json({
-         articles: validArticles,
-         totalResults: validArticles.length,
-         hasMore: false,
-         debug: debugInfo
-       });
+      return NextResponse.json({
+        articles: validArticles,
+        totalResults: validArticles.length,
+        hasMore: false,
+        debug: debugInfo
+      });
     } else {
       // Return existing cached articles
       const sortedCachedArticles = [...existingArticles].sort(
@@ -377,11 +374,11 @@ export async function GET(request: Request) {
         return true; // Don't filter out, just log for debugging
       });
 
-             return NextResponse.json({
-         articles: validCachedArticles,
-         totalResults: validCachedArticles.length,
-         hasMore: false
-       });
+      return NextResponse.json({
+        articles: validCachedArticles,
+        totalResults: validCachedArticles.length,
+        hasMore: false
+      });
     }
   } catch (error) {
     console.error('Error fetching news:', error);
@@ -644,9 +641,26 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               const googleNewsUrl = linkMatch[1];
               const title = decodeHtmlEntities(linkMatch[2].trim());
 
-              // Use the original URL from the RSS feed (this should be a proper Google News URL)
+              // Use the original URL from the RSS feed
               let directUrl = googleNewsUrl;
-              console.log(`🔗 Using original RSS URL: ${googleNewsUrl}`);
+              console.log(`🔗 RSS feed provided URL: ${googleNewsUrl}`);
+
+              // Check if this is a direct ABC News URL or a Google News URL
+              if (
+                googleNewsUrl.includes('abcnews.go.com') ||
+                googleNewsUrl.includes('abc.com')
+              ) {
+                console.log(
+                  `⚠️ RSS feed provided direct ABC News URL: ${googleNewsUrl}`
+                );
+                console.log(`ℹ️ This should be a Google News URL instead`);
+              } else if (googleNewsUrl.includes('news.google.com')) {
+                console.log(
+                  `✅ RSS feed provided Google News URL: ${googleNewsUrl}`
+                );
+              } else {
+                console.log(`❓ Unknown URL format from RSS: ${googleNewsUrl}`);
+              }
 
               // Try multiple methods to extract source name
               let sourceName = 'Google News';
@@ -786,9 +800,26 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
             );
             const googleNewsUrl = linkMatch[1].trim();
 
-            // Use the original URL from the RSS feed (this should be a proper Google News URL)
+            // Use the original URL from the RSS feed
             let directUrl = googleNewsUrl;
-            console.log(`🔗 Using original RSS URL: ${googleNewsUrl}`);
+            console.log(`🔗 RSS feed provided URL: ${googleNewsUrl}`);
+
+            // Check if this is a direct ABC News URL or a Google News URL
+            if (
+              googleNewsUrl.includes('abcnews.go.com') ||
+              googleNewsUrl.includes('abc.com')
+            ) {
+              console.log(
+                `⚠️ RSS feed provided direct ABC News URL: ${googleNewsUrl}`
+              );
+              console.log(`ℹ️ This should be a Google News URL instead`);
+            } else if (googleNewsUrl.includes('news.google.com')) {
+              console.log(
+                `✅ RSS feed provided Google News URL: ${googleNewsUrl}`
+              );
+            } else {
+              console.log(`❓ Unknown URL format from RSS: ${googleNewsUrl}`);
+            }
 
             let description = descriptionMatch
               ? cleanHtmlTags(
