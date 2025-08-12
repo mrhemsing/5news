@@ -605,7 +605,7 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                     continue;
                   }
 
-                  // Extract date using multiple methods for reliability
+                  // Extract date using Google News URL timestamp parameter
                   let publishedAt: string | null = null;
 
                   // Method 1: Try to extract from Google News URL timestamp parameter
@@ -620,15 +620,24 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                     }
                   }
 
-                  // Method 2: Use RSS feed generation time with offset based on item position
+                  // Only include articles with valid dates - no more calculated dates!
                   if (!publishedAt) {
-                    // Calculate time offset based on item position (newer items appear first)
-                    const timeOffset = listIndex * 1000 + itemIndex * 500; // 1 second per list, 0.5 seconds per item
-                    const calculatedTime = rssFeedTime - timeOffset;
-                    publishedAt = new Date(calculatedTime).toISOString();
                     console.log(
-                      `📅 Calculated date from RSS feed time for "${title}": ${publishedAt} (position: list ${listIndex}, item ${itemIndex})`
+                      `❌ Skipping article without valid date: "${title}"`
                     );
+                    continue; // Skip this article entirely
+                  }
+
+                  // Filter out articles older than 2 days to ensure freshness
+                  const articleDate = new Date(publishedAt);
+                  const twoDaysAgo = new Date(
+                    Date.now() - 2 * 24 * 60 * 60 * 1000
+                  );
+                  if (articleDate < twoDaysAgo) {
+                    console.log(
+                      `❌ Skipping old article: "${title}" (${publishedAt}) - older than 2 days`
+                    );
+                    continue; // Skip this article entirely
                   }
 
                   if (publishedAt && !processedUrls.has(directUrl)) {
@@ -850,7 +859,7 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                   continue;
                 }
 
-                // Extract date using multiple methods for reliability
+                // Extract date using RSS pubDate tag (most reliable)
                 let publishedAt: string | null = null;
 
                 // Method 1: Try to extract from RSS pubDate tag (most reliable)
@@ -870,7 +879,7 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                   }
                 }
 
-                // Method 2: Try to extract from Google News URL timestamp parameter
+                // Method 2: Try to extract from Google News URL timestamp parameter (fallback)
                 if (!publishedAt) {
                   const urlTimestampMatch = googleNewsUrl.match(
                     /[?&]ceid=[^&]*&gl=[^&]*&hl=[^&]*&t=(\d+)/
@@ -886,14 +895,24 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                   }
                 }
 
-                // Method 3: Use RSS feed generation time with offset based on item position
+                // Only include articles with valid dates - no more calculated dates!
                 if (!publishedAt) {
-                  const timeOffset = index * 1000; // 1 second per item
-                  const calculatedTime = rssFeedTime - timeOffset;
-                  publishedAt = new Date(calculatedTime).toISOString();
                   console.log(
-                    `📅 Calculated date from RSS feed time for "${title}": ${publishedAt} (position: ${index})`
+                    `❌ Skipping article without valid date: "${title}"`
                   );
+                  continue; // Skip this article entirely
+                }
+
+                // Filter out articles older than 2 days to ensure freshness
+                const articleDate = new Date(publishedAt);
+                const twoDaysAgo = new Date(
+                  Date.now() - 2 * 24 * 60 * 60 * 1000
+                );
+                if (articleDate < twoDaysAgo) {
+                  console.log(
+                    `❌ Skipping old article: "${title}" (${publishedAt}) - older than 2 days`
+                  );
+                  continue; // Skip this article entirely
                 }
 
                 if (publishedAt) {
@@ -989,6 +1008,25 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
   );
 
   console.log(`Parsed ${articles.length} articles from Google News RSS feed`);
+
+  // Log the date range of articles for debugging
+  if (articles.length > 0) {
+    const dates = articles
+      .map(a => new Date(a.publishedAt))
+      .sort((a, b) => a.getTime() - b.getTime());
+    console.log(
+      `📅 Date range: ${dates[0].toISOString()} to ${dates[
+        dates.length - 1
+      ].toISOString()}`
+    );
+    console.log(
+      `📅 Total time span: ${Math.round(
+        (dates[dates.length - 1].getTime() - dates[0].getTime()) /
+          (1000 * 60 * 60 * 24)
+      )} days`
+    );
+  }
+
   return articles;
 }
 
