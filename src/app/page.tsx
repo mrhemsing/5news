@@ -76,9 +76,9 @@ export default function Home() {
           setLoading(false);
           // Only show error if we don't have any articles yet
           if (articles.length === 0) {
-            setError('Loading timeout - please refresh the page');
+            setError('Loading is taking longer than expected - please wait or refresh the page');
           }
-        }, 30000); // 30 seconds
+        }, 60000); // 60 seconds
       }
     });
 
