@@ -18,7 +18,18 @@ export async function GET(request: Request) {
       const cachedArticles = await getCachedNews();
       if (cachedArticles) {
         console.log(`Returning cached news data for page ${page}`);
-        existingArticles = cachedArticles;
+        // Apply VIDEO filter to cached articles as well
+        existingArticles = cachedArticles.filter(article => {
+          const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
+          if (cleanTitle.toLowerCase().includes('video')) {
+            console.log('Filtered out cached video headline:', article.title);
+            return false;
+          }
+          return true;
+        });
+        console.log(
+          `Filtered cached articles: ${cachedArticles.length} -> ${existingArticles.length}`
+        );
       }
     }
 
@@ -51,12 +62,12 @@ export async function GET(request: Request) {
         `Making Google News RSS request for page ${page} (stealth mode)`
       );
 
-      // Add minimal initial delay to avoid rate limiting
-      const initialDelay = 500 + Math.random() * 1000;
-      console.log(
-        `Initial delay: ${Math.round(initialDelay / 1000)} seconds...`
-      );
-      await new Promise(resolve => setTimeout(resolve, initialDelay));
+             // Minimal delay to avoid rate limiting
+       const initialDelay = 100 + Math.random() * 200;
+       console.log(
+         `Initial delay: ${Math.round(initialDelay / 1000)} seconds...`
+       );
+       await new Promise(resolve => setTimeout(resolve, initialDelay));
 
       let mergedArticles: NewsArticle[] = [];
 
@@ -84,13 +95,13 @@ export async function GET(request: Request) {
               `Trying Google News RSS: ${rssUrl} (attempt ${3 - retries}/2)`
             );
 
-            if (retries < 2) {
-              const naturalDelay = 1000 + Math.random() * 2000;
-              console.log(
-                `Natural delay: ${Math.round(naturalDelay / 1000)} seconds...`
-              );
-              await new Promise(resolve => setTimeout(resolve, naturalDelay));
-            }
+                         if (retries < 2) {
+               const naturalDelay = 500 + Math.random() * 1000;
+               console.log(
+                 `Natural delay: ${Math.round(naturalDelay / 1000)} seconds...`
+               );
+               await new Promise(resolve => setTimeout(resolve, naturalDelay));
+             }
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -131,15 +142,15 @@ export async function GET(request: Request) {
                   `503 Service Unavailable - trying next URL variation...`
                 );
                 break;
-              } else {
-                console.log(
-                  `Failed: ${response.status} ${response.statusText}`
-                );
-                retries--;
-                if (retries > 0) {
-                  await new Promise(resolve => setTimeout(resolve, 3000));
-                }
-              }
+                             } else {
+                 console.log(
+                   `Failed: ${response.status} ${response.statusText}`
+                 );
+                 retries--;
+                 if (retries > 0) {
+                   await new Promise(resolve => setTimeout(resolve, 1000));
+                 }
+               }
             } catch (fetchError: any) {
               clearTimeout(timeoutId);
               if (fetchError.name === 'AbortError') {
@@ -161,24 +172,44 @@ export async function GET(request: Request) {
           }
         }
 
-        if (
-          !googleNewsSuccess &&
-          rssUrls.indexOf(rssUrl) < rssUrls.length - 1
-        ) {
-          const naturalDelay = 8000 + Math.random() * 4000;
-          console.log(
-            `Natural delay before next URL: ${Math.round(
-              naturalDelay / 1000
-            )} seconds...`
-          );
-          await new Promise(resolve => setTimeout(resolve, naturalDelay));
-        }
+                 if (
+           !googleNewsSuccess &&
+           rssUrls.indexOf(rssUrl) < rssUrls.length - 1
+         ) {
+           const naturalDelay = 2000 + Math.random() * 2000;
+           console.log(
+             `Natural delay before next URL: ${Math.round(
+               naturalDelay / 1000
+             )} seconds...`
+           );
+           await new Promise(resolve => setTimeout(resolve, naturalDelay));
+         }
       }
 
       if (!googleNewsSuccess) {
         console.log(
           'All Google News RSS variations failed. This may indicate IP blocking.'
         );
+
+        // Fallback: Return filtered cached articles if available
+        if (existingArticles.length > 0) {
+          console.log(
+            'Falling back to filtered cached articles due to RSS failure'
+          );
+          const sortedCachedArticles = [...existingArticles].sort(
+            (a, b) =>
+              new Date(b.publishedAt).getTime() -
+              new Date(a.publishedAt).getTime()
+          );
+
+          return NextResponse.json({
+            articles: sortedCachedArticles,
+            totalResults: sortedCachedArticles.length,
+            hasMore: false,
+            fallback: true
+          });
+        }
+
         return NextResponse.json(
           {
             error:
