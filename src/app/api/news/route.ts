@@ -346,15 +346,22 @@ function cleanHtmlTags(text: string): string {
 }
 
 // Function to extract real URL and published date from Google News redirect
-async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<{ url: string; publishedAt: string | null }> {
+async function extractRealUrlFromGoogleNews(
+  googleNewsUrl: string
+): Promise<{ url: string; publishedAt: string | null }> {
   try {
     // Method 1: Try to extract from URL parameters first (fastest)
     const urlParamMatch = googleNewsUrl.match(/[?&]url=([^&]+)/);
     if (urlParamMatch) {
       try {
         const decodedUrl = decodeURIComponent(urlParamMatch[1]);
-        if (decodedUrl.includes('abcnews.go.com') || decodedUrl.includes('abc.com')) {
-          console.log(`✓ Fast extraction: Found direct ABC News URL in parameters: ${decodedUrl}`);
+        if (
+          decodedUrl.includes('abcnews.go.com') ||
+          decodedUrl.includes('abc.com')
+        ) {
+          console.log(
+            `✓ Fast extraction: Found direct ABC News URL in parameters: ${decodedUrl}`
+          );
           return { url: decodedUrl, publishedAt: null };
         }
       } catch (e) {
@@ -367,8 +374,13 @@ async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<{ ur
     if (redirectMatch) {
       try {
         const decodedUrl = decodeURIComponent(redirectMatch[1]);
-        if (decodedUrl.includes('abcnews.go.com') || decodedUrl.includes('abc.com')) {
-          console.log(`✓ Fast extraction: Found direct ABC News URL in redirect parameter: ${decodedUrl}`);
+        if (
+          decodedUrl.includes('abcnews.go.com') ||
+          decodedUrl.includes('abc.com')
+        ) {
+          console.log(
+            `✓ Fast extraction: Found direct ABC News URL in redirect parameter: ${decodedUrl}`
+          );
           return { url: decodedUrl, publishedAt: null };
         }
       } catch (e) {
@@ -379,24 +391,30 @@ async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<{ ur
     // Method 3: Fetch the Google News page to extract the real URL (slower but more reliable)
     if (googleNewsUrl.includes('/articles/')) {
       try {
-        console.log(`🔍 Fetching Google News page to extract real URL: ${googleNewsUrl}`);
-        
+        console.log(
+          `🔍 Fetching Google News page to extract real URL: ${googleNewsUrl}`
+        );
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-        
+
         const response = await fetch(googleNewsUrl, {
           method: 'GET',
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
           },
           signal: controller.signal
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (response.ok) {
           const html = await response.text();
-          
+          console.log(
+            `📄 Google News page fetched successfully. HTML length: ${html.length} characters`
+          );
+
           // Look for various patterns that might contain the real URL
           const patterns = [
             /href="([^"]*abcnews\.go\.com[^"]*)"/g,
@@ -406,29 +424,88 @@ async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<{ ur
             /redirect=([^&]*abcnews\.go\.com[^&]*)/g,
             /redirect=([^&]*abc\.com[^&]*)/g
           ];
-          
+
+          console.log(`🔍 Searching for ABC News URLs in Google News HTML...`);
+
           for (const pattern of patterns) {
+            console.log(`🔍 Trying pattern: ${pattern.source}`);
             const matches = html.match(pattern);
             if (matches && matches.length > 0) {
+              console.log(
+                `✅ Pattern matched! Found ${matches.length} potential URLs`
+              );
               for (const match of matches) {
                 try {
-                  const url = match.includes('href="') ? 
-                    match.replace('href="', '').replace('"', '') :
-                    match.includes('url=') ? 
-                      match.replace('url=', '') :
-                      match.replace('redirect=', '');
-                  
+                  console.log(`🔍 Processing match: ${match}`);
+
+                  const url = match.includes('href="')
+                    ? match.replace('href="', '').replace('"', '')
+                    : match.includes('url=')
+                    ? match.replace('url=', '')
+                    : match.replace('redirect=', '');
+
+                  console.log(`🔍 Extracted URL part: ${url}`);
+
                   const decodedUrl = decodeURIComponent(url);
-                  if (decodedUrl.includes('abcnews.go.com') || decodedUrl.includes('abc.com')) {
-                    console.log(`✓ Found real ABC News URL in HTML: ${decodedUrl}`);
+                  console.log(`🔍 Decoded URL: ${decodedUrl}`);
+
+                  if (
+                    decodedUrl.includes('abcnews.go.com') ||
+                    decodedUrl.includes('abc.com')
+                  ) {
+                    console.log(
+                      `✓ Found real ABC News URL in HTML: ${decodedUrl}`
+                    );
                     return { url: decodedUrl, publishedAt: null };
+                  } else {
+                    console.log(
+                      `⚠️ URL doesn't contain ABC News domain: ${decodedUrl}`
+                    );
                   }
-                } catch (e) {
-                  // Continue to next pattern
+                } catch (e: any) {
+                  console.log(`❌ Error processing match: ${e.message}`);
                 }
               }
+            } else {
+              console.log(`❌ Pattern ${pattern.source} found no matches`);
             }
           }
+
+          // If no patterns matched, let's look for any ABC News URLs in the HTML
+          console.log(
+            `🔍 No patterns matched. Searching for any ABC News URLs in HTML...`
+          );
+          const anyAbcUrlMatch = html.match(
+            /https?:\/\/[^"'\s]*abcnews\.go\.com[^"'\s]*/g
+          );
+          if (anyAbcUrlMatch) {
+            console.log(
+              `🔍 Found ${anyAbcUrlMatch.length} ABC News URLs in HTML:`,
+              anyAbcUrlMatch.slice(0, 3)
+            );
+            // Return the first one that looks like an article
+            for (const url of anyAbcUrlMatch) {
+              if (
+                url.includes('/article') ||
+                url.includes('/story') ||
+                url.includes('/news')
+              ) {
+                console.log(`✓ Found article-like ABC News URL: ${url}`);
+                return { url: url, publishedAt: null };
+              }
+            }
+          } else {
+            console.log(`❌ No ABC News URLs found in HTML at all`);
+          }
+
+          // Let's also check what the HTML actually contains
+          console.log(
+            `🔍 HTML preview (first 500 chars): ${html.substring(0, 500)}`
+          );
+        } else {
+          console.log(
+            `❌ Google News page fetch failed: ${response.status} ${response.statusText}`
+          );
         }
       } catch (error: any) {
         if (error.name === 'AbortError') {
@@ -442,9 +519,13 @@ async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<{ ur
     // Method 4: Last resort - try to construct a working URL from the article ID
     if (googleNewsUrl.includes('/articles/')) {
       try {
-        const articleIdMatch = googleNewsUrl.match(/\/articles\/([A-Za-z0-9]+)/);
+        const articleIdMatch = googleNewsUrl.match(
+          /\/articles\/([A-Za-z0-9]+)/
+        );
         if (articleIdMatch) {
           const articleId = articleIdMatch[1];
+          console.log(`🔧 Article ID extracted: ${articleId}`);
+
           // Try different ABC News URL patterns
           const possibleUrls = [
             `https://abcnews.go.com/US/article-${articleId.substring(0, 8)}`,
@@ -452,17 +533,28 @@ async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<{ ur
             `https://abcnews.go.com/US/article-${articleId.substring(0, 12)}`,
             `https://abcnews.go.com/article-${articleId.substring(0, 12)}`
           ];
-          
-          console.log(`🔧 Constructing fallback URLs from article ID: ${articleId}`);
+
+          console.log(
+            `🔧 Constructing fallback URLs from article ID: ${articleId}`
+          );
+          console.log(`🔧 Possible URLs: ${possibleUrls.join(', ')}`);
+          console.log(`🔧 Using fallback URL: ${possibleUrls[0]}`);
+
           return { url: possibleUrls[0], publishedAt: null }; // Return the first one as fallback
+        } else {
+          console.log(`❌ Could not extract article ID from Google News URL`);
         }
-      } catch (e) {
-        console.log('Failed to construct fallback URL from article ID');
+      } catch (e: any) {
+        console.log(
+          `❌ Failed to construct fallback URL from article ID: ${e.message}`
+        );
       }
     }
 
     // If all else fails, return the original URL
-    console.log(`⚠️ Could not extract real URL, keeping original: ${googleNewsUrl}`);
+    console.log(
+      `⚠️ Could not extract real URL, keeping original: ${googleNewsUrl}`
+    );
     return { url: googleNewsUrl, publishedAt: null };
   } catch (error: any) {
     console.log(`❌ Error in extractRealUrlFromGoogleNews: ${error.message}`);
@@ -471,31 +563,45 @@ async function extractRealUrlFromGoogleNews(googleNewsUrl: string): Promise<{ ur
 }
 
 // Function to extract published date from ABC News article page
-async function extractPublishedDateFromABCNews(articleUrl: string): Promise<string | null> {
+async function extractPublishedDateFromABCNews(
+  articleUrl: string
+): Promise<string | null> {
   try {
     // Only try to fetch if it's an actual ABC News URL
-    if (!articleUrl.includes('abcnews.go.com') && !articleUrl.includes('abc.com')) {
+    if (
+      !articleUrl.includes('abcnews.go.com') &&
+      !articleUrl.includes('abc.com')
+    ) {
+      console.log(
+        `⚠️ Skipping date extraction - not an ABC News URL: ${articleUrl}`
+      );
       return null;
     }
 
-    console.log(`📅 Fetching ABC News article to extract published date: ${articleUrl}`);
-    
+    console.log(
+      `📅 Fetching ABC News article to extract published date: ${articleUrl}`
+    );
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     const response = await fetch(articleUrl, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       },
       signal: controller.signal
     });
-    
+
     clearTimeout(timeoutId);
-    
+
     if (response.ok) {
       const html = await response.text();
-      
+      console.log(
+        `📄 ABC News article fetched successfully. HTML length: ${html.length} characters`
+      );
+
       // Look for various date patterns in ABC News articles
       const datePatterns = [
         // Meta tags
@@ -503,42 +609,52 @@ async function extractPublishedDateFromABCNews(articleUrl: string): Promise<stri
         /<meta name="publish_date" content="([^"]+)"/i,
         /<meta name="date" content="([^"]+)"/i,
         /<meta property="og:updated_time" content="([^"]+)"/i,
-        
+
         // Schema.org structured data
         /"datePublished":\s*"([^"]+)"/i,
         /"dateCreated":\s*"([^"]+)"/i,
         /"dateModified":\s*"([^"]+)"/i,
-        
+
         // HTML time elements
         /<time[^>]*datetime="([^"]+)"[^>]*>/i,
         /<time[^>]*>([^<]+)<\/time>/i,
-        
+
         // Common date formats in ABC News
         /(\d{1,2}\/\d{1,2}\/\d{4})/i,
         /(\d{4}-\d{2}-\d{2})/i,
         /(\w+ \d{1,2},? \d{4})/i
       ];
-      
+
+      console.log(`🔍 Searching for date patterns in ABC News article...`);
+
       for (const pattern of datePatterns) {
+        console.log(`🔍 Trying date pattern: ${pattern.source}`);
         const match = html.match(pattern);
         if (match && match[1]) {
+          console.log(`✅ Date pattern matched! Found: ${match[1]}`);
           try {
             let dateString = match[1];
-            
+
             // Clean up the date string
             dateString = dateString.replace(/T.*$/, ''); // Remove time part if present
             dateString = dateString.replace(/Z$/, ''); // Remove Z suffix
-            
+
+            console.log(`🔍 Cleaned date string: ${dateString}`);
+
             // Try to parse the date
             let parsedDate: Date;
-            
+
             if (dateString.includes('-')) {
               // ISO format: 2024-01-15
               parsedDate = new Date(dateString);
             } else if (dateString.includes('/')) {
               // US format: 01/15/2024
               const [month, day, year] = dateString.split('/');
-              parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+              parsedDate = new Date(
+                parseInt(year),
+                parseInt(month) - 1,
+                parseInt(day)
+              );
             } else if (dateString.includes(',')) {
               // Text format: January 15, 2024
               parsedDate = new Date(dateString);
@@ -546,30 +662,48 @@ async function extractPublishedDateFromABCNews(articleUrl: string): Promise<stri
               // Try direct parsing
               parsedDate = new Date(dateString);
             }
-            
+
             if (!isNaN(parsedDate.getTime())) {
               const isoDate = parsedDate.toISOString();
-              console.log(`✓ Extracted published date: ${isoDate} from pattern: ${pattern.source}`);
+              console.log(
+                `✓ Extracted published date: ${isoDate} from pattern: ${pattern.source}`
+              );
               return isoDate;
+            } else {
+              console.log(`⚠️ Parsed date is invalid: ${parsedDate}`);
             }
-          } catch (e) {
-            // Continue to next pattern
+          } catch (e: any) {
+            console.log(`❌ Error parsing date: ${e.message}`);
           }
+        } else {
+          console.log(`❌ Date pattern ${pattern.source} found no matches`);
         }
       }
-      
+
       console.log('⚠️ No valid date found in ABC News article');
+
+      // Let's see what the HTML actually contains
+      console.log(
+        `🔍 HTML preview (first 500 chars): ${html.substring(0, 500)}`
+      );
+
+      return null;
+    } else {
+      console.log(
+        `❌ ABC News article fetch failed: ${response.status} ${response.statusText}`
+      );
       return null;
     }
   } catch (error: any) {
     if (error.name === 'AbortError') {
       console.log('⏰ Timeout while fetching ABC News article for date');
     } else {
-      console.log(`❌ Error fetching ABC News article for date: ${error.message}`);
+      console.log(
+        `❌ Error fetching ABC News article for date: ${error.message}`
+      );
     }
+    return null;
   }
-  
-  return null;
 }
 
 // Function to parse Google News RSS feed
@@ -595,9 +729,11 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               const googleNewsUrl = linkMatch[1];
               const title = decodeHtmlEntities(linkMatch[2].trim());
 
-                          // Extract the actual ABC News URL from Google News redirect
-            const urlResult = await extractRealUrlFromGoogleNews(googleNewsUrl);
-            let directUrl = urlResult.url;
+              // Extract the actual ABC News URL from Google News redirect
+              const urlResult = await extractRealUrlFromGoogleNews(
+                googleNewsUrl
+              );
+              let directUrl = urlResult.url;
 
               // Try multiple methods to extract source name
               let sourceName = 'Google News';
@@ -670,8 +806,13 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                   let publishedAt: string | null = null;
 
                   // Method 1: Try to extract from the actual ABC News article page
-                  if (directUrl.includes('abcnews.go.com') || directUrl.includes('abc.com')) {
-                    publishedAt = await extractPublishedDateFromABCNews(directUrl);
+                  if (
+                    directUrl.includes('abcnews.go.com') ||
+                    directUrl.includes('abc.com')
+                  ) {
+                    publishedAt = await extractPublishedDateFromABCNews(
+                      directUrl
+                    );
                     if (publishedAt) {
                       console.log(
                         `✓ Extracted real published date from ABC News article for "${title}": ${publishedAt}`
@@ -681,7 +822,8 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
 
                   // Method 2: Extract from Google News URL timestamp parameter (fallback)
                   if (!publishedAt) {
-                    const urlTimestampMatch = googleNewsUrl.match(/[?&]t=(\d+)/);
+                    const urlTimestampMatch =
+                      googleNewsUrl.match(/[?&]t=(\d+)/);
                     if (urlTimestampMatch) {
                       const timestamp = parseInt(urlTimestampMatch[1]);
                       if (!isNaN(timestamp)) {
@@ -759,26 +901,33 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               : '';
 
             // Try to extract better description from ABC News article if available
-            if ((!description || description.length < 50) && (directUrl.includes('abcnews.go.com') || directUrl.includes('abc.com'))) {
+            if (
+              (!description || description.length < 50) &&
+              (directUrl.includes('abcnews.go.com') ||
+                directUrl.includes('abc.com'))
+            ) {
               try {
-                console.log(`📝 Fetching ABC News article to extract better description: ${directUrl}`);
-                
+                console.log(
+                  `📝 Fetching ABC News article to extract better description: ${directUrl}`
+                );
+
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 8000);
-                
+
                 const response = await fetch(directUrl, {
                   method: 'GET',
                   headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    'User-Agent':
+                      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                   },
                   signal: controller.signal
                 });
-                
+
                 clearTimeout(timeoutId);
-                
+
                 if (response.ok) {
                   const html = await response.text();
-                  
+
                   // Look for article content in various patterns
                   const contentPatterns = [
                     /<meta name="description" content="([^"]+)"/i,
@@ -786,14 +935,21 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                     /<p[^>]*class="[^"]*content[^"]*"[^>]*>([^<]+)<\/p>/i,
                     /<div[^>]*class="[^"]*content[^"]*"[^>]*>([^<]+)<\/div>/i
                   ];
-                  
+
                   for (const pattern of contentPatterns) {
                     const match = html.match(pattern);
                     if (match && match[1] && match[1].length > 50) {
-                      const cleanContent = cleanHtmlTags(decodeHtmlEntities(match[1]));
+                      const cleanContent = cleanHtmlTags(
+                        decodeHtmlEntities(match[1])
+                      );
                       if (cleanContent.length > 50) {
                         description = cleanContent;
-                        console.log(`✓ Extracted better description from ABC News article: ${description.substring(0, 100)}...`);
+                        console.log(
+                          `✓ Extracted better description from ABC News article: ${description.substring(
+                            0,
+                            100
+                          )}...`
+                        );
                         break;
                       }
                     }
@@ -801,9 +957,13 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 }
               } catch (error: any) {
                 if (error.name === 'AbortError') {
-                  console.log('⏰ Timeout while fetching ABC News article for description');
+                  console.log(
+                    '⏰ Timeout while fetching ABC News article for description'
+                  );
                 } else {
-                  console.log(`❌ Error fetching ABC News article for description: ${error.message}`);
+                  console.log(
+                    `❌ Error fetching ABC News article for description: ${error.message}`
+                  );
                 }
               }
             }
@@ -852,8 +1012,13 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 let publishedAt: string | null = null;
 
                 // Method 1: Try to extract from the actual ABC News article page
-                if (directUrl.includes('abcnews.go.com') || directUrl.includes('abc.com')) {
-                  publishedAt = await extractPublishedDateFromABCNews(directUrl);
+                if (
+                  directUrl.includes('abcnews.go.com') ||
+                  directUrl.includes('abc.com')
+                ) {
+                  publishedAt = await extractPublishedDateFromABCNews(
+                    directUrl
+                  );
                   if (publishedAt) {
                     console.log(
                       `✓ Extracted real published date from ABC News article for "${title}": ${publishedAt}`
@@ -888,19 +1053,19 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 if (publishedAt) {
                   processedUrls.add(directUrl);
 
-                                     articles.push({
-                     id: `rss-${index}-${Date.now()}`,
-                     title: title,
-                     url: directUrl,
-                     publishedAt: publishedAt,
-                     description: description || title,
-                     content: description || title,
-                     urlToImage: '',
-                     source: {
-                       id: null,
-                       name: 'ABC News'
-                     }
-                   });
+                  articles.push({
+                    id: `rss-${index}-${Date.now()}`,
+                    title: title,
+                    url: directUrl,
+                    publishedAt: publishedAt,
+                    description: description || title,
+                    content: description || title,
+                    urlToImage: '',
+                    source: {
+                      id: null,
+                      name: 'ABC News'
+                    }
+                  });
                 }
               }
             }
