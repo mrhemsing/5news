@@ -72,13 +72,39 @@ export default function Home() {
       // Only set safety timeout if we didn't restore articles from localStorage
       if (!articlesRestored) {
         safetyTimeout = setTimeout(() => {
-          console.log('Safety timeout triggered - forcing loading to false');
+          console.log(
+            'Safety timeout triggered - checking if we need to show error'
+          );
           setLoading(false);
-          // Only show error if we don't have any articles yet
-          if (articles.length === 0) {
-            setError('Loading is taking longer than expected - please wait or refresh the page');
+
+          // Check if we have articles in localStorage as a fallback
+          const savedArticles = localStorage.getItem('5news-articles');
+          let hasLocalArticles = false;
+          if (savedArticles) {
+            try {
+              const parsedData = JSON.parse(savedArticles);
+              hasLocalArticles =
+                Array.isArray(parsedData.articles) &&
+                parsedData.articles.length > 0;
+            } catch (error) {
+              hasLocalArticles = false;
+            }
           }
-        }, 60000); // 60 seconds
+
+          // Only show error if we have no articles anywhere AND we're not loading
+          if (articles.length === 0 && !hasLocalArticles && !loading) {
+            console.log(
+              'No articles anywhere and not loading - showing timeout error'
+            );
+            setError(
+              'Loading is taking longer than expected - please wait or refresh the page'
+            );
+          } else {
+            console.log(
+              'Articles available somewhere or still loading - not showing timeout error'
+            );
+          }
+        }, 120000); // 2 minutes - much more generous
       }
     });
 
