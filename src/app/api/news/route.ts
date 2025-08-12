@@ -641,11 +641,24 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               const googleNewsUrl = linkMatch[1];
               const title = decodeHtmlEntities(linkMatch[2].trim());
 
-              // Extract the actual ABC News URL from Google News redirect
-              const urlResult = await extractRealUrlFromGoogleNews(
-                googleNewsUrl
-              );
-              let directUrl = urlResult.url;
+              // The RSS feed provides direct ABC News URLs, but we want Google News redirect URLs
+              // Construct a Google News redirect URL that will show "ABC News" as the source
+              let directUrl = googleNewsUrl;
+
+              // If this is a direct ABC News URL, convert it to a Google News redirect format
+              if (
+                googleNewsUrl.includes('abcnews.go.com') ||
+                googleNewsUrl.includes('abc.com')
+              ) {
+                // Create a Google News redirect URL that maintains the ABC News branding
+                const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(
+                  googleNewsUrl
+                )}&hl=en-US&gl=US&ceid=US:en`;
+                directUrl = googleNewsRedirectUrl;
+                console.log(
+                  `🔗 Converted direct ABC News URL to Google News redirect: ${googleNewsRedirectUrl}`
+                );
+              }
 
               // Try multiple methods to extract source name
               let sourceName = 'Google News';
@@ -785,8 +798,24 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
             );
             const googleNewsUrl = linkMatch[1].trim();
 
-            const urlResult = await extractRealUrlFromGoogleNews(googleNewsUrl);
-            let directUrl = urlResult.url;
+            // The RSS feed provides direct ABC News URLs, but we want Google News redirect URLs
+            // Construct a Google News redirect URL that will show "ABC News" as the source
+            let directUrl = googleNewsUrl;
+
+            // If this is a direct ABC News URL, convert it to a Google News redirect format
+            if (
+              googleNewsUrl.includes('abcnews.go.com') ||
+              googleNewsUrl.includes('abc.com')
+            ) {
+              // Create a Google News redirect URL that maintains the ABC News branding
+              const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(
+                googleNewsUrl
+              )}&hl=en-US&gl=US&ceid=US:en`;
+              directUrl = googleNewsRedirectUrl;
+              console.log(
+                `🔗 Converted direct ABC News URL to Google News redirect: ${googleNewsRedirectUrl}`
+              );
+            }
 
             let description = descriptionMatch
               ? cleanHtmlTags(
