@@ -67,7 +67,7 @@ export default function Home() {
 
     // Add a safety timeout ONLY for initial page load
     let safetyTimeout: NodeJS.Timeout | null = null;
-    
+
     initializeApp().then(articlesRestored => {
       // Only set safety timeout if we didn't restore articles from localStorage
       if (!articlesRestored) {
