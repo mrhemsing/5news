@@ -103,41 +103,62 @@ export async function GET(request: Request) {
               await new Promise(resolve => setTimeout(resolve, naturalDelay));
             }
 
-            // Enhanced headers to mimic real browser behavior
-            const response = await fetch(rssUrl, {
-              headers: {
-                'User-Agent': userAgent,
-                Accept:
-                  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                Connection: 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Cache-Control': 'max-age=0'
+            // Enhanced headers to mimic real browser behavior with timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+            try {
+              const response = await fetch(rssUrl, {
+                headers: {
+                  'User-Agent': userAgent,
+                  Accept:
+                    'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                  'Accept-Language': 'en-US,en;q=0.5',
+                  'Accept-Encoding': 'gzip, deflate',
+                  Connection: 'keep-alive',
+                  'Upgrade-Insecure-Requests': '1',
+                  'Cache-Control': 'max-age=0'
+                },
+                signal: controller.signal
+              });
+
+              clearTimeout(timeoutId);
+
+              if (response.ok) {
+                const rssText = await response.text();
+                console.log(
+                  `✓ Google News RSS success! Length: ${rssText.length} characters`
+                );
+
+                const articles = await parseGoogleNewsRSS(rssText);
+                console.log(
+                  `Got ${articles.length} articles from Google News RSS`
+                );
+
+                mergedArticles = mergeArticles(mergedArticles, articles);
+                googleNewsSuccess = true;
+                break;
+              } else if (response.status === 503) {
+                console.log(
+                  `503 Service Unavailable - trying next URL variation...`
+                );
+                break; // Try next URL variation
+              } else {
+                console.log(
+                  `Failed: ${response.status} ${response.statusText}`
+                );
+                retries--;
+                if (retries > 0) {
+                  await new Promise(resolve => setTimeout(resolve, 3000));
+                }
               }
-            });
-
-            if (response.ok) {
-              const rssText = await response.text();
-              console.log(
-                `✓ Google News RSS success! Length: ${rssText.length} characters`
-              );
-
-              const articles = await parseGoogleNewsRSS(rssText);
-              console.log(
-                `Got ${articles.length} articles from Google News RSS`
-              );
-
-              mergedArticles = mergeArticles(mergedArticles, articles);
-              googleNewsSuccess = true;
-              break;
-            } else if (response.status === 503) {
-              console.log(
-                `503 Service Unavailable - trying next URL variation...`
-              );
-              break; // Try next URL variation
-            } else {
-              console.log(`Failed: ${response.status} ${response.statusText}`);
+            } catch (fetchError: any) {
+              clearTimeout(timeoutId);
+              if (fetchError.name === 'AbortError') {
+                console.log('RSS fetch timed out, trying next attempt...');
+              } else {
+                console.error(`RSS fetch error:`, fetchError);
+              }
               retries--;
               if (retries > 0) {
                 await new Promise(resolve => setTimeout(resolve, 3000));
@@ -277,41 +298,107 @@ export async function GET(request: Request) {
         );
       }
 
-      // Cache the merged results
-      await setCachedNews(allArticles, page);
+      // Filter out articles with malformed URLs before caching and returning
+      const validArticles = allArticles.filter(article => {
+        // Check if URL is a malformed Google News article ID (extremely long)
+        if (article.url.includes('/articles/') && article.url.length > 200) {
+          console.log(
+            `Filtered out article with malformed URL: "${article.title}"`
+          );
+          console.log(
+            `URL length: ${article.url.length}, URL: ${article.url.substring(
+              0,
+              100
+            )}...`
+          );
+          return false;
+        }
+
+        // Check if URL is a Google News redirect that we couldn't resolve
+        if (
+          article.url.includes('news.google.com') &&
+          !article.url.includes('abcnews.go.com')
+        ) {
+          console.log(
+            `Filtered out article with unresolved Google News URL: "${article.title}"`
+          );
+          return false;
+        }
+
+        return true;
+      });
+
+      console.log(
+        `Filtered out ${
+          allArticles.length - validArticles.length
+        } articles with malformed URLs`
+      );
+
+      // Cache the filtered results
+      await setCachedNews(validArticles, page);
 
       // Log the order of articles being returned
       console.log('Returning fresh articles - order verification:');
-      allArticles.slice(0, 5).forEach((article, index) => {
+      validArticles.slice(0, 5).forEach((article, index) => {
         console.log(
           `${index + 1}. "${article.title}" - ${article.publishedAt}`
         );
       });
 
-      // Return all articles - let frontend handle pagination
+      // Return filtered articles - let frontend handle pagination
       return NextResponse.json({
-        articles: allArticles,
-        totalResults: allArticles.length,
+        articles: validArticles,
+        totalResults: validArticles.length,
         hasMore: false // Google News RSS doesn't support pagination
       });
     } else {
-      // Return existing cached articles - ensure they're properly sorted
+      // Return existing cached articles - ensure they're properly sorted and filtered
       const sortedCachedArticles = [...existingArticles].sort(
         (a, b) =>
           new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
       );
 
+      // Apply the same URL filtering to cached articles
+      const validCachedArticles = sortedCachedArticles.filter(article => {
+        // Check if URL is a malformed Google News article ID (extremely long)
+        if (article.url.includes('/articles/') && article.url.length > 200) {
+          console.log(
+            `Filtered out cached article with malformed URL: "${article.title}"`
+          );
+          return false;
+        }
+
+        // Check if URL is a Google News redirect that we couldn't resolve
+        if (
+          article.url.includes('news.google.com') &&
+          !article.url.includes('abcnews.go.com')
+        ) {
+          console.log(
+            `Filtered out cached article with unresolved Google News URL: "${article.title}"`
+          );
+          return false;
+        }
+
+        return true;
+      });
+
+      console.log(
+        `Filtered out ${
+          sortedCachedArticles.length - validCachedArticles.length
+        } cached articles with malformed URLs`
+      );
+
       console.log('Returning cached articles - ensuring proper sorting');
       console.log('First 3 cached articles:');
-      sortedCachedArticles.slice(0, 3).forEach((article, index) => {
+      validCachedArticles.slice(0, 3).forEach((article, index) => {
         console.log(
           `${index + 1}. "${article.title}" - ${article.publishedAt}`
         );
       });
 
       return NextResponse.json({
-        articles: sortedCachedArticles,
-        totalResults: sortedCachedArticles.length,
+        articles: validCachedArticles,
+        totalResults: validCachedArticles.length,
         hasMore: false // Google News RSS doesn't support pagination
       });
     }
@@ -364,139 +451,144 @@ async function extractRealUrlFromGoogleNews(
       )}...`
     );
 
-    const response = await fetch(googleNewsUrl, {
-      headers: {
-        'User-Agent': userAgent,
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        Connection: 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
-      }
-    });
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
-    console.log(
-      `📊 Response status: ${response.status} ${response.statusText}`
-    );
+    try {
+      const response = await fetch(googleNewsUrl, {
+        headers: {
+          'User-Agent': userAgent,
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          Connection: 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        },
+        signal: controller.signal
+      });
 
-    if (!response.ok) {
-      console.log(`❌ Failed to fetch Google News article: ${response.status}`);
-      if (response.status === 503) {
-        console.log(`🚫 503 error - likely IP blocked by Google`);
-      }
-      return googleNewsUrl; // Return original URL if fetch fails
-    }
+      clearTimeout(timeoutId);
 
-    const html = await response.text();
-    console.log(
-      `✅ Successfully fetched Google News article, length: ${html.length} characters`
-    );
+      console.log(
+        `📊 Response status: ${response.status} ${response.statusText}`
+      );
 
-    // Look for ABC News URLs in the HTML content with multiple patterns
-    const abcUrlPatterns = [
-      // Direct ABC News URLs
-      /https:\/\/abcnews\.go\.com\/[^\s"']+/g,
-      /https:\/\/abc\.com\/[^\s"']+/g,
-      // URLs in href attributes
-      /href="([^"]*abcnews\.go\.com[^"]*)"/g,
-      /href="([^"]*abc\.com[^"]*)"/g,
-      // URLs in data attributes
-      /data-url="([^"]*abcnews\.go\.com[^"]*)"/g,
-      /data-url="([^"]*abc\.com[^"]*)"/g,
-      // URLs in onclick attributes
-      /onclick="[^"]*['"]([^'"]*abcnews\.go\.com[^'"]*)['"][^"]*"/g,
-      /onclick="[^"]*['"]([^'"]*abc\.com[^'"]*)['"][^"]*"/g
-    ];
-
-    console.log(
-      `🔍 Searching for ABC News URLs using ${abcUrlPatterns.length} patterns...`
-    );
-
-    for (let i = 0; i < abcUrlPatterns.length; i++) {
-      const pattern = abcUrlPatterns[i];
-      console.log(`🔍 Pattern ${i + 1}: ${pattern.source}`);
-
-      const matches = html.match(pattern);
-      if (matches && matches.length > 0) {
-        console.log(`🎯 Found ${matches.length} matches with pattern ${i + 1}`);
-
-        for (let j = 0; j < matches.length; j++) {
-          const match = matches[j];
-          console.log(`  Match ${j + 1}: ${match.substring(0, 100)}...`);
-
-          let realUrl = match;
-
-          // Clean up the URL if it's in an attribute
-          if (realUrl.includes('href="')) {
-            realUrl = realUrl.replace(/href="([^"]*)"/, '$1');
-            console.log(`  Cleaned href attribute: ${realUrl}`);
-          } else if (realUrl.includes('data-url="')) {
-            realUrl = realUrl.replace(/data-url="([^"]*)"/, '$1');
-            console.log(`  Cleaned data-url attribute: ${realUrl}`);
-          } else if (realUrl.includes('onclick=')) {
-            realUrl = realUrl.replace(
-              /onclick="[^"]*['"]([^'"]*)['"][^"]*"/,
-              '$1'
-            );
-            console.log(`  Cleaned onclick attribute: ${realUrl}`);
-          }
-
-          // Validate the URL
-          if (
-            realUrl.includes('abcnews.go.com') ||
-            realUrl.includes('abc.com')
-          ) {
-            // Clean up any remaining HTML entities or fragments
-            realUrl = realUrl.split('#')[0].split('?')[0]; // Remove fragments and query params
-            realUrl = decodeHtmlEntities(realUrl);
-
-            console.log(
-              `✅ Successfully extracted real ABC News URL: ${realUrl}`
-            );
-            return realUrl;
-          } else {
-            console.log(`⚠️  URL doesn't contain ABC News domain: ${realUrl}`);
-          }
-        }
-      } else {
-        console.log(`❌ No matches found with pattern ${i + 1}`);
-      }
-    }
-
-    // If no ABC News URL found, look for any external news URL
-    const externalUrlPattern = /href="(https:\/\/[^"]*\.com\/[^"]*)"/g;
-    const externalMatches = html.match(externalUrlPattern);
-    if (externalMatches && externalMatches.length > 0) {
-      const externalUrl = externalMatches[0].replace(/href="([^"]*)"/, '$1');
-      console.log(`⚠️  Found external URL (not ABC): ${externalUrl}`);
-    }
-
-    console.log(`❌ No real ABC News URL found in Google News article`);
-    console.log(
-      `🔍 HTML preview (first 500 chars): ${html.substring(0, 500)}...`
-    );
-
-    // Fallback: Try to construct a direct ABC News URL from the Google News article ID
-    if (googleNewsUrl.includes('/articles/')) {
-      const articleIdMatch = googleNewsUrl.match(/\/articles\/([^?]+)/);
-      if (articleIdMatch) {
-        const articleId = articleIdMatch[1];
+      if (!response.ok) {
         console.log(
-          `🔧 Attempting fallback URL construction with article ID: ${articleId}`
+          `❌ Failed to fetch Google News article: ${response.status}`
         );
-
-        // Try to construct a direct ABC News URL
-        // This is a best-effort approach when the real URL extraction fails
-        const fallbackUrl = `https://abcnews.go.com/articles/${articleId}`;
-        console.log(`🔧 Constructed fallback URL: ${fallbackUrl}`);
-
-        // Note: This fallback URL may not work, but it's better than the Google News redirect
-        return fallbackUrl;
+        if (response.status === 503) {
+          console.log(`🚫 503 error - likely IP blocked by Google`);
+        }
+        return googleNewsUrl; // Return original URL if fetch fails
       }
-    }
 
-    return googleNewsUrl; // Return original URL if no real URL found
+      const html = await response.text();
+      console.log(
+        `✅ Successfully fetched Google News article, length: ${html.length} characters`
+      );
+
+      // Look for ABC News URLs in the HTML content with multiple patterns
+      const abcUrlPatterns = [
+        // Direct ABC News URLs
+        /https:\/\/abcnews\.go\.com\/[^\s"']+/g,
+        /https:\/\/abc\.com\/[^\s"']+/g,
+        // URLs in href attributes
+        /href="([^"]*abcnews\.go\.com[^"]*)"/g,
+        /href="([^"]*abc\.com[^"]*)"/g,
+        // URLs in data attributes
+        /data-url="([^"]*abcnews\.go\.com[^"]*)"/g,
+        /data-url="([^"]*abc\.com[^"]*)"/g,
+        // URLs in onclick attributes
+        /onclick="[^"]*['"]([^'"]*abcnews\.go\.com[^'"]*)['"][^"]*"/g,
+        /onclick="[^"]*['"]([^'"]*abc\.com[^'"]*)['"][^"]*"/g
+      ];
+
+      console.log(
+        `🔍 Searching for ABC News URLs using ${abcUrlPatterns.length} patterns...`
+      );
+
+      for (let i = 0; i < abcUrlPatterns.length; i++) {
+        const pattern = abcUrlPatterns[i];
+        console.log(`🔍 Pattern ${i + 1}: ${pattern.source}`);
+
+        const matches = html.match(pattern);
+        if (matches && matches.length > 0) {
+          console.log(
+            `🎯 Found ${matches.length} matches with pattern ${i + 1}`
+          );
+
+          for (let j = 0; j < matches.length; j++) {
+            const match = matches[j];
+            console.log(`  Match ${j + 1}: ${match.substring(0, 100)}...`);
+
+            let realUrl = match;
+
+            // Clean up the URL if it's in an attribute
+            if (realUrl.includes('href="')) {
+              realUrl = realUrl.replace(/href="([^"]*)"/, '$1');
+              console.log(`  Cleaned href attribute: ${realUrl}`);
+            } else if (realUrl.includes('data-url="')) {
+              realUrl = realUrl.replace(/data-url="([^"]*)"/, '$1');
+              console.log(`  Cleaned data-url attribute: ${realUrl}`);
+            } else if (realUrl.includes('onclick=')) {
+              realUrl = realUrl.replace(
+                /onclick="[^"]*['"]([^'"]*)['"][^"]*"/,
+                '$1'
+              );
+              console.log(`  Cleaned onclick attribute: ${realUrl}`);
+            }
+
+            // Validate the URL
+            if (
+              realUrl.includes('abcnews.go.com') ||
+              realUrl.includes('abc.com')
+            ) {
+              // Clean up any remaining HTML entities or fragments
+              realUrl = realUrl.split('#')[0].split('?')[0]; // Remove fragments and query params
+              realUrl = decodeHtmlEntities(realUrl);
+
+              console.log(
+                `✅ Successfully extracted real ABC News URL: ${realUrl}`
+              );
+              return realUrl;
+            } else {
+              console.log(
+                `⚠️  URL doesn't contain ABC News domain: ${realUrl}`
+              );
+            }
+          }
+        } else {
+          console.log(`❌ No matches found with pattern ${i + 1}`);
+        }
+      }
+
+      // If no ABC News URL found, look for any external news URL
+      const externalUrlPattern = /href="(https:\/\/[^"]*\.com\/[^"]*)"/g;
+      const externalMatches = html.match(externalUrlPattern);
+      if (externalMatches && externalMatches.length > 0) {
+        const externalUrl = externalMatches[0].replace(/href="([^"]*)"/, '$1');
+        console.log(`⚠️  Found external URL (not ABC): ${externalUrl}`);
+      }
+
+      console.log(`❌ No real ABC News URL found in Google News article`);
+      console.log(
+        `🔍 HTML preview (first 500 chars): ${html.substring(0, 500)}...`
+      );
+
+      // Fallback: Don't construct malformed URLs from Google News article IDs
+      // Instead, return the original Google News URL and let the calling function handle it
+      console.log(
+        `⚠️  No real ABC News URL found, returning original Google News URL`
+      );
+      return googleNewsUrl;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error(`💥 Error during fetch:`, fetchError);
+      return googleNewsUrl; // Return original URL on fetch error
+    }
   } catch (error) {
     console.error(`💥 Error fetching Google News article:`, error);
     return googleNewsUrl; // Return original URL on error
@@ -551,23 +643,8 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               }
 
               // Method 2: Look for the actual article URL in the Google News URL path
-              if (directUrl === googleNewsUrl) {
-                const articleUrlMatch =
-                  googleNewsUrl.match(/\/articles\/([^?]+)/);
-                if (articleUrlMatch) {
-                  const articlePath = articleUrlMatch[1];
-                  // Check if this looks like a direct ABC News path
-                  if (
-                    articlePath.includes('abc') ||
-                    articlePath.includes('news')
-                  ) {
-                    // Try to construct the direct ABC News URL
-                    const possibleDirectUrl = `https://abcnews.go.com/${articlePath}`;
-                    // We'll validate this URL later when we check if it's an ABC source
-                    directUrl = possibleDirectUrl;
-                  }
-                }
-              }
+              // Note: Google News article IDs are not real ABC News paths, so we skip this method
+              // to avoid creating malformed URLs
 
               // Method 3: Look for redirect URLs in other parameters
               if (directUrl === googleNewsUrl) {
@@ -624,10 +701,26 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
 
                 try {
                   // Fetch the actual Google News article page to extract the real ABC News URL
-                  console.log(`🚀 Calling extractRealUrlFromGoogleNews...`);
-                  const realUrl = await extractRealUrlFromGoogleNews(
-                    googleNewsUrl
+                  // Add timeout to prevent hanging
+                  console.log(
+                    `🚀 Calling extractRealUrlFromGoogleNews with timeout...`
                   );
+
+                  const timeoutPromise = new Promise<string>((_, reject) => {
+                    setTimeout(
+                      () => reject(new Error('URL extraction timeout')),
+                      10000
+                    ); // 10 second timeout
+                  });
+
+                  const realUrlPromise =
+                    extractRealUrlFromGoogleNews(googleNewsUrl);
+
+                  const realUrl = await Promise.race([
+                    realUrlPromise,
+                    timeoutPromise
+                  ]);
+
                   console.log(`📊 Real URL extraction result: ${realUrl}`);
 
                   if (realUrl !== googleNewsUrl) {
@@ -643,6 +736,8 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 } catch (error) {
                   console.error(`💥 Error during real URL extraction:`, error);
                   console.log(`⚠️  Error occurred, keeping Google News URL`);
+                  // Don't try to extract real URLs for this article to prevent further hanging
+                  directUrl = googleNewsUrl;
                 }
               }
 
@@ -942,23 +1037,8 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
             }
 
             // Method 2: Look for the actual article URL in the Google News URL path
-            if (directUrl === googleNewsUrl) {
-              const articleUrlMatch =
-                googleNewsUrl.match(/\/articles\/([^?]+)/);
-              if (articleUrlMatch) {
-                const articlePath = articleUrlMatch[1];
-                // Check if this looks like a direct ABC News path
-                if (
-                  articlePath.includes('abc') ||
-                  articlePath.includes('news')
-                ) {
-                  // Try to construct the direct ABC News URL
-                  const possibleDirectUrl = `https://abcnews.go.com/${articlePath}`;
-                  // We'll validate this URL later when we check if it's an ABC source
-                  directUrl = possibleDirectUrl;
-                }
-              }
-            }
+            // Note: Google News article IDs are not real ABC News paths, so we skip this method
+            // to avoid creating malformed URLs
 
             // Method 3: Look for redirect URLs in other parameters
             if (directUrl === googleNewsUrl) {
