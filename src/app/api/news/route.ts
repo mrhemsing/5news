@@ -203,6 +203,10 @@ export async function GET(request: Request) {
           console.log('Filtered out latest news:', article.title);
           return false;
         }
+        if (cleanTitle.toLowerCase().includes('video')) {
+          console.log('Filtered out video headline:', article.title);
+          return false;
+        }
         return true;
       });
 
@@ -269,10 +273,43 @@ export async function GET(request: Request) {
         console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
       });
 
+      // Add debug info to verify sorting
+      const firstArticle = validArticles[0];
+      const lastArticle = validArticles[validArticles.length - 1];
+      const debugInfo = {
+        firstArticle: {
+          title: firstArticle?.title,
+          publishedAt: firstArticle?.publishedAt,
+          timestamp: firstArticle
+            ? new Date(firstArticle.publishedAt).getTime()
+            : null
+        },
+        lastArticle: {
+          title: lastArticle?.title,
+          publishedAt: lastArticle?.publishedAt,
+          timestamp: lastArticle
+            ? new Date(lastArticle.publishedAt).getTime()
+            : null
+        },
+        totalArticles: validArticles.length,
+        sortingVerified:
+          firstArticle && lastArticle
+            ? new Date(firstArticle.publishedAt).getTime() >
+              new Date(lastArticle.publishedAt).getTime()
+            : false
+      };
+
+      console.log(
+        `SORTING_VERIFICATION: ${
+          debugInfo.sortingVerified ? '✅' : '❌'
+        } Sorting verified - First article is newer than last article`
+      );
+
       return NextResponse.json({
         articles: validArticles,
         totalResults: validArticles.length,
-        hasMore: false
+        hasMore: false,
+        debug: debugInfo
       });
     } else {
       // Return existing cached articles
@@ -999,6 +1036,16 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
     const date = new Date(article.publishedAt);
     console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
   });
+
+  // Add a simple log that will definitely show in Vercel
+  console.log(
+    `SORTING_DEBUG: First article after sort: "${articles[0]?.title}" at ${articles[0]?.publishedAt}`
+  );
+  console.log(
+    `SORTING_DEBUG: Last article after sort: "${
+      articles[articles.length - 1]?.title
+    }" at ${articles[articles.length - 1]?.publishedAt}`
+  );
 
   console.log(`Parsed ${articles.length} articles from Google News RSS feed`);
   return articles;
