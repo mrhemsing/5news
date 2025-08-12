@@ -865,18 +865,30 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                 // Method 1: Try to extract from RSS pubDate tag (most reliable)
                 if (pubDateMatch) {
                   try {
-                    const pubDate = new Date(pubDateMatch[1]);
+                    const rawPubDate = pubDateMatch[1];
+                    console.log(
+                      `📅 Raw RSS pubDate for "${title}": ${rawPubDate}`
+                    );
+
+                    const pubDate = new Date(rawPubDate);
                     if (!isNaN(pubDate.getTime())) {
                       publishedAt = pubDate.toISOString();
                       console.log(
                         `✓ Extracted date from RSS pubDate for "${title}": ${publishedAt}`
                       );
+                      console.log(
+                        `✓ Local time equivalent: ${pubDate.toString()}`
+                      );
+                    } else {
+                      console.log(`❌ Invalid RSS pubDate: ${rawPubDate}`);
                     }
                   } catch (e) {
                     console.log(
                       `⚠️ Failed to parse RSS pubDate: ${pubDateMatch[1]}`
                     );
                   }
+                } else {
+                  console.log(`❌ No RSS pubDate found for "${title}"`);
                 }
 
                 // Method 2: Try to extract from Google News URL timestamp parameter (fallback)
@@ -889,9 +901,16 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                     if (!isNaN(timestamp)) {
                       publishedAt = new Date(timestamp * 1000).toISOString();
                       console.log(
-                        `✓ Extracted date from Google News timestamp for "${title}": ${publishedAt}`
+                        `⚠️ FALLBACK: Extracted date from Google News timestamp for "${title}": ${publishedAt}`
+                      );
+                      console.log(
+                        `⚠️ FALLBACK: Local time equivalent: ${new Date(
+                          timestamp * 1000
+                        ).toString()}`
                       );
                     }
+                  } else {
+                    console.log(`❌ No URL timestamp found for "${title}"`);
                   }
                 }
 
@@ -901,6 +920,36 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                     `❌ Skipping article without valid date: "${title}"`
                   );
                   continue; // Skip this article entirely
+                }
+
+                // Log the final date being used
+                console.log(`🎯 FINAL DATE for "${title}": ${publishedAt}`);
+                console.log(
+                  `🎯 FINAL DATE local: ${new Date(publishedAt).toString()}`
+                );
+
+                // Validate that the date is reasonable (not in the future, not too old)
+                const validatedDate = new Date(publishedAt);
+                const now = new Date();
+                const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+                if (validatedDate > now) {
+                  console.log(
+                    `⚠️ WARNING: Article date is in the future: ${publishedAt}`
+                  );
+                  console.log(
+                    `⚠️ This suggests a date parsing issue - skipping article`
+                  );
+                  continue;
+                }
+
+                if (validatedDate < oneDayAgo) {
+                  console.log(
+                    `⚠️ WARNING: Article date is more than 1 day old: ${publishedAt}`
+                  );
+                  console.log(
+                    `⚠️ This might be a stale article - but continuing`
+                  );
                 }
 
                 // Filter out articles older than 2 days to ensure freshness
