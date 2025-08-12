@@ -573,6 +573,17 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
   const processedUrls = new Set<string>();
 
   try {
+    // Extract RSS feed generation time for fallback dating
+    const lastBuildDateMatch = rssText.match(
+      /<lastBuildDate>([^<]+)<\/lastBuildDate>/
+    );
+    const rssFeedTime = lastBuildDateMatch
+      ? new Date(lastBuildDateMatch[1]).getTime()
+      : Date.now();
+    console.log(
+      `📅 RSS feed generated at: ${new Date(rssFeedTime).toISOString()}`
+    );
+
     // Method 1: Try parsing <ol> lists (Google News format)
     const listMatches = rssText.match(/<ol>([\s\S]*?)<\/ol>/g);
 
@@ -663,44 +674,29 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                     continue;
                   }
 
-                  // Extract date from the ABC News article page (most accurate)
+                  // Extract date using multiple methods for reliability
                   let publishedAt: string | null = null;
 
-                  // Method 1: Try to extract from the actual ABC News article page
-                  if (
-                    directUrl.includes('abcnews.go.com') ||
-                    directUrl.includes('abc.com')
-                  ) {
-                    publishedAt = await extractPublishedDateFromABCNews(
-                      directUrl
-                    );
-                    if (publishedAt) {
+                  // Method 1: Try to extract from Google News URL timestamp parameter
+                  const urlTimestampMatch = googleNewsUrl.match(/[?&]t=(\d+)/);
+                  if (urlTimestampMatch) {
+                    const timestamp = parseInt(urlTimestampMatch[1]);
+                    if (!isNaN(timestamp)) {
+                      publishedAt = new Date(timestamp * 1000).toISOString();
                       console.log(
-                        `✓ Extracted real published date from ABC News article for "${title}": ${publishedAt}`
+                        `✓ Extracted date from Google News URL timestamp for "${title}": ${publishedAt}`
                       );
                     }
                   }
 
-                  // Method 2: Extract from Google News URL timestamp parameter (fallback)
+                  // Method 2: Use RSS feed generation time with offset based on item position
                   if (!publishedAt) {
-                    const urlTimestampMatch =
-                      googleNewsUrl.match(/[?&]t=(\d+)/);
-                    if (urlTimestampMatch) {
-                      const timestamp = parseInt(urlTimestampMatch[1]);
-                      if (!isNaN(timestamp)) {
-                        publishedAt = new Date(timestamp * 1000).toISOString();
-                        console.log(
-                          `✓ Extracted date from Google News timestamp for "${title}": ${publishedAt}`
-                        );
-                      }
-                    }
-                  }
-
-                  // Method 3: Use current time as last resort
-                  if (!publishedAt) {
-                    publishedAt = new Date().toISOString();
+                    // Calculate time offset based on item position (newer items appear first)
+                    const timeOffset = listIndex * 1000 + itemIndex * 500; // 1 second per list, 0.5 seconds per item
+                    const calculatedTime = rssFeedTime - timeOffset;
+                    publishedAt = new Date(calculatedTime).toISOString();
                     console.log(
-                      `⚠ Using current time for "${title}" (no date found)`
+                      `📅 Calculated date from RSS feed time for "${title}": ${publishedAt} (position: list ${listIndex}, item ${itemIndex})`
                     );
                   }
 
@@ -741,6 +737,7 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
           const descriptionMatch = item.match(
             /<description>([\s\S]*?)<\/description>/
           );
+          const pubDateMatch = item.match(/<pubDate>([^<]+)<\/pubDate>/);
 
           if (titleMatch && linkMatch) {
             const title = decodeHtmlEntities(
@@ -869,25 +866,27 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                   continue;
                 }
 
-                // Extract date from the ABC News article page (most accurate)
+                // Extract date using multiple methods for reliability
                 let publishedAt: string | null = null;
 
-                // Method 1: Try to extract from the actual ABC News article page
-                if (
-                  directUrl.includes('abcnews.go.com') ||
-                  directUrl.includes('abc.com')
-                ) {
-                  publishedAt = await extractPublishedDateFromABCNews(
-                    directUrl
-                  );
-                  if (publishedAt) {
+                // Method 1: Try to extract from RSS pubDate tag (most reliable)
+                if (pubDateMatch) {
+                  try {
+                    const pubDate = new Date(pubDateMatch[1]);
+                    if (!isNaN(pubDate.getTime())) {
+                      publishedAt = pubDate.toISOString();
+                      console.log(
+                        `✓ Extracted date from RSS pubDate for "${title}": ${publishedAt}`
+                      );
+                    }
+                  } catch (e) {
                     console.log(
-                      `✓ Extracted real published date from ABC News article for "${title}": ${publishedAt}`
+                      `⚠️ Failed to parse RSS pubDate: ${pubDateMatch[1]}`
                     );
                   }
                 }
 
-                // Method 2: Extract from Google News URL timestamp parameter (fallback)
+                // Method 2: Try to extract from Google News URL timestamp parameter
                 if (!publishedAt) {
                   const urlTimestampMatch = googleNewsUrl.match(
                     /[?&]ceid=[^&]*&gl=[^&]*&hl=[^&]*&t=(\d+)/
@@ -903,11 +902,13 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                   }
                 }
 
-                // Method 3: Use current time as last resort
+                // Method 3: Use RSS feed generation time with offset based on item position
                 if (!publishedAt) {
-                  publishedAt = new Date().toISOString();
+                  const timeOffset = index * 1000; // 1 second per item
+                  const calculatedTime = rssFeedTime - timeOffset;
+                  publishedAt = new Date(calculatedTime).toISOString();
                   console.log(
-                    `⚠ Using current time for "${title}" (no date found)`
+                    `📅 Calculated date from RSS feed time for "${title}": ${publishedAt} (position: ${index})`
                   );
                 }
 
