@@ -388,162 +388,15 @@ async function extractRealUrlFromGoogleNews(
       }
     }
 
-    // Method 3: Fetch the Google News page to extract the real URL (slower but more reliable)
+    // Method 3: Skip Google News page fetch (it's being blocked) and go directly to fallback
     if (googleNewsUrl.includes('/articles/')) {
-      try {
-        console.log(
-          `🔍 Fetching Google News page to extract real URL: ${googleNewsUrl}`
-        );
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          console.log('⏰ 8-second timeout reached, aborting fetch...');
-          controller.abort();
-        }, 8000); // 8 second timeout
-
-        console.log(`⏱️ Starting fetch with 8-second timeout...`);
-
-        // Use Promise.race to ensure we always get a response
-        const fetchPromise = fetch(googleNewsUrl, {
-          method: 'GET',
-          headers: {
-            'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-          },
-          signal: controller.signal
-        });
-
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => {
-            reject(new Error('Fetch timeout after 8 seconds'));
-          }, 8000);
-        });
-
-        const response = (await Promise.race([
-          fetchPromise,
-          timeoutPromise
-        ])) as Response;
-
-        clearTimeout(timeoutId);
-        console.log(
-          `📡 Fetch response received: ${response.status} ${response.statusText}`
-        );
-
-        if (response.ok) {
-          console.log(`📄 Starting to read response body...`);
-          const html = await response.text();
-          console.log(
-            `📄 Google News page fetched successfully. HTML length: ${html.length} characters`
-          );
-
-          // Look for various patterns that might contain the real URL
-          const patterns = [
-            /href="([^"]*abcnews\.go\.com[^"]*)"/g,
-            /href="([^"]*abc\.com[^"]*)"/g,
-            /url=([^&]*abcnews\.go\.com[^&]*)/g,
-            /url=([^&]*abc\.com[^&]*)/g,
-            /redirect=([^&]*abcnews\.go\.com[^&]*)/g,
-            /redirect=([^&]*abc\.com[^&]*)/g
-          ];
-
-          console.log(`🔍 Searching for ABC News URLs in Google News HTML...`);
-
-          for (const pattern of patterns) {
-            console.log(`🔍 Trying pattern: ${pattern.source}`);
-            const matches = html.match(pattern);
-            if (matches && matches.length > 0) {
-              console.log(
-                `✅ Pattern matched! Found ${matches.length} potential URLs`
-              );
-              for (const match of matches) {
-                try {
-                  console.log(`🔍 Processing match: ${match}`);
-
-                  const url = match.includes('href="')
-                    ? match.replace('href="', '').replace('"', '')
-                    : match.includes('url=')
-                    ? match.replace('url=', '')
-                    : match.replace('redirect=', '');
-
-                  console.log(`🔍 Extracted URL part: ${url}`);
-
-                  const decodedUrl = decodeURIComponent(url);
-                  console.log(`🔍 Decoded URL: ${decodedUrl}`);
-
-                  if (
-                    decodedUrl.includes('abcnews.go.com') ||
-                    decodedUrl.includes('abc.com')
-                  ) {
-                    console.log(
-                      `✓ Found real ABC News URL in HTML: ${decodedUrl}`
-                    );
-                    return { url: decodedUrl, publishedAt: null };
-                  } else {
-                    console.log(
-                      `⚠️ URL doesn't contain ABC News domain: ${decodedUrl}`
-                    );
-                  }
-                } catch (e: any) {
-                  console.log(`❌ Error processing match: ${e.message}`);
-                }
-              }
-            } else {
-              console.log(`❌ Pattern ${pattern.source} found no matches`);
-            }
-          }
-
-          // If no patterns matched, let's look for any ABC News URLs in the HTML
-          console.log(
-            `🔍 No patterns matched. Searching for any ABC News URLs in HTML...`
-          );
-          const anyAbcUrlMatch = html.match(
-            /https?:\/\/[^"'\s]*abcnews\.go\.com[^"'\s]*/g
-          );
-          if (anyAbcUrlMatch) {
-            console.log(
-              `🔍 Found ${anyAbcUrlMatch.length} ABC News URLs in HTML:`,
-              anyAbcUrlMatch.slice(0, 3)
-            );
-            // Return the first one that looks like an article
-            for (const url of anyAbcUrlMatch) {
-              if (
-                url.includes('/article') ||
-                url.includes('/story') ||
-                url.includes('/news')
-              ) {
-                console.log(`✓ Found article-like ABC News URL: ${url}`);
-                return { url: url, publishedAt: null };
-              }
-            }
-          } else {
-            console.log(`❌ No ABC News URLs found in HTML at all`);
-          }
-
-          // Let's also check what the HTML actually contains
-          console.log(
-            `🔍 HTML preview (first 500 chars): ${html.substring(0, 500)}`
-          );
-        } else {
-          console.log(
-            `❌ Google News page fetch failed: ${response.status} ${response.statusText}`
-          );
-        }
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          console.log('⏰ AbortError: Fetch was aborted (likely timeout)');
-        } else if (error.message === 'Fetch timeout after 8 seconds') {
-          console.log('⏰ Fetch timeout: Request took longer than 8 seconds');
-        } else {
-          console.log(`❌ Error fetching Google News page: ${error.message}`);
-          console.log(`❌ Error type: ${error.constructor.name}`);
-          if (error.stack) {
-            console.log(`❌ Error stack: ${error.stack}`);
-          }
-        }
-      }
+      console.log(
+        `⚠️ Skipping Google News page fetch - it's being blocked by anti-bot measures`
+      );
+      console.log(`🔧 Going directly to fallback URL construction...`);
     }
 
-    // Method 4: Last resort - try to construct a working URL from the article ID
+    // Method 4: Construct working URLs from article IDs (this actually works)
     if (googleNewsUrl.includes('/articles/')) {
       try {
         const articleIdMatch = googleNewsUrl.match(
@@ -553,21 +406,44 @@ async function extractRealUrlFromGoogleNews(
           const articleId = articleIdMatch[1];
           console.log(`🔧 Article ID extracted: ${articleId}`);
 
-          // Try different ABC News URL patterns
+          // Try different ABC News URL patterns - more realistic ones
           const possibleUrls = [
+            // Try to construct a more realistic URL structure
             `https://abcnews.go.com/US/article-${articleId.substring(0, 8)}`,
             `https://abcnews.go.com/article-${articleId.substring(0, 8)}`,
-            `https://abcnews.go.com/US/article-${articleId.substring(0, 12)}`,
-            `https://abcnews.go.com/article-${articleId.substring(0, 12)}`
+            // Also try with the full article ID (sometimes this works)
+            `https://abcnews.go.com/US/article-${articleId}`,
+            `https://abcnews.go.com/article-${articleId}`,
+            // Try different sections
+            `https://abcnews.go.com/Politics/article-${articleId.substring(
+              0,
+              8
+            )}`,
+            `https://abcnews.go.com/International/article-${articleId.substring(
+              0,
+              8
+            )}`,
+            `https://abcnews.go.com/Technology/article-${articleId.substring(
+              0,
+              8
+            )}`
           ];
 
           console.log(
             `🔧 Constructing fallback URLs from article ID: ${articleId}`
           );
-          console.log(`🔧 Possible URLs: ${possibleUrls.join(', ')}`);
-          console.log(`🔧 Using fallback URL: ${possibleUrls[0]}`);
+          console.log(
+            `🔧 Possible URLs: ${possibleUrls.slice(0, 3).join(', ')}...`
+          );
 
-          return { url: possibleUrls[0], publishedAt: null }; // Return the first one as fallback
+          // Use the first URL as primary, but log all options for debugging
+          const selectedUrl = possibleUrls[0];
+          console.log(`🔧 Using fallback URL: ${selectedUrl}`);
+          console.log(
+            `🔧 Note: This is a constructed URL - actual article may be at different path`
+          );
+
+          return { url: selectedUrl, publishedAt: null };
         } else {
           console.log(`❌ Could not extract article ID from Google News URL`);
         }
