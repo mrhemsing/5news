@@ -65,25 +65,27 @@ export default function Home() {
       return false;
     };
 
-    // Add a safety timeout to prevent infinite loading
-    const safetyTimeout = setTimeout(() => {
-      console.log('Safety timeout triggered - forcing loading to false');
-      setLoading(false);
-      setError('Loading timeout - please refresh the page');
-    }, 30000); // 30 seconds
-
+    // Add a safety timeout ONLY for initial page load
+    let safetyTimeout: NodeJS.Timeout | null = null;
+    
     initializeApp().then(articlesRestored => {
-      // If articles were restored from localStorage, clear the safety timeout
-      if (articlesRestored) {
-        console.log(
-          'Articles restored from localStorage, clearing safety timeout'
-        );
-        clearTimeout(safetyTimeout);
+      // Only set safety timeout if we didn't restore articles from localStorage
+      if (!articlesRestored) {
+        safetyTimeout = setTimeout(() => {
+          console.log('Safety timeout triggered - forcing loading to false');
+          setLoading(false);
+          // Only show error if we don't have any articles yet
+          if (articles.length === 0) {
+            setError('Loading timeout - please refresh the page');
+          }
+        }, 30000); // 30 seconds
       }
     });
 
     return () => {
-      clearTimeout(safetyTimeout);
+      if (safetyTimeout) {
+        clearTimeout(safetyTimeout);
+      }
       // Abort any ongoing request when component unmounts
       if (currentRequestRef.current) {
         currentRequestRef.current.abort();
@@ -155,7 +157,10 @@ export default function Home() {
       if (scrollPosition >= threshold) {
         // Set loadingMore to true immediately to prevent multiple requests
         setLoadingMore(true);
-        fetchNews(page + 1, true);
+        // Use a separate timeout for pagination to avoid conflicts with main loading
+        setTimeout(() => {
+          fetchNews(page + 1, true);
+        }, 100);
       }
     };
 
@@ -185,9 +190,10 @@ export default function Home() {
       return;
     }
 
-    // Set loading state first
+    // Set loading state first - only set main loading for first page
     if (pageNum === 1) {
       setLoading(true);
+      setError(null); // Clear any previous errors
     } else {
       setLoadingMore(true);
     }
