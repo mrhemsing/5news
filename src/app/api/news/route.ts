@@ -263,6 +263,12 @@ export async function GET(request: Request) {
       // Cache the filtered results
       await setCachedNews(validArticles, page);
 
+      console.log(`📤 Returning ${validArticles.length} articles to frontend:`);
+      validArticles.slice(0, 5).forEach((article, index) => {
+        const date = new Date(article.publishedAt);
+        console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
+      });
+
       return NextResponse.json({
         articles: validArticles,
         totalResults: validArticles.length,
@@ -940,20 +946,61 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
   }
 
   // Sort articles by actual publication date before returning
+  console.log(`🔄 Starting to sort ${articles.length} articles by date...`);
+
+  // Validate and log all dates before sorting
+  articles.forEach((article, index) => {
+    const date = new Date(article.publishedAt);
+    if (isNaN(date.getTime())) {
+      console.log(
+        `⚠️ Invalid date for article ${index}: "${article.title}" - ${article.publishedAt}`
+      );
+      // Fix invalid dates by using current time
+      article.publishedAt = new Date().toISOString();
+    } else {
+      console.log(
+        `📅 Article ${index}: "${article.title}" - ${article.publishedAt}`
+      );
+    }
+  });
+
+  // Sort by publishedAt (newest first) to maintain chronological order
   articles.sort((a, b) => {
     const dateA = new Date(a.publishedAt);
     const dateB = new Date(b.publishedAt);
-    return dateB.getTime() - dateA.getTime(); // Newest first
+
+    // Ensure we have valid dates
+    if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+      console.log(
+        `⚠️ Invalid date detected during sorting: dateA=${a.publishedAt}, dateB=${b.publishedAt}`
+      );
+      return 0; // Keep original order if dates are invalid
+    }
+
+    const timeA = dateA.getTime();
+    const timeB = dateB.getTime();
+
+    // Sort newest first (descending order)
+    const result = timeB - timeA;
+
+    if (result !== 0) {
+      console.log(
+        `🔄 Sorting: "${a.title}" (${dateA.toISOString()}) vs "${
+          b.title
+        }" (${dateB.toISOString()}) = ${result > 0 ? 'A first' : 'B first'}`
+      );
+    }
+
+    return result;
+  });
+
+  console.log(`✅ Sorting completed. First 3 articles after sorting:`);
+  articles.slice(0, 3).forEach((article, index) => {
+    const date = new Date(article.publishedAt);
+    console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
   });
 
   console.log(`Parsed ${articles.length} articles from Google News RSS feed`);
-  if (articles.length > 0) {
-    console.log('First 3 articles after parsing:');
-    articles.slice(0, 3).forEach((article, index) => {
-      console.log(`${index + 1}. "${article.title}" - ${article.publishedAt}`);
-    });
-  }
-
   return articles;
 }
 
@@ -1030,10 +1077,42 @@ function mergeArticles(
   );
 
   // Sort by publishedAt (newest first) to maintain chronological order
-  mergedArticles.sort(
-    (a, b) =>
-      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  mergedArticles.sort((a, b) => {
+    const dateA = new Date(a.publishedAt);
+    const dateB = new Date(b.publishedAt);
+
+    // Ensure we have valid dates
+    if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+      console.log(
+        `⚠️ Invalid date detected during merge sorting: dateA=${a.publishedAt}, dateB=${b.publishedAt}`
+      );
+      return 0; // Keep original order if dates are invalid
+    }
+
+    const timeA = dateA.getTime();
+    const timeB = dateB.getTime();
+
+    // Sort newest first (descending order)
+    const result = timeB - timeA;
+
+    if (result !== 0) {
+      console.log(
+        `🔄 Merge sorting: "${a.title}" (${dateA.toISOString()}) vs "${
+          b.title
+        }" (${dateB.toISOString()}) = ${result > 0 ? 'A first' : 'B first'}`
+      );
+    }
+
+    return result;
+  });
+
+  console.log(
+    `✅ Merge sorting completed. First 3 articles after merge sorting:`
   );
+  mergedArticles.slice(0, 3).forEach((article, index) => {
+    const date = new Date(article.publishedAt);
+    console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
+  });
 
   return mergedArticles;
 }
