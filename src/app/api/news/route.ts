@@ -398,6 +398,8 @@ async function extractRealUrlFromGoogleNews(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
+        console.log(`⏱️ Starting fetch with 8-second timeout...`);
+
         const response = await fetch(googleNewsUrl, {
           method: 'GET',
           headers: {
@@ -408,8 +410,12 @@ async function extractRealUrlFromGoogleNews(
         });
 
         clearTimeout(timeoutId);
+        console.log(
+          `📡 Fetch response received: ${response.status} ${response.statusText}`
+        );
 
         if (response.ok) {
+          console.log(`📄 Starting to read response body...`);
           const html = await response.text();
           console.log(
             `📄 Google News page fetched successfully. HTML length: ${html.length} characters`
@@ -512,6 +518,8 @@ async function extractRealUrlFromGoogleNews(
           console.log('⏰ Timeout while fetching Google News page');
         } else {
           console.log(`❌ Error fetching Google News page: ${error.message}`);
+          console.log(`❌ Error type: ${error.constructor.name}`);
+          console.log(`❌ Error stack: ${error.stack}`);
         }
       }
     }
