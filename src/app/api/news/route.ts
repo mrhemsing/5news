@@ -202,23 +202,9 @@ export async function GET(request: Request) {
               new Date(a.publishedAt).getTime()
           );
 
-          // Convert cached ABC News URLs to Google News redirect URLs before returning
-          const fallbackArticlesWithGoogleNewsUrls = sortedCachedArticles.map(article => {
-            if (article.url.includes('abcnews.go.com') || article.url.includes('abc.com')) {
-              // Create a Google News redirect URL that maintains the ABC News branding
-              const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(article.url)}&hl=en-US&gl=US&ceid=US:en`;
-              console.log(`🔗 Converting fallback article URL: ${article.url} -> ${googleNewsRedirectUrl}`);
-              return {
-                ...article,
-                url: googleNewsRedirectUrl
-              };
-            }
-            return article;
-          });
-
           return NextResponse.json({
-            articles: fallbackArticlesWithGoogleNewsUrls,
-            totalResults: fallbackArticlesWithGoogleNewsUrls.length,
+            articles: sortedCachedArticles,
+            totalResults: sortedCachedArticles.length,
             hasMore: false,
             fallback: true
           });
@@ -309,119 +295,94 @@ export async function GET(request: Request) {
         } articles with malformed URLs`
       );
 
-      // Convert all ABC News URLs to Google News redirect URLs before returning
-      const articlesWithGoogleNewsUrls = validArticles.map(article => {
-        if (article.url.includes('abcnews.go.com') || article.url.includes('abc.com')) {
-          // Create a Google News redirect URL that maintains the ABC News branding
-          const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(article.url)}&hl=en-US&gl=US&ceid=US:en`;
-          console.log(`🔗 Converting cached article URL: ${article.url} -> ${googleNewsRedirectUrl}`);
-          return {
-            ...article,
-            url: googleNewsRedirectUrl
-          };
-        }
-        return article;
-      });
+             // Cache the filtered results
+       await setCachedNews(validArticles, page);
 
-      // Cache the filtered results (with converted URLs)
-      await setCachedNews(articlesWithGoogleNewsUrls, page);
+       console.log(
+         `📤 Returning ${validArticles.length} articles to frontend:`
+       );
+       validArticles.slice(0, 5).forEach((article, index) => {
+         const date = new Date(article.publishedAt);
+         console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
+       });
 
-      console.log(`📤 Returning ${articlesWithGoogleNewsUrls.length} articles to frontend:`);
-      articlesWithGoogleNewsUrls.slice(0, 5).forEach((article, index) => {
-        const date = new Date(article.publishedAt);
-        console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
-      });
+       // Add debug info to verify sorting
+       const firstArticle = validArticles[0];
+       const lastArticle =
+         validArticles[validArticles.length - 1];
+       const debugInfo = {
+         firstArticle: {
+           title: firstArticle?.title,
+           publishedAt: firstArticle?.publishedAt,
+           timestamp: firstArticle
+             ? new Date(firstArticle.publishedAt).getTime()
+             : null
+         },
+         lastArticle: {
+           title: lastArticle?.title,
+           publishedAt: lastArticle?.publishedAt,
+           timestamp: lastArticle
+             ? new Date(lastArticle.publishedAt).getTime()
+             : null
+         },
+         totalArticles: validArticles.length,
+         sortingVerified:
+           firstArticle && lastArticle
+             ? new Date(firstArticle.publishedAt).getTime() >
+               new Date(lastArticle.publishedAt).getTime()
+             : false
+       };
 
-      // Add debug info to verify sorting
-      const firstArticle = articlesWithGoogleNewsUrls[0];
-      const lastArticle = articlesWithGoogleNewsUrls[articlesWithGoogleNewsUrls.length - 1];
-      const debugInfo = {
-        firstArticle: {
-          title: firstArticle?.title,
-          publishedAt: firstArticle?.publishedAt,
-          timestamp: firstArticle
-            ? new Date(firstArticle.publishedAt).getTime()
-            : null
-        },
-        lastArticle: {
-          title: lastArticle?.title,
-          publishedAt: lastArticle?.publishedAt,
-          timestamp: lastArticle
-            ? new Date(lastArticle.publishedAt).getTime()
-            : null
-        },
-        totalArticles: articlesWithGoogleNewsUrls.length,
-        sortingVerified:
-          firstArticle && lastArticle
-            ? new Date(firstArticle.publishedAt).getTime() >
-              new Date(lastArticle.publishedAt).getTime()
-            : false
-      };
+       console.log(
+         `SORTING_VERIFICATION: ${
+           debugInfo.sortingVerified ? '✅' : '❌'
+         } Sorting verified - First article is newer than last article`
+       );
 
-      console.log(
-        `SORTING_VERIFICATION: ${
-          debugInfo.sortingVerified ? '✅' : '❌'
-        } Sorting verified - First article is newer than last article`
+       return NextResponse.json({
+         articles: validArticles,
+         totalResults: validArticles.length,
+         hasMore: false,
+         debug: debugInfo
+       });
+    } else {
+      // Return existing cached articles
+      const sortedCachedArticles = [...existingArticles].sort(
+        (a, b) =>
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
       );
 
-      return NextResponse.json({
-        articles: articlesWithGoogleNewsUrls,
-        totalResults: articlesWithGoogleNewsUrls.length,
-        hasMore: false,
-        debug: debugInfo
-      });
-          } else {
-        // Return existing cached articles
-        const sortedCachedArticles = [...existingArticles].sort(
-          (a, b) =>
-            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-        );
-
-        const validCachedArticles = sortedCachedArticles.filter(article => {
-          // Only filter out extremely long URLs (likely malformed)
-          if (article.url.length > 500) {
-            console.log(
-              `Filtered out cached article with extremely long URL (${article.url.length} chars): "${article.title}"`
-            );
-            return false;
-          }
-
-          // Accept any URL that looks like it could be valid
-          if (
-            article.url.includes('abcnews.go.com') ||
-            article.url.includes('abc.com') ||
-            article.url.includes('news.google.com')
-          ) {
-            return true;
-          }
-
-          // Log any other URLs for debugging
+      const validCachedArticles = sortedCachedArticles.filter(article => {
+        // Only filter out extremely long URLs (likely malformed)
+        if (article.url.length > 500) {
           console.log(
-            `⚠️  Unknown cached URL format: ${article.url} for "${article.title}"`
+            `Filtered out cached article with extremely long URL (${article.url.length} chars): "${article.title}"`
           );
-          return true; // Don't filter out, just log for debugging
-        });
+          return false;
+        }
 
-        // Convert cached ABC News URLs to Google News redirect URLs before returning
-        const cachedArticlesWithGoogleNewsUrls = validCachedArticles.map(article => {
-          if (article.url.includes('abcnews.go.com') || article.url.includes('abc.com')) {
-            // Create a Google News redirect URL that maintains the ABC News branding
-            const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(article.url)}&hl=en-US&gl=US&ceid=US:en`;
-            console.log(`🔗 Converting cached article URL: ${article.url} -> ${googleNewsRedirectUrl}`);
-            return {
-              ...article,
-              url: googleNewsRedirectUrl
-            };
-          }
-          return article;
-        });
+        // Accept any URL that looks like it could be valid
+        if (
+          article.url.includes('abcnews.go.com') ||
+          article.url.includes('abc.com') ||
+          article.url.includes('news.google.com')
+        ) {
+          return true;
+        }
 
-        return NextResponse.json({
-          articles: cachedArticlesWithGoogleNewsUrls,
-          totalResults: cachedArticlesWithGoogleNewsUrls.length,
-          hasMore: false
-        });
-      }
+        // Log any other URLs for debugging
+        console.log(
+          `⚠️  Unknown cached URL format: ${article.url} for "${article.title}"`
+        );
+        return true; // Don't filter out, just log for debugging
+      });
+
+             return NextResponse.json({
+         articles: validCachedArticles,
+         totalResults: validCachedArticles.length,
+         hasMore: false
+       });
+    }
   } catch (error) {
     console.error('Error fetching news:', error);
     return NextResponse.json(
@@ -683,24 +644,9 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
               const googleNewsUrl = linkMatch[1];
               const title = decodeHtmlEntities(linkMatch[2].trim());
 
-              // The RSS feed provides direct ABC News URLs, but we want Google News redirect URLs
-              // Construct a Google News redirect URL that will show "ABC News" as the source
+              // Use the original URL from the RSS feed (this should be a proper Google News URL)
               let directUrl = googleNewsUrl;
-
-              // If this is a direct ABC News URL, convert it to a Google News redirect format
-              if (
-                googleNewsUrl.includes('abcnews.go.com') ||
-                googleNewsUrl.includes('abc.com')
-              ) {
-                // Create a Google News redirect URL that maintains the ABC News branding
-                const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(
-                  googleNewsUrl
-                )}&hl=en-US&gl=US&ceid=US:en`;
-                directUrl = googleNewsRedirectUrl;
-                console.log(
-                  `🔗 Converted direct ABC News URL to Google News redirect: ${googleNewsRedirectUrl}`
-                );
-              }
+              console.log(`🔗 Using original RSS URL: ${googleNewsUrl}`);
 
               // Try multiple methods to extract source name
               let sourceName = 'Google News';
@@ -840,24 +786,9 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
             );
             const googleNewsUrl = linkMatch[1].trim();
 
-            // The RSS feed provides direct ABC News URLs, but we want Google News redirect URLs
-            // Construct a Google News redirect URL that will show "ABC News" as the source
+            // Use the original URL from the RSS feed (this should be a proper Google News URL)
             let directUrl = googleNewsUrl;
-
-            // If this is a direct ABC News URL, convert it to a Google News redirect format
-            if (
-              googleNewsUrl.includes('abcnews.go.com') ||
-              googleNewsUrl.includes('abc.com')
-            ) {
-              // Create a Google News redirect URL that maintains the ABC News branding
-              const googleNewsRedirectUrl = `https://news.google.com/articles/redirect?url=${encodeURIComponent(
-                googleNewsUrl
-              )}&hl=en-US&gl=US&ceid=US:en`;
-              directUrl = googleNewsRedirectUrl;
-              console.log(
-                `🔗 Converted direct ABC News URL to Google News redirect: ${googleNewsRedirectUrl}`
-              );
-            }
+            console.log(`🔗 Using original RSS URL: ${googleNewsUrl}`);
 
             let description = descriptionMatch
               ? cleanHtmlTags(
