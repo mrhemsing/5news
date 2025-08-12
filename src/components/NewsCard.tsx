@@ -78,23 +78,29 @@ export default function NewsCard({
 
   // Generate cartoon when component mounts or when article changes
   useEffect(() => {
+    console.log(
+      `🔄 NewsCard useEffect triggered for article: ${article.id} - "${article.title}"`
+    );
+
     // Clear any existing cartoon when article changes
     setCartoonUrl(null);
     setImageError(false);
     setRetryCount(0);
     setUseProxy(true);
+    setCartoonLoading(false); // Ensure loading state is reset
 
     // Generate new cartoon for this headline
-    if (!cartoonLoading) {
-      generateCartoon(article.title);
-    }
+    console.log(`🎨 Starting cartoon generation for: "${article.title}"`);
+    generateCartoon(article.title);
 
     // Cleanup function to reset state when component unmounts or article changes
     return () => {
+      console.log(`🧹 Cleaning up NewsCard for article: ${article.id}`);
       setCartoonUrl(null);
       setImageError(false);
       setRetryCount(0);
       setUseProxy(true);
+      setCartoonLoading(false);
     };
   }, [article.id]); // Use article.id instead of article.title to detect new articles
 
@@ -122,18 +128,17 @@ export default function NewsCard({
         if (data.cartoonUrl) {
           setCartoonUrl(data.cartoonUrl);
           setRetryCount(0); // Reset retry count on success
-          // If it was cached or fallback, we can stop loading immediately
-          if (data.cached || data.fallback) {
-            setCartoonLoading(false);
-          }
+          setCartoonLoading(false); // Always stop loading when we get a URL
         } else {
           // No cartoon URL returned, try to retry
           console.error('No cartoon URL returned from API');
+          setCartoonLoading(false); // Stop loading since we got a response
           throw new Error('No cartoon URL returned');
         }
       } else {
         const errorText = await response.text();
         console.error('Cartoon API error:', response.status, errorText);
+        setCartoonLoading(false); // Stop loading on error
         throw new Error(`Cartoon API error: ${response.status} - ${errorText}`);
       }
     } catch (error) {
@@ -153,10 +158,7 @@ export default function NewsCard({
       } else {
         console.log('Max retry attempts reached for cartoon generation');
         setRetryCount(0); // Reset for next time
-      }
-    } finally {
-      if (retryAttempt >= 2) {
-        setCartoonLoading(false);
+        setCartoonLoading(false); // Always stop loading after max retries
       }
     }
   };
