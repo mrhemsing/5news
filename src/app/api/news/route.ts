@@ -396,11 +396,15 @@ async function extractRealUrlFromGoogleNews(
         );
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+        const timeoutId = setTimeout(() => {
+          console.log('⏰ 8-second timeout reached, aborting fetch...');
+          controller.abort();
+        }, 8000); // 8 second timeout
 
         console.log(`⏱️ Starting fetch with 8-second timeout...`);
 
-        const response = await fetch(googleNewsUrl, {
+        // Use Promise.race to ensure we always get a response
+        const fetchPromise = fetch(googleNewsUrl, {
           method: 'GET',
           headers: {
             'User-Agent':
@@ -408,6 +412,17 @@ async function extractRealUrlFromGoogleNews(
           },
           signal: controller.signal
         });
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Fetch timeout after 8 seconds'));
+          }, 8000);
+        });
+
+        const response = (await Promise.race([
+          fetchPromise,
+          timeoutPromise
+        ])) as Response;
 
         clearTimeout(timeoutId);
         console.log(
@@ -515,11 +530,15 @@ async function extractRealUrlFromGoogleNews(
         }
       } catch (error: any) {
         if (error.name === 'AbortError') {
-          console.log('⏰ Timeout while fetching Google News page');
+          console.log('⏰ AbortError: Fetch was aborted (likely timeout)');
+        } else if (error.message === 'Fetch timeout after 8 seconds') {
+          console.log('⏰ Fetch timeout: Request took longer than 8 seconds');
         } else {
           console.log(`❌ Error fetching Google News page: ${error.message}`);
           console.log(`❌ Error type: ${error.constructor.name}`);
-          console.log(`❌ Error stack: ${error.stack}`);
+          if (error.stack) {
+            console.log(`❌ Error stack: ${error.stack}`);
+          }
         }
       }
     }
