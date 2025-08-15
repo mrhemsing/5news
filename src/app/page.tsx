@@ -16,6 +16,7 @@ export default function Home() {
   const [failedArticles, setFailedArticles] = useState<Set<string>>(new Set());
   // Removed validArticles state - using only articles
   const [initialLoading, setInitialLoading] = useState(true);
+  const [pullRefreshLoading, setPullRefreshLoading] = useState(false);
 
   const currentRequestRef = useRef<AbortController | null>(null);
 
@@ -69,36 +70,52 @@ export default function Home() {
     let startY = 0;
     let currentY = 0;
     let isPulling = false;
-
+    let pullRefreshTimeout: NodeJS.Timeout | null = null;
+    
     const handleTouchStart = (e: TouchEvent) => {
       startY = e.touches[0].clientY;
       isPulling = false;
     };
-
+    
     const handleTouchMove = (e: TouchEvent) => {
       currentY = e.touches[0].clientY;
       const pullDistance = startY - currentY;
-
+      
       // If user pulls down more than 100px from the top, trigger refresh
-      if (pullDistance > 100 && window.scrollY === 0 && !isPulling) {
+      if (pullDistance > 100 && window.scrollY === 0 && !isPulling && !loading) {
         isPulling = true;
         console.log('📱 Pull-to-refresh detected on mobile');
-        fetchNews(1, false, true);
+        
+        // Clear any existing timeout
+        if (pullRefreshTimeout) {
+          clearTimeout(pullRefreshTimeout);
+        }
+        
+        // Add a small delay to prevent immediate duplicate requests
+        pullRefreshTimeout = setTimeout(() => {
+          setPullRefreshLoading(true);
+          fetchNews(1, false, true).finally(() => {
+            setPullRefreshLoading(false);
+          });
+          // Reset pulling state after a delay
+          setTimeout(() => {
+            isPulling = false;
+          }, 1000);
+        }, 100);
       }
     };
-
+    
     // Add touch event listeners for mobile
     if ('ontouchstart' in window) {
-      document.addEventListener('touchstart', handleTouchStart, {
-        passive: true
-      });
-      document.addEventListener('touchmove', handleTouchMove, {
-        passive: true
-      });
-
+      document.addEventListener('touchstart', handleTouchStart, { passive: true });
+      document.addEventListener('touchmove', handleTouchMove, { passive: true });
+      
       return () => {
         document.removeEventListener('touchstart', handleTouchStart);
         document.removeEventListener('touchmove', handleTouchMove);
+        if (pullRefreshTimeout) {
+          clearTimeout(pullRefreshTimeout);
+        }
       };
     }
 
@@ -303,6 +320,16 @@ export default function Home() {
     const abortController = new AbortController();
     currentRequestRef.current = abortController;
 
+    // Add a safety timeout to prevent infinite loading
+    const safetyTimeout = setTimeout(() => {
+      if (abortController.signal.aborted) return;
+      console.log('📱 Safety timeout triggered - aborting request');
+      abortController.abort();
+      setLoading(false);
+      setLoadingMore(false);
+      setError('Request timed out. Please try again.');
+    }, 30000); // 30 second timeout
+
     try {
       // Add 1-second delay for lazy loading
       if (append) {
@@ -402,6 +429,12 @@ export default function Home() {
       console.log('fetchNews finally block: setting loading states to false');
       setLoading(false);
       setLoadingMore(false);
+      clearTimeout(safetyTimeout); // Clear the safety timeout
+      
+      // Clear the current request reference
+      if (currentRequestRef.current === abortController) {
+        currentRequestRef.current = null;
+      }
     }
   };
 
@@ -1083,18 +1116,26 @@ export default function Home() {
           </div>
 
           {/* Mobile Refresh Button */}
-          {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-            navigator.userAgent
-          ) && (
+          {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
             <div className="text-center mb-6">
               <button
                 onClick={() => fetchNews(1, false, true)}
-                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition-colors duration-200 shadow-lg">
-                🔄 Refresh Headlines
+                disabled={loading || pullRefreshLoading}
+                className={`px-6 py-3 font-medium rounded-md transition-colors duration-200 shadow-lg ${
+                  loading || pullRefreshLoading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}>
+                {pullRefreshLoading ? '🔄 Refreshing...' : '🔄 Refresh Headlines'}
               </button>
               <p className="text-sm text-gray-600 mt-2">
-                Tap to get the latest news
+                Tap to get the latest news • Pull down from top to refresh
               </p>
+              {pullRefreshLoading && (
+                <div className="mt-2 text-sm text-blue-600">
+                  Pull-to-refresh in progress...
+                </div>
+              )}
             </div>
           )}
 
