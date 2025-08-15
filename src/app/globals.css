@@ -162,9 +162,9 @@ html.fonts-loaded .logo-newz-small {
   }
 }
 .chalkboard-wrapper {
-  margin-bottom: 0rem;
+  margin-bottom: -1rem;
   @media only screen and (max-width: 600px) {
-    margin-bottom: 0rem;
+    margin-bottom: -1rem;
   }
 }
 .chalk-text {
