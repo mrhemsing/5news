@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const forceRefresh = searchParams.get('refresh') === 'true';
 
-    // Get user agent early for browser refresh detection
+    // Get user agent early for browser refresh detection.
     const userAgent = request.headers.get('user-agent') || 'Unknown';
 
     // Detect browser refresh by checking for Cache-Control: no-cache header

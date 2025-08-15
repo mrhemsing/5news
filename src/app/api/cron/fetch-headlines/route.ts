@@ -6,6 +6,15 @@ export const dynamic = 'force-dynamic';
 
 // This endpoint will be called by a cron job every 30 minutes
 export async function GET(request: Request) {
+  return await handleHeadlineFetch(request);
+}
+
+// Added POST method for GitHub Actions compatibility
+export async function POST(request: Request) {
+  return await handleHeadlineFetch(request);
+}
+
+async function handleHeadlineFetch(request: Request) {
   try {
     // Verify the request is from our cron service (add security)
     const authHeader = request.headers.get('authorization');

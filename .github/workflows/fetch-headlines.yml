@@ -1,4 +1,4 @@
-name: Generate Cartoons
+name: Fetch Headlines
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch: # Allow manual triggering
 
 jobs:
-  generate-cartoons:
+  fetch-headlines:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,12 +23,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate cartoons
-        run: npm run generate-cartoons
+      - name: Fetch headlines
+        run: |
+          # Make a request to your API endpoint
+          curl -X POST "${{ secrets.BASE_URL }}/api/cron/fetch-headlines" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET_KEY }}"
         env:
-          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
-          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           BASE_URL: ${{ secrets.BASE_URL }}
+          CRON_SECRET_KEY: ${{ secrets.CRON_SECRET_KEY }}
