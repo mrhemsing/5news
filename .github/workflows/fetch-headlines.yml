@@ -23,12 +23,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Debug environment
+        run: |
+          echo "Checking if BASE_URL is set..."
+          if [ -z "${{ secrets.BASE_URL }}" ]; then
+            echo "❌ ERROR: BASE_URL secret is not set!"
+            echo "Please go to your repository Settings → Secrets and variables → Actions"
+            echo "And add BASE_URL with your Vercel app URL (e.g., https://your-app.vercel.app)"
+            exit 1
+          else
+            echo "✅ BASE_URL is set: ${{ secrets.BASE_URL }}"
+          fi
+
+          if [ -z "${{ secrets.CRON_SECRET_KEY }}" ]; then
+            echo "❌ ERROR: CRON_SECRET_KEY secret is not set!"
+            echo "Please add CRON_SECRET_KEY to your GitHub secrets"
+            exit 1
+          else
+            echo "✅ CRON_SECRET_KEY is set"
+          fi
+
       - name: Fetch headlines
         run: |
-          # Make a request to your API endpoint
+          echo "Making request to: ${{ secrets.BASE_URL }}/api/cron/fetch-headlines"
           curl -X POST "${{ secrets.BASE_URL }}/api/cron/fetch-headlines" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET_KEY }}"
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET_KEY }}" \
+            -v
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           CRON_SECRET_KEY: ${{ secrets.CRON_SECRET_KEY }}
