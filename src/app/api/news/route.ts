@@ -5,6 +5,7 @@ import {
   setCachedNews,
   getAllCachedPages
 } from '@/lib/newsCache';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: Request) {
   try {
@@ -49,468 +50,102 @@ export async function GET(request: Request) {
     console.log(`📱 Request User-Agent: ${userAgent.substring(0, 80)}...`);
     console.log(`🌍 Request Accept-Language: ${acceptLanguage}`);
     console.log(
-      `🔄 Cache-Control: ${cacheControl}, Pragma: ${pragma}, Sec-Fetch-Mode: ${request.headers.get(
-        'sec-fetch-mode'
-      )}`
+      `🔄 Cache-Control: ${cacheControl}, Pragma: ${pragma}, Sec-Fetch-Mode: ${secFetchMode}`
     );
 
-    // Try to get cached news first (for any page, unless force refresh OR browser refresh)
-    let existingArticles: NewsArticle[] = [];
-    if (!forceRefresh && !isBrowserRefresh) {
-      const cachedArticles = await getCachedNews();
-      if (cachedArticles) {
-        console.log(
-          `📱 Returning cached news data for page ${page} (${cachedArticles.length} articles)`
-        );
-        console.log(`📱 Cache timestamp: ${new Date().toISOString()}`);
+    // Fetch headlines from centralized Supabase database
+    const headlines = await fetchHeadlinesFromDatabase();
 
-        // Additional mobile cache validation - force refresh if cache is older than 5 minutes for mobile
-        // This handles mobile Chrome's aggressive caching behavior where refresh headers aren't always sent
-        const isMobile = userAgent.toLowerCase().includes('mobile');
-        if (isMobile && cachedArticles.length > 0) {
-          const cacheAge =
-            Date.now() -
-            new Date(cachedArticles[0]?.publishedAt || 0).getTime();
-          const fiveMinutes = 5 * 60 * 1000;
-
-          if (cacheAge > fiveMinutes) {
-            console.log(
-              `📱 Mobile detected with stale cache (${Math.round(
-                cacheAge / 1000
-              )}s old) - forcing refresh`
-            );
-            isBrowserRefresh = true;
-          } else {
-            console.log(
-              `📱 Mobile cache is fresh (${Math.round(
-                cacheAge / 1000
-              )}s old) - using cached data`
-            );
-          }
-        }
-
-        if (!isBrowserRefresh) {
-          // Apply VIDEO filter to cached articles as well
-          existingArticles = cachedArticles.filter(article => {
-            const cleanTitle = article.title
-              .replace(/\s*\([^)]*\)/g, '')
-              .trim();
-            if (cleanTitle.toLowerCase().includes('video')) {
-              console.log('Filtered out cached video headline:', article.title);
-              return false;
-            }
-            return true;
-          });
-          console.log(
-            `📱 Filtered cached articles: ${cachedArticles.length} -> ${existingArticles.length}`
-          );
-        }
-      } else {
-        console.log(`📱 No cached news found, will fetch fresh data`);
-      }
-    } else {
-      if (isBrowserRefresh) {
-        console.log(
-          `🔄 Browser refresh detected - clearing cache and fetching fresh data`
-        );
-      } else {
-        console.log(
-          `🔄 Force refresh requested - clearing cache and fetching fresh data`
-        );
-      }
+    if (!headlines || headlines.length === 0) {
+      console.log('❌ No headlines found in database');
+      return NextResponse.json(
+        { error: 'No headlines available. Please try again later.' },
+        { status: 503 }
+      );
     }
 
-    // If we're requesting page 1 and don't have it cached, check if we have other pages
-    if (page === 1 && !forceRefresh && existingArticles.length === 0) {
-      const cachedPages = await getAllCachedPages(
-        new Date().toISOString().split('T')[0]
-      );
-      if (cachedPages.length > 0) {
-        console.log(
-          'Found cached pages, serving from cache instead of making API call'
-        );
-        const cachedArticles = await getCachedNews();
-        if (cachedArticles) {
-          existingArticles = cachedArticles;
-        }
-      }
-    }
+    // Apply pagination
+    const articlesPerPage = 20;
+    const startIndex = (page - 1) * articlesPerPage;
+    const endIndex = startIndex + articlesPerPage;
+    const paginatedHeadlines = headlines.slice(startIndex, endIndex);
 
-    // Check if we need to fetch fresh articles
-    const shouldFetchFresh =
-      forceRefresh ||
-      existingArticles.length === 0 ||
-      (existingArticles.length > 0 &&
-        Date.now() - new Date(existingArticles[0]?.publishedAt || 0).getTime() >
-          30 * 60 * 1000);
+    console.log(
+      `📊 Returning ${
+        paginatedHeadlines.length
+      } headlines (page ${page} of ${Math.ceil(
+        headlines.length / articlesPerPage
+      )})`
+    );
+    console.log(`📊 Total headlines in database: ${headlines.length}`);
+    console.log(
+      `📊 Database last updated: ${headlines[0]?.fetchedAt || 'Unknown'}`
+    );
 
-    if (shouldFetchFresh) {
-      console.log(
-        `Making Google News RSS request for page ${page} (stealth mode)`
-      );
-
-      // Minimal delay to avoid rate limiting
-      const initialDelay = 100 + Math.random() * 200;
-      console.log(
-        `Initial delay: ${Math.round(initialDelay / 1000)} seconds...`
-      );
-      await new Promise(resolve => setTimeout(resolve, initialDelay));
-
-      let mergedArticles: NewsArticle[] = [];
-
-      const rssUrls = [
-        'https://news.google.com/rss/search?q=ABC+News&hl=en-US&gl=US&ceid=US:en&num=20',
-        'https://news.google.com/rss/search?q=ABC+News&hl=en&gl=US&ceid=US:en&num=20'
-      ];
-
-      const userAgents = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-        'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-        'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
-      ];
-
-      // Try Google News RSS with enhanced anti-blocking
-      let googleNewsSuccess = false;
-      for (const rssUrl of rssUrls) {
-        if (googleNewsSuccess) break;
-
-        let retries = 2;
-        while (retries > 0 && !googleNewsSuccess) {
-          try {
-            const userAgent =
-              userAgents[Math.floor(Math.random() * userAgents.length)];
-            console.log(
-              `Trying Google News RSS: ${rssUrl} (attempt ${3 - retries}/2)`
-            );
-            console.log(
-              `📱 Using User-Agent: ${userAgent.substring(0, 50)}...`
-            );
-
-            if (retries < 2) {
-              const naturalDelay = 500 + Math.random() * 1000;
-              console.log(
-                `Natural delay: ${Math.round(naturalDelay / 1000)} seconds...`
-              );
-              await new Promise(resolve => setTimeout(resolve, naturalDelay));
-            }
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-            try {
-              const response = await fetch(rssUrl, {
-                headers: {
-                  'User-Agent': userAgent,
-                  Accept:
-                    'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                  'Accept-Language': 'en-US,en;q=0.5',
-                  'Accept-Encoding': 'gzip, deflate',
-                  Connection: 'keep-alive',
-                  'Upgrade-Insecure-Requests': '1',
-                  'Cache-Control': 'max-age=0'
-                },
-                signal: controller.signal
-              });
-
-              clearTimeout(timeoutId);
-
-              if (response.ok) {
-                const rssText = await response.text();
-                console.log(
-                  `✓ Google News RSS success! Length: ${rssText.length} characters`
-                );
-
-                const articles = await parseGoogleNewsRSS(rssText);
-                console.log(
-                  `Got ${articles.length} articles from Google News RSS`
-                );
-
-                mergedArticles = mergeArticles(mergedArticles, articles);
-                googleNewsSuccess = true;
-                break;
-              } else if (response.status === 503) {
-                console.log(
-                  `503 Service Unavailable - trying next URL variation...`
-                );
-                break;
-              } else {
-                console.log(
-                  `Failed: ${response.status} ${response.statusText}`
-                );
-                retries--;
-                if (retries > 0) {
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-              }
-            } catch (fetchError: any) {
-              clearTimeout(timeoutId);
-              if (fetchError.name === 'AbortError') {
-                console.log('RSS fetch timed out, trying next attempt...');
-              } else {
-                console.error(`RSS fetch error:`, fetchError);
-              }
-              retries--;
-              if (retries > 0) {
-                await new Promise(resolve => setTimeout(resolve, 3000));
-              }
-            }
-          } catch (error) {
-            console.error(`Error with Google News RSS:`, error);
-            retries--;
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 3000));
-            }
-          }
-        }
-
-        if (
-          !googleNewsSuccess &&
-          rssUrls.indexOf(rssUrl) < rssUrls.length - 1
-        ) {
-          const naturalDelay = 2000 + Math.random() * 2000;
-          console.log(
-            `Natural delay before next URL: ${Math.round(
-              naturalDelay / 1000
-            )} seconds...`
-          );
-          await new Promise(resolve => setTimeout(resolve, naturalDelay));
-        }
-      }
-
-      if (!googleNewsSuccess) {
-        console.log(
-          'All Google News RSS variations failed. This may indicate IP blocking.'
-        );
-
-        // Fallback: Return filtered cached articles if available
-        if (existingArticles.length > 0) {
-          console.log(
-            'Falling back to filtered cached articles due to RSS failure'
-          );
-          const sortedCachedArticles = [...existingArticles].sort(
-            (a, b) =>
-              new Date(b.publishedAt).getTime() -
-              new Date(a.publishedAt).getTime()
-          );
-
-          return NextResponse.json({
-            articles: sortedCachedArticles,
-            totalResults: sortedCachedArticles.length,
-            hasMore: false,
-            fallback: true
-          });
-        }
-
-        return NextResponse.json(
-          {
-            error:
-              'Google News RSS temporarily unavailable. Please try again later.'
-          },
-          { status: 503 }
-        );
-      }
-
-      // Filter and deduplicate articles
-      const filteredArticles = mergedArticles.filter(article => {
-        const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
-        if (cleanTitle.split(' ').length <= 1) {
-          console.log('Filtered out single word:', article.title);
-          return false;
-        }
-        if (cleanTitle.toLowerCase().includes('live updates')) {
-          console.log('Filtered out live updates:', article.title);
-          return false;
-        }
-        if (cleanTitle.toLowerCase().includes('latest news')) {
-          console.log('Filtered out latest news:', article.title);
-          return false;
-        }
-        if (cleanTitle.toLowerCase().includes('video')) {
-          console.log('Filtered out video headline:', article.title);
-          return false;
-        }
-        return true;
-      });
-
-      const uniqueArticles = filteredArticles.filter((article, index, self) => {
-        const urlIndex = self.findIndex(a => a.url === article.url);
-        if (urlIndex !== index) {
-          console.log('Filtered out duplicate URL:', article.title);
-          return false;
-        }
-        return true;
-      });
-
-      // Add unique IDs to new articles
-      const newArticlesWithIds: NewsArticle[] = uniqueArticles.map(
-        (article, index) => ({
-          ...article,
-          id: `article-${Date.now()}-${index}`,
-          title: article.title.replace(/\s*\([^)]*\)/g, '').trim()
-        })
-      );
-
-      // Merge new articles with existing ones
-      const allArticles = mergeArticles(existingArticles, newArticlesWithIds);
-
-      // Filter out articles with malformed URLs - less strict validation
-      const validArticles = allArticles.filter(article => {
-        // Only filter out extremely long URLs (likely malformed)
-        if (article.url.length > 500) {
-          console.log(
-            `Filtered out article with extremely long URL (${article.url.length} chars): "${article.title}"`
-          );
-          return false;
-        }
-
-        // Accept only proper Google News RSS URLs (which redirect to ABC News articles)
-        if (article.url.includes('news.google.com/rss/articles/')) {
-          console.log(`✅ Valid Google News RSS URL: ${article.url}`);
-          return true;
-        }
-
-        // Filter out any redirect URLs that shouldn't exist
-        if (article.url.includes('news.google.com/articles/redirect')) {
-          console.log(`❌ Filtering out invalid redirect URL: ${article.url}`);
-          return false;
-        }
-
-        // Filter out direct ABC News URLs - they should be converted to Google News format
-        if (
-          article.url.includes('abcnews.go.com') ||
-          article.url.includes('abc.com')
-        ) {
-          console.log(`❌ Filtering out direct ABC News URL: ${article.url}`);
-          console.log(`⚠️ These should be converted to Google News RSS format`);
-          return false;
-        }
-
-        // Log any other URLs for debugging
-        console.log(
-          `⚠️  Unknown URL format: ${article.url} for "${article.title}"`
-        );
-        return true; // Don't filter out, just log for debugging
-      });
-
-      console.log(
-        `Filtered out ${
-          allArticles.length - validArticles.length
-        } articles with malformed URLs`
-      );
-
-      // Cache the filtered results
-      await setCachedNews(validArticles);
-
-      console.log(
-        `📱 Device-agnostic cache stored for consistent headlines across all devices`
-      );
-      console.log(`📤 Returning ${validArticles.length} articles to frontend:`);
-      validArticles.slice(0, 5).forEach((article, index) => {
-        const date = new Date(article.publishedAt);
-        console.log(`${index + 1}. "${article.title}" - ${date.toISOString()}`);
-      });
-
-      // Add debug info to verify sorting
-      const firstArticle = validArticles[0];
-      const lastArticle = validArticles[validArticles.length - 1];
-      const debugInfo = {
-        firstArticle: {
-          title: firstArticle?.title,
-          publishedAt: firstArticle?.publishedAt,
-          timestamp: firstArticle
-            ? new Date(firstArticle.publishedAt).getTime()
-            : null
-        },
-        lastArticle: {
-          title: lastArticle?.title,
-          publishedAt: lastArticle?.publishedAt,
-          timestamp: lastArticle
-            ? new Date(lastArticle.publishedAt).getTime()
-            : null
-        },
-        totalArticles: validArticles.length,
-        sortingVerified:
-          firstArticle && lastArticle
-            ? new Date(firstArticle.publishedAt).getTime() >
-              new Date(lastArticle.publishedAt).getTime()
-            : false
-      };
-
-      console.log(
-        `SORTING_VERIFICATION: ${
-          debugInfo.sortingVerified ? '✅' : '❌'
-        } Sorting verified - First article is newer than last article`
-      );
-
-      return NextResponse.json({
-        articles: validArticles,
-        totalResults: validArticles.length,
-        hasMore: false,
-        debug: debugInfo
-      });
-    } else {
-      // Return existing cached articles
-      const sortedCachedArticles = [...existingArticles].sort(
-        (a, b) =>
-          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-      );
-
-      const validCachedArticles = sortedCachedArticles.filter(article => {
-        // Only filter out extremely long URLs (likely malformed)
-        if (article.url.length > 500) {
-          console.log(
-            `Filtered out cached article with extremely long URL (${article.url.length} chars): "${article.title}"`
-          );
-          return false;
-        }
-
-        // Accept only proper Google News RSS URLs (which redirect to ABC News articles)
-        if (article.url.includes('news.google.com/rss/articles/')) {
-          console.log(`✅ Valid cached Google News RSS URL: ${article.url}`);
-          return true;
-        }
-
-        // Filter out any redirect URLs that shouldn't exist
-        if (article.url.includes('news.google.com/articles/redirect')) {
-          console.log(
-            `❌ Filtering out invalid cached redirect URL: ${article.url}`
-          );
-          return false;
-        }
-
-        // Filter out direct ABC News URLs - they should be converted to Google News format
-        if (
-          article.url.includes('abcnews.go.com') ||
-          article.url.includes('abc.com')
-        ) {
-          console.log(
-            `❌ Filtering out invalid cached ABC News URL: ${article.url}`
-          );
-          console.log(`⚠️ These should be converted to Google News RSS format`);
-          return false;
-        }
-
-        // Log any other URLs for debugging
-        console.log(
-          `⚠️  Unknown cached URL format: ${article.url} for "${article.title}"`
-        );
-        return true; // Don't filter out, just log for debugging
-      });
-
-      return NextResponse.json({
-        articles: validCachedArticles,
-        totalResults: validCachedArticles.length,
-        hasMore: false
-      });
-    }
+    return NextResponse.json({
+      articles: paginatedHeadlines,
+      totalResults: headlines.length,
+      hasMore: endIndex < headlines.length,
+      page: page,
+      totalPages: Math.ceil(headlines.length / articlesPerPage),
+      databaseTimestamp: headlines[0]?.fetchedAt || null
+    });
   } catch (error) {
     console.error('Error fetching news:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch news' },
+      { error: 'Failed to fetch news from database' },
       { status: 500 }
     );
+  }
+}
+
+async function fetchHeadlinesFromDatabase() {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    // Fetch headlines from the centralized database, sorted by published date (newest first)
+    const { data: headlines, error } = await supabase
+      .from('headlines')
+      .select('*')
+      .order('publishedAt', { ascending: false })
+      .limit(100); // Limit to prevent overwhelming response
+
+    if (error) {
+      console.error('❌ Error fetching headlines from database:', error);
+      return null;
+    }
+
+    if (!headlines || headlines.length === 0) {
+      console.log('❌ No headlines found in database');
+      return null;
+    }
+
+    // Transform to match the expected NewsArticle format
+    const transformedHeadlines = headlines.map((headline: any) => ({
+      id: headline.id,
+      title: headline.title,
+      url: headline.url,
+      publishedAt: headline.publishedAt,
+      description: headline.title, // Use title as description for now
+      content: headline.title,
+      urlToImage: '',
+      source: {
+        id: null,
+        name: headline.source || 'ABC News'
+      },
+      fetchedAt: headline.fetchedAt // Preserve the fetchedAt timestamp
+    }));
+
+    console.log(
+      `✅ Successfully fetched ${transformedHeadlines.length} headlines from database`
+    );
+    return transformedHeadlines;
+  } catch (error) {
+    console.error('❌ Error in fetchHeadlinesFromDatabase:', error);
+    return null;
   }
 }
 

@@ -71,26 +71,31 @@ export default function Home() {
     let currentY = 0;
     let isPulling = false;
     let pullRefreshTimeout: NodeJS.Timeout | null = null;
-    
+
     const handleTouchStart = (e: TouchEvent) => {
       startY = e.touches[0].clientY;
       isPulling = false;
     };
-    
+
     const handleTouchMove = (e: TouchEvent) => {
       currentY = e.touches[0].clientY;
       const pullDistance = startY - currentY;
-      
+
       // If user pulls down more than 100px from the top, trigger refresh
-      if (pullDistance > 100 && window.scrollY === 0 && !isPulling && !loading) {
+      if (
+        pullDistance > 100 &&
+        window.scrollY === 0 &&
+        !isPulling &&
+        !loading
+      ) {
         isPulling = true;
         console.log('📱 Pull-to-refresh detected on mobile');
-        
+
         // Clear any existing timeout
         if (pullRefreshTimeout) {
           clearTimeout(pullRefreshTimeout);
         }
-        
+
         // Add a small delay to prevent immediate duplicate requests
         pullRefreshTimeout = setTimeout(() => {
           setPullRefreshLoading(true);
@@ -104,12 +109,16 @@ export default function Home() {
         }, 100);
       }
     };
-    
+
     // Add touch event listeners for mobile
     if ('ontouchstart' in window) {
-      document.addEventListener('touchstart', handleTouchStart, { passive: true });
-      document.addEventListener('touchmove', handleTouchMove, { passive: true });
-      
+      document.addEventListener('touchstart', handleTouchStart, {
+        passive: true
+      });
+      document.addEventListener('touchmove', handleTouchMove, {
+        passive: true
+      });
+
       return () => {
         document.removeEventListener('touchstart', handleTouchStart);
         document.removeEventListener('touchmove', handleTouchMove);
@@ -430,7 +439,7 @@ export default function Home() {
       setLoading(false);
       setLoadingMore(false);
       clearTimeout(safetyTimeout); // Clear the safety timeout
-      
+
       // Clear the current request reference
       if (currentRequestRef.current === abortController) {
         currentRequestRef.current = null;
@@ -1116,7 +1125,9 @@ export default function Home() {
           </div>
 
           {/* Mobile Refresh Button */}
-          {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+          {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          ) && (
             <div className="text-center mb-6">
               <button
                 onClick={() => fetchNews(1, false, true)}
@@ -1126,7 +1137,9 @@ export default function Home() {
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}>
-                {pullRefreshLoading ? '🔄 Refreshing...' : '🔄 Refresh Headlines'}
+                {pullRefreshLoading
+                  ? '🔄 Refreshing...'
+                  : '🔄 Refresh Headlines'}
               </button>
               <p className="text-sm text-gray-600 mt-2">
                 Tap to get the latest news • Pull down from top to refresh
