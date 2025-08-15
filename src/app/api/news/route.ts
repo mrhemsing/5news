@@ -62,7 +62,12 @@ export async function GET(request: Request) {
     if (!headlines || headlines.length === 0) {
       console.log('❌ No headlines found in database');
       return NextResponse.json(
-        { error: 'No headlines available. Please try again later.' },
+        {
+          error:
+            'No headlines available yet. The cron job will populate the database shortly. Please try again in a few minutes.',
+          status: 'initializing',
+          message: 'Database is being populated by scheduled cron job'
+        },
         { status: 503 }
       );
     }
