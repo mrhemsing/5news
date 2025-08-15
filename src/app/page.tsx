@@ -512,7 +512,7 @@ export default function Home() {
           <div className="absolute -bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full"></div>
           <div className="absolute top-1 left-1 w-2 h-2 bg-green-500 rounded-full"></div>
         </div>
-        
+
         {/* Dinosaur 2 - Top right */}
         <div className="absolute top-32 right-16 w-20 h-20 opacity-15">
           <div className="w-full h-full bg-emerald-300 rounded-full"></div>
@@ -520,7 +520,7 @@ export default function Home() {
           <div className="absolute -bottom-3 right-3 w-4 h-4 bg-emerald-400 rounded-full"></div>
           <div className="absolute top-2 right-2 w-3 h-3 bg-emerald-500 rounded-full"></div>
         </div>
-        
+
         {/* Dinosaur 3 - Bottom left */}
         <div className="absolute bottom-32 left-20 w-14 h-14 opacity-25">
           <div className="w-full h-full bg-green-200 rounded-full"></div>
@@ -528,7 +528,7 @@ export default function Home() {
           <div className="absolute -bottom-2 right-2 w-3 h-3 bg-green-300 rounded-full"></div>
           <div className="absolute top-1 left-1 w-2 h-2 bg-green-400 rounded-full"></div>
         </div>
-        
+
         {/* Dinosaur 4 - Bottom right */}
         <div className="absolute bottom-20 right-24 w-18 h-18 opacity-20">
           <div className="w-full h-full bg-emerald-200 rounded-full"></div>
@@ -536,17 +536,17 @@ export default function Home() {
           <div className="absolute -bottom-2 right-2 w-3 h-3 bg-emerald-300 rounded-full"></div>
           <div className="absolute top-1 right-1 w-2 h-2 bg-emerald-400 rounded-full"></div>
         </div>
-        
+
         {/* Small dinosaur eggs scattered around */}
         <div className="absolute top-40 left-1/4 w-6 h-8 bg-green-200 rounded-full opacity-30"></div>
         <div className="absolute top-60 right-1/3 w-5 h-7 bg-emerald-200 rounded-full opacity-25"></div>
         <div className="absolute bottom-40 left-1/3 w-7 h-6 bg-green-200 rounded-full opacity-30"></div>
         <div className="absolute bottom-60 right-1/4 w-6 h-7 bg-emerald-200 rounded-full opacity-25"></div>
       </div>
-      
+
       <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-0">
           <div className="flex justify-center mb-5">
             <Logo />
           </div>
