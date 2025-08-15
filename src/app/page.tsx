@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { NewsArticle } from '@/types/news';
 import NewsCard from '@/components/NewsCard';
+import Logo from '@/components/Logo';
 
 export default function Home() {
   // Test deployment - 2025-01-07
@@ -595,36 +596,7 @@ export default function Home() {
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-              📰 5News
-            </h1>
-            <p className="text-lg text-gray-600 mb-4">
-              Simple news for everyone
-            </p>
-
-            {/* Mobile Refresh Button */}
-            {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-              navigator.userAgent
-            ) && (
-              <div className="mb-4">
-                <button
-                  onClick={() => fetchNews(1, false, true)}
-                  disabled={loading}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition-colors duration-200 shadow-lg">
-                  🔄 Refresh Headlines
-                </button>
-                <p className="text-sm text-gray-600 mt-2">
-                  Tap to get the latest news
-                </p>
-              </div>
-            )}
-
-            <button
-              onClick={() => fetchNews(1, false, true)}
-              disabled={loading}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-lg">
-              {loading ? '🔄 Loading...' : '📰 Get Latest News'}
-            </button>
+            <Logo />
           </div>
 
           {/* News Grid */}

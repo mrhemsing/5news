@@ -53,11 +53,7 @@ CREATE POLICY "Allow public read access to headlines" ON headlines
 CREATE POLICY "Allow service role full access to headlines" ON headlines
   FOR ALL USING (auth.role() = 'service_role');
 
--- Insert some sample data for testing
-INSERT INTO headlines (id, title, url, "publishedAt", source, "fetchedAt") VALUES
-  ('sample-1', 'Sample Headline 1', 'https://example.com/1', NOW() - INTERVAL '1 hour', 'ABC News', NOW()),
-  ('sample-2', 'Sample Headline 2', 'https://example.com/2', NOW() - INTERVAL '2 hours', 'ABC News', NOW())
-ON CONFLICT (url) DO NOTHING;
+-- No sample data - let the cron job populate with real headlines
 
 -- Verify the final table structure
 SELECT 'Final table structure:' as info;
