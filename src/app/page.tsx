@@ -502,7 +502,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen relative overflow-hidden">
+
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -881,61 +882,59 @@ export default function Home() {
             </div>
           </div>
 
-          {backgroundRefreshing && (
-            <div className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center justify-center">
-              <span className="animate-spin mr-1">🔄</span>
-              Refreshing headlines...
-            </div>
-          )}
-        </div>
 
-        {/* News Grid */}
-        <div className="max-w-4xl mx-auto space-y-6">
-          {validArticles
-            .filter(article => !failedArticles.has(article.id))
-            .map(article => (
-              <NewsCard
-                key={article.id}
-                article={article}
-                onExplain={handleExplain}
-                onExplainError={handleExplainError}
-              />
-            ))}
 
-          {/* Loading More Indicator */}
-          {loadingMore && (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                Loading more articles..
-              </p>
-            </div>
-          )}
 
-          {/* Load More Button (for testing) */}
-          {hasMore && !loadingMore && articles.length > 0 && (
-            <div className="text-center py-8">
-              <button
-                onClick={() => fetchNews(page + 1, true)}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200">
-                Load More Headlines
-              </button>
-            </div>
-          )}
 
-          {/* End of Results */}
-          {!hasMore && articles.length > 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500 dark:text-gray-400">
-                You&apos;ve reached the end of the headlines!
-              </p>
-            </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>Powered by NewsAPI.org, OpenAI and Eleven Labs.</p>
+
+      <div className="relative z-10">
+        <div className="container mx-auto px-4 py-8">
+
+
+          <div className="max-w-4xl mx-auto space-y-6">
+            {articles
+              .filter(article => !failedArticles.has(article.id))
+              .map(article => (
+                <NewsCard
+                  key={article.id}
+                  article={article}
+                  onExplain={handleExplain}
+                  onExplainError={handleExplainError}
+                />
+              ))}
+
+            {loadingMore && (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600 dark:text-gray-400">
+                  Loading more articles..
+                </p>
+              </div>
+            )}
+
+            {hasMore && !loadingMore && articles.length > 0 && (
+              <div className="text-center py-8">
+                <button
+                  onClick={() => fetchNews(page + 1, true)}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200">
+                  Load More Headlines
+                </button>
+              </div>
+            )}
+
+            {!hasMore && articles.length > 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">
+                  You&apos;ve reached the end of the headlines!
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p>Powered by Google News RSS, OpenAI and Eleven Labs.</p>
+          </div>
         </div>
       </div>
     </div>
