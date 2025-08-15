@@ -197,7 +197,7 @@ export default function Home() {
       return;
     }
 
-    // Set loading state first, only set main loading for first page
+    // Set loading state first - only set main loading for first page
     if (pageNum === 1) {
       setLoading(true);
       setError(null); // Clear any previous errors
