@@ -503,7 +503,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -881,17 +880,11 @@ export default function Home() {
               </span>
             </div>
           </div>
-
-
-
-
-
-
+        </div>
+      </div>
 
       <div className="relative z-10">
         <div className="container mx-auto px-4 py-8">
-
-
           <div className="max-w-4xl mx-auto space-y-6">
             {articles
               .filter(article => !failedArticles.has(article.id))
