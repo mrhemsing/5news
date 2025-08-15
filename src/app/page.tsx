@@ -16,7 +16,6 @@ export default function Home() {
   const [failedArticles, setFailedArticles] = useState<Set<string>>(new Set());
   // Removed validArticles state - using only articles
   const [initialLoading, setInitialLoading] = useState(true);
-  const [pullRefreshLoading, setPullRefreshLoading] = useState(false);
 
   const currentRequestRef = useRef<AbortController | null>(null);
 
@@ -66,115 +65,11 @@ export default function Home() {
       return false;
     };
 
-    // Add pull-to-refresh detection for mobile
-    let startY = 0;
-    let currentY = 0;
-    let isPulling = false;
-    let pullRefreshTimeout: NodeJS.Timeout | null = null;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      startY = e.touches[0].clientY;
-      isPulling = false;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      currentY = e.touches[0].clientY;
-      const pullDistance = startY - currentY;
-
-      // If user pulls down more than 100px from the top, trigger refresh
-      if (
-        pullDistance > 100 &&
-        window.scrollY === 0 &&
-        !isPulling &&
-        !loading
-      ) {
-        isPulling = true;
-        console.log('📱 Pull-to-refresh detected on mobile');
-
-        // Clear any existing timeout
-        if (pullRefreshTimeout) {
-          clearTimeout(pullRefreshTimeout);
-        }
-
-        // Add a small delay to prevent immediate duplicate requests
-        pullRefreshTimeout = setTimeout(() => {
-          setPullRefreshLoading(true);
-          fetchNews(1, false, true).finally(() => {
-            setPullRefreshLoading(false);
-          });
-          // Reset pulling state after a delay
-          setTimeout(() => {
-            isPulling = false;
-          }, 1000);
-        }, 100);
-      }
-    };
-
-    // Add touch event listeners for mobile
-    if ('ontouchstart' in window) {
-      document.addEventListener('touchstart', handleTouchStart, {
-        passive: true
-      });
-      document.addEventListener('touchmove', handleTouchMove, {
-        passive: true
-      });
-
-      return () => {
-        document.removeEventListener('touchstart', handleTouchStart);
-        document.removeEventListener('touchmove', handleTouchMove);
-        if (pullRefreshTimeout) {
-          clearTimeout(pullRefreshTimeout);
-        }
-      };
-    }
-
-    // Add a safety timeout ONLY for initial page load
-    let safetyTimeout: NodeJS.Timeout | null = null;
-
-    initializeApp().then(articlesRestored => {
-      // Only set safety timeout if we didn't restore articles from localStorage
-      if (!articlesRestored) {
-        safetyTimeout = setTimeout(() => {
-          console.log(
-            'Safety timeout triggered - checking if we need to show error'
-          );
-          setLoading(false);
-
-          // Check if we have articles in localStorage as a fallback
-          const savedArticles = localStorage.getItem('5news-articles');
-          let hasLocalArticles = false;
-          if (savedArticles) {
-            try {
-              const parsedData = JSON.parse(savedArticles);
-              hasLocalArticles =
-                Array.isArray(parsedData.articles) &&
-                parsedData.articles.length > 0;
-            } catch (error) {
-              hasLocalArticles = false;
-            }
-          }
-
-          // Only show error if we have no articles anywhere AND we're not loading
-          if (articles.length === 0 && !hasLocalArticles && !loading) {
-            console.log(
-              'No articles anywhere and not loading - showing timeout error'
-            );
-            setError(
-              'Loading is taking longer than expected - please wait or refresh the page'
-            );
-          } else {
-            console.log(
-              'Articles available somewhere or still loading - not showing timeout error'
-            );
-          }
-        }, 120000); // 2 minutes - much more generous
-      }
+    initializeApp().then(() => {
+      console.log('App initialized successfully');
     });
 
     return () => {
-      if (safetyTimeout) {
-        clearTimeout(safetyTimeout);
-      }
       // Abort any ongoing request when component unmounts
       if (currentRequestRef.current) {
         currentRequestRef.current.abort();
@@ -266,39 +161,6 @@ export default function Home() {
       `fetchNews called: pageNum=${pageNum}, append=${append}, forceRefresh=${forceRefresh}, currentArticles=${articles.length}`
     );
 
-    // Detect mobile device for aggressive cache busting
-    const isMobile =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      ) ||
-      'ontouchstart' in window ||
-      window.innerWidth <= 768;
-
-    console.log(
-      `📱 Device detection: UserAgent mobile=${/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      )}, Touch=${'ontouchstart' in window}, Width=${
-        window.innerWidth
-      }px, Final=${isMobile}`
-    );
-
-    // Force refresh on mobile if cache is older than 2 minutes
-    if (isMobile && !forceRefresh && articles.length > 0) {
-      const lastFetchTime = localStorage.getItem('5news-last-fetch');
-      if (lastFetchTime) {
-        const timeSinceLastFetch = Date.now() - parseInt(lastFetchTime);
-        const twoMinutes = 2 * 60 * 1000;
-        if (timeSinceLastFetch > twoMinutes) {
-          console.log(
-            `📱 Mobile detected with stale cache (${Math.round(
-              timeSinceLastFetch / 1000
-            )}s old) - forcing refresh`
-          );
-          forceRefresh = true;
-        }
-      }
-    }
-
     // Don't fetch if we already have articles and this isn't a force refresh
     if (!forceRefresh && pageNum === 1 && articles.length > 0) {
       console.log('Articles already loaded, skipping fetch');
@@ -329,16 +191,6 @@ export default function Home() {
     const abortController = new AbortController();
     currentRequestRef.current = abortController;
 
-    // Add a safety timeout to prevent infinite loading
-    const safetyTimeout = setTimeout(() => {
-      if (abortController.signal.aborted) return;
-      console.log('📱 Safety timeout triggered - aborting request');
-      abortController.abort();
-      setLoading(false);
-      setLoadingMore(false);
-      setError('Request timed out. Please try again.');
-    }, 30000); // 30 second timeout
-
     try {
       // Add 1-second delay for lazy loading
       if (append) {
@@ -346,13 +198,9 @@ export default function Home() {
       }
 
       const refreshParam = forceRefresh ? '&refresh=true' : '';
-      const timestampParam = isMobile ? `&_t=${Date.now()}` : '';
-      const response = await fetch(
-        `/api/news?page=${pageNum}${refreshParam}${timestampParam}`,
-        {
-          signal: abortController.signal
-        }
-      );
+      const response = await fetch(`/api/news?page=${pageNum}${refreshParam}`, {
+        signal: abortController.signal
+      });
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -415,11 +263,8 @@ export default function Home() {
       const hasMoreArticles = currentEndIndex < data.articles.length;
       setHasMore(hasMoreArticles);
 
-      // Update last fetch time for mobile cache busting
-      if (isMobile) {
-        localStorage.setItem('5news-last-fetch', Date.now().toString());
-        console.log('📱 Updated mobile last fetch timestamp');
-      }
+      // Update last fetch time
+      console.log('✅ News fetch completed successfully');
 
       // If no articles returned and we're loading more, reset the loading state
       if (append && (!data.articles || data.articles.length === 0)) {
@@ -438,7 +283,6 @@ export default function Home() {
       console.log('fetchNews finally block: setting loading states to false');
       setLoading(false);
       setLoadingMore(false);
-      clearTimeout(safetyTimeout); // Clear the safety timeout
 
       // Clear the current request reference
       if (currentRequestRef.current === abortController) {
@@ -1123,34 +967,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-
-          {/* Mobile Refresh Button */}
-          {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-            navigator.userAgent
-          ) && (
-            <div className="text-center mb-6">
-              <button
-                onClick={() => fetchNews(1, false, true)}
-                disabled={loading || pullRefreshLoading}
-                className={`px-6 py-3 font-medium rounded-md transition-colors duration-200 shadow-lg ${
-                  loading || pullRefreshLoading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}>
-                {pullRefreshLoading
-                  ? '🔄 Refreshing...'
-                  : '🔄 Refresh Headlines'}
-              </button>
-              <p className="text-sm text-gray-600 mt-2">
-                Tap to get the latest news • Pull down from top to refresh
-              </p>
-              {pullRefreshLoading && (
-                <div className="mt-2 text-sm text-blue-600">
-                  Pull-to-refresh in progress...
-                </div>
-              )}
-            </div>
-          )}
 
           {/* News Grid */}
           <div className="max-w-4xl mx-auto space-y-6">
