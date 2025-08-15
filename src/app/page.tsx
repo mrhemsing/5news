@@ -554,7 +554,7 @@ export default function Home() {
               <p
                 className="text-lg text-white font-bold"
                 style={{ fontFamily: 'Eraser, cursive' }}>
-                Today's Top Headlines
+                Today&apos;s Top Headlines
               </p>
             </div>
           </div>
