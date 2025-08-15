@@ -65,6 +65,43 @@ export default function Home() {
       return false;
     };
 
+    // Add pull-to-refresh detection for mobile
+    let startY = 0;
+    let currentY = 0;
+    let isPulling = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY;
+      isPulling = false;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      currentY = e.touches[0].clientY;
+      const pullDistance = startY - currentY;
+
+      // If user pulls down more than 100px from the top, trigger refresh
+      if (pullDistance > 100 && window.scrollY === 0 && !isPulling) {
+        isPulling = true;
+        console.log('📱 Pull-to-refresh detected on mobile');
+        fetchNews(1, false, true);
+      }
+    };
+
+    // Add touch event listeners for mobile
+    if ('ontouchstart' in window) {
+      document.addEventListener('touchstart', handleTouchStart, {
+        passive: true
+      });
+      document.addEventListener('touchmove', handleTouchMove, {
+        passive: true
+      });
+
+      return () => {
+        document.removeEventListener('touchstart', handleTouchStart);
+        document.removeEventListener('touchmove', handleTouchMove);
+      };
+    }
+
     // Add a safety timeout ONLY for initial page load
     let safetyTimeout: NodeJS.Timeout | null = null;
 
@@ -203,6 +240,39 @@ export default function Home() {
       `fetchNews called: pageNum=${pageNum}, append=${append}, forceRefresh=${forceRefresh}, currentArticles=${articles.length}`
     );
 
+    // Detect mobile device for aggressive cache busting
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      ) ||
+      'ontouchstart' in window ||
+      window.innerWidth <= 768;
+
+    console.log(
+      `📱 Device detection: UserAgent mobile=${/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      )}, Touch=${'ontouchstart' in window}, Width=${
+        window.innerWidth
+      }px, Final=${isMobile}`
+    );
+
+    // Force refresh on mobile if cache is older than 2 minutes
+    if (isMobile && !forceRefresh && articles.length > 0) {
+      const lastFetchTime = localStorage.getItem('5news-last-fetch');
+      if (lastFetchTime) {
+        const timeSinceLastFetch = Date.now() - parseInt(lastFetchTime);
+        const twoMinutes = 2 * 60 * 1000;
+        if (timeSinceLastFetch > twoMinutes) {
+          console.log(
+            `📱 Mobile detected with stale cache (${Math.round(
+              timeSinceLastFetch / 1000
+            )}s old) - forcing refresh`
+          );
+          forceRefresh = true;
+        }
+      }
+    }
+
     // Don't fetch if we already have articles and this isn't a force refresh
     if (!forceRefresh && pageNum === 1 && articles.length > 0) {
       console.log('Articles already loaded, skipping fetch');
@@ -240,9 +310,13 @@ export default function Home() {
       }
 
       const refreshParam = forceRefresh ? '&refresh=true' : '';
-      const response = await fetch(`/api/news?page=${pageNum}${refreshParam}`, {
-        signal: abortController.signal
-      });
+      const timestampParam = isMobile ? `&_t=${Date.now()}` : '';
+      const response = await fetch(
+        `/api/news?page=${pageNum}${refreshParam}${timestampParam}`,
+        {
+          signal: abortController.signal
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -304,6 +378,12 @@ export default function Home() {
       const currentEndIndex = pageNum * articlesPerPage;
       const hasMoreArticles = currentEndIndex < data.articles.length;
       setHasMore(hasMoreArticles);
+
+      // Update last fetch time for mobile cache busting
+      if (isMobile) {
+        localStorage.setItem('5news-last-fetch', Date.now().toString());
+        console.log('📱 Updated mobile last fetch timestamp');
+      }
 
       // If no articles returned and we're loading more, reset the loading state
       if (append && (!data.articles || data.articles.length === 0)) {
@@ -1001,6 +1081,22 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {/* Mobile Refresh Button */}
+          {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          ) && (
+            <div className="text-center mb-6">
+              <button
+                onClick={() => fetchNews(1, false, true)}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition-colors duration-200 shadow-lg">
+                🔄 Refresh Headlines
+              </button>
+              <p className="text-sm text-gray-600 mt-2">
+                Tap to get the latest news
+              </p>
+            </div>
+          )}
 
           {/* News Grid */}
           <div className="max-w-4xl mx-auto space-y-6">
