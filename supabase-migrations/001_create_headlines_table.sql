@@ -2,16 +2,16 @@
 CREATE TABLE IF NOT EXISTS headlines (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
-  url TEXT NOT NULL UNIQUE,
-  publishedAt TIMESTAMP WITH TIME ZONE NOT NULL,
+  url TEXT NOT NULL,
+  "publishedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
   source TEXT NOT NULL DEFAULT 'ABC News',
-  fetchedAt TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  "fetchedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_headlines_published_at ON headlines(publishedAt DESC);
-CREATE INDEX IF NOT EXISTS idx_headlines_fetched_at ON headlines(fetchedAt DESC);
+CREATE INDEX IF NOT EXISTS idx_headlines_published_at ON headlines("publishedAt" DESC);
+CREATE INDEX IF NOT EXISTS idx_headlines_fetched_at ON headlines("fetchedAt" DESC);
 CREATE INDEX IF NOT EXISTS idx_headlines_source ON headlines(source);
 
 -- Create a function to automatically update created_at
@@ -41,7 +41,7 @@ CREATE POLICY "Allow service role full access to headlines" ON headlines
   FOR ALL USING (auth.role() = 'service_role');
 
 -- Insert some sample data for testing
-INSERT INTO headlines (id, title, url, publishedAt, source, fetchedAt) VALUES
+INSERT INTO headlines (id, title, url, "publishedAt", source, "fetchedAt") VALUES
   ('sample-1', 'Sample Headline 1', 'https://example.com/1', NOW() - INTERVAL '1 hour', 'ABC News', NOW()),
   ('sample-2', 'Sample Headline 2', 'https://example.com/2', NOW() - INTERVAL '2 hours', 'ABC News', NOW())
 ON CONFLICT (url) DO NOTHING;
