@@ -522,7 +522,12 @@ export default function Home() {
         <div className="relative z-10">
           <div className="container mx-auto px-4 py-8">
             <div className="text-center">
-              <div className="bg-red-100 dark:bg-red-900/20 border border-red-400 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+              <div
+                className={`px-4 py-3 rounded border ${
+                  error.includes('initializing') || error.includes('populate')
+                    ? 'bg-blue-100 dark:bg-blue-900/20 border-blue-400 text-blue-700 dark:text-blue-400'
+                    : 'bg-red-100 dark:bg-red-900/20 border-red-400 text-red-700 dark:text-red-400'
+                }`}>
                 {error}
               </div>
               <button
