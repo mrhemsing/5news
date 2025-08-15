@@ -12,16 +12,36 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const forceRefresh = searchParams.get('refresh') === 'true';
 
+    // Get user agent early for browser refresh detection
+    const userAgent = request.headers.get('user-agent') || 'Unknown';
+
     // Detect browser refresh by checking for Cache-Control: no-cache header
     const cacheControl = request.headers.get('cache-control');
     const pragma = request.headers.get('pragma');
-    const isBrowserRefresh =
+    const secFetchMode = request.headers.get('sec-fetch-mode');
+    const secFetchDest = request.headers.get('sec-fetch-dest');
+    const secFetchSite = request.headers.get('sec-fetch-site');
+
+    // Enhanced detection for mobile Chrome and other aggressive caching browsers
+    let isBrowserRefresh =
       cacheControl?.includes('no-cache') ||
       pragma?.includes('no-cache') ||
-      request.headers.get('sec-fetch-mode') === 'navigate';
+      secFetchMode === 'navigate' ||
+      secFetchDest === 'document' ||
+      secFetchSite === 'same-origin' ||
+      // Mobile Chrome specific - check for user agent and common mobile refresh patterns
+      (userAgent.toLowerCase().includes('mobile') &&
+        (cacheControl?.includes('max-age=0') ||
+          cacheControl?.includes('no-store') ||
+          // Check if this is likely a manual refresh (not navigation)
+          request.headers.get('referer') === null ||
+          request.headers.get('referer') === '' ||
+          // Check for timestamp parameters that indicate manual refresh
+          searchParams.has('_t') ||
+          searchParams.has('timestamp') ||
+          searchParams.has('refresh')));
 
     // Log request details for debugging device differences
-    const userAgent = request.headers.get('user-agent') || 'Unknown';
     const acceptLanguage = request.headers.get('accept-language') || 'Unknown';
     console.log(
       `🌐 API Request - Page: ${page}, Force Refresh: ${forceRefresh}, Browser Refresh: ${isBrowserRefresh}`
@@ -43,18 +63,48 @@ export async function GET(request: Request) {
           `📱 Returning cached news data for page ${page} (${cachedArticles.length} articles)`
         );
         console.log(`📱 Cache timestamp: ${new Date().toISOString()}`);
-        // Apply VIDEO filter to cached articles as well
-        existingArticles = cachedArticles.filter(article => {
-          const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
-          if (cleanTitle.toLowerCase().includes('video')) {
-            console.log('Filtered out cached video headline:', article.title);
-            return false;
+
+        // Additional mobile cache validation - force refresh if cache is older than 5 minutes for mobile
+        // This handles mobile Chrome's aggressive caching behavior where refresh headers aren't always sent
+        const isMobile = userAgent.toLowerCase().includes('mobile');
+        if (isMobile && cachedArticles.length > 0) {
+          const cacheAge =
+            Date.now() -
+            new Date(cachedArticles[0]?.publishedAt || 0).getTime();
+          const fiveMinutes = 5 * 60 * 1000;
+
+          if (cacheAge > fiveMinutes) {
+            console.log(
+              `📱 Mobile detected with stale cache (${Math.round(
+                cacheAge / 1000
+              )}s old) - forcing refresh`
+            );
+            isBrowserRefresh = true;
+          } else {
+            console.log(
+              `📱 Mobile cache is fresh (${Math.round(
+                cacheAge / 1000
+              )}s old) - using cached data`
+            );
           }
-          return true;
-        });
-        console.log(
-          `📱 Filtered cached articles: ${cachedArticles.length} -> ${existingArticles.length}`
-        );
+        }
+
+        if (!isBrowserRefresh) {
+          // Apply VIDEO filter to cached articles as well
+          existingArticles = cachedArticles.filter(article => {
+            const cleanTitle = article.title
+              .replace(/\s*\([^)]*\)/g, '')
+              .trim();
+            if (cleanTitle.toLowerCase().includes('video')) {
+              console.log('Filtered out cached video headline:', article.title);
+              return false;
+            }
+            return true;
+          });
+          console.log(
+            `📱 Filtered cached articles: ${cachedArticles.length} -> ${existingArticles.length}`
+          );
+        }
       } else {
         console.log(`📱 No cached news found, will fetch fresh data`);
       }
