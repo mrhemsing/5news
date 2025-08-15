@@ -153,13 +153,36 @@ export default function Home() {
   }, [hasMore, loadingMore, loading, page]); // Added page back to dependencies
 
   const fetchNews = async (
-    pageNum = 1,
+    pageNum: number,
     append = false,
     forceRefresh = false
   ) => {
     console.log(
       `fetchNews called: pageNum=${pageNum}, append=${append}, forceRefresh=${forceRefresh}, currentArticles=${articles.length}`
     );
+
+    // Simple mobile detection for cache busting
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+
+    // Force refresh on mobile if cache is older than 5 minutes
+    if (isMobile && !forceRefresh && articles.length > 0) {
+      const lastFetchTime = localStorage.getItem('5news-last-fetch');
+      if (lastFetchTime) {
+        const timeSinceLastFetch = Date.now() - parseInt(lastFetchTime);
+        const fiveMinutes = 5 * 60 * 1000;
+        if (timeSinceLastFetch > fiveMinutes) {
+          console.log(
+            `📱 Mobile detected with stale cache (${Math.round(
+              timeSinceLastFetch / 1000
+            )}s old) - forcing refresh`
+          );
+          forceRefresh = true;
+        }
+      }
+    }
 
     // Don't fetch if we already have articles and this isn't a force refresh
     if (!forceRefresh && pageNum === 1 && articles.length > 0) {
@@ -198,9 +221,13 @@ export default function Home() {
       }
 
       const refreshParam = forceRefresh ? '&refresh=true' : '';
-      const response = await fetch(`/api/news?page=${pageNum}${refreshParam}`, {
-        signal: abortController.signal
-      });
+      const timestampParam = isMobile ? `&_t=${Date.now()}` : '';
+      const response = await fetch(
+        `/api/news?page=${pageNum}${refreshParam}${timestampParam}`,
+        {
+          signal: abortController.signal
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -263,8 +290,11 @@ export default function Home() {
       const hasMoreArticles = currentEndIndex < data.articles.length;
       setHasMore(hasMoreArticles);
 
-      // Update last fetch time
-      console.log('✅ News fetch completed successfully');
+      // Update last fetch time for mobile cache validation
+      if (isMobile) {
+        localStorage.setItem('5news-last-fetch', Date.now().toString());
+        console.log('📱 Updated mobile last fetch timestamp');
+      }
 
       // If no articles returned and we're loading more, reset the loading state
       if (append && (!data.articles || data.articles.length === 0)) {
@@ -561,411 +591,36 @@ export default function Home() {
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="flex justify-center mb-5">
-              <Logo />
-            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+              📰 5News
+            </h1>
+            <p className="text-lg text-gray-600 mb-4">
+              Simple news for everyone
+            </p>
 
-            {/* Chalkboard subtitle */}
-            <div className="w-full md:max-w-4xl md:mx-auto">
-              <div
-                className="mt-4 px-4 md:px-6 py-2 md:py-3 rounded-lg shadow-lg chalkboard-wrapper relative z-0 w-full md:w-fit md:mx-auto"
-                style={{
-                  background:
-                    'linear-gradient(135deg, #2d3748 0%, #1a202c 100%)',
-                  border: '3px solid #4a5568',
-                  boxShadow:
-                    '0 4px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-                  maxWidth: '90vw'
-                }}>
-                {/* Top left bolt */}
-                <div className="absolute top-2 left-2 w-3 h-3 md:w-4 md:h-4 bg-gray-600 rounded-full shadow-lg flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-800 rounded-full"></div>
-                </div>
-
-                {/* Top right bolt */}
-                <div className="absolute top-2 right-2 w-3 h-3 md:w-4 md:h-4 bg-gray-600 rounded-full shadow-lg flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-800 rounded-full"></div>
-                </div>
-
-                <span
-                  className="chalk-text text-white font-bold text-base md:text-xl tracking-wide"
-                  style={{
-                    fontFamily:
-                      '"Eraser", "Indie Flower", "Chalkduster", "Chalkboard", "Comic Sans MS", "Comic Sans", cursive',
-                    textShadow:
-                      '2px 2px 4px rgba(0,0,0,0.8), 1px 1px 2px rgba(255,255,255,0.3), 0 0 8px rgba(255,255,255,0.1)',
-                    color: '#ffffff',
-                    fontWeight: 'bold',
-                    letterSpacing: '0.08em',
-                    transform: 'rotate(-0.5deg)',
-                    display: 'inline-block',
-                    lineHeight: '1.2'
-                  }}>
-                  <span
-                    style={{
-                      transform: 'rotate(1deg)',
-                      display: 'inline-block'
-                    }}>
-                    T
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.8deg)',
-                      display: 'inline-block'
-                    }}>
-                    O
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.3deg)',
-                      display: 'inline-block'
-                    }}>
-                    D
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.2deg)',
-                      display: 'inline-block'
-                    }}>
-                    A
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.7deg)',
-                      display: 'inline-block'
-                    }}>
-                    Y
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.4deg)',
-                      display: 'inline-block'
-                    }}>
-                    &apos;
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.1deg)',
-                      display: 'inline-block'
-                    }}>
-                    S
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.6deg)',
-                      display: 'inline-block',
-                      marginRight: '0.3em'
-                    }}>
-                    {' '}
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.6deg)',
-                      display: 'inline-block'
-                    }}>
-                    T
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.2deg)',
-                      display: 'inline-block'
-                    }}>
-                    O
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.3deg)',
-                      display: 'inline-block'
-                    }}>
-                    P
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.4deg)',
-                      display: 'inline-block',
-                      marginRight: '0.3em'
-                    }}>
-                    {' '}
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.6deg)',
-                      display: 'inline-block'
-                    }}>
-                    A
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.2deg)',
-                      display: 'inline-block'
-                    }}>
-                    B
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.3deg)',
-                      display: 'inline-block'
-                    }}>
-                    C
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.4deg)',
-                      display: 'inline-block',
-                      marginRight: '0.3em'
-                    }}>
-                    {' '}
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.1deg)',
-                      display: 'inline-block'
-                    }}>
-                    N
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.3deg)',
-                      display: 'inline-block'
-                    }}>
-                    E
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.5deg)',
-                      display: 'inline-block'
-                    }}>
-                    W
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.2deg)',
-                      display: 'inline-block'
-                    }}>
-                    S
-                  </span>
-                  <br className="block md:hidden" />
-                  <span
-                    style={{
-                      transform: 'rotate(0.3deg)',
-                      display: 'inline-block',
-                      marginRight: '0.3em'
-                    }}>
-                    {' '}
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.6deg)',
-                      display: 'inline-block'
-                    }}>
-                    H
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.2deg)',
-                      display: 'inline-block'
-                    }}>
-                    E
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.3deg)',
-                      display: 'inline-block'
-                    }}>
-                    A
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.4deg)',
-                      display: 'inline-block'
-                    }}>
-                    D
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.1deg)',
-                      display: 'inline-block'
-                    }}>
-                    L
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.7deg)',
-                      display: 'inline-block'
-                    }}>
-                    I
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.5deg)',
-                      display: 'inline-block'
-                    }}>
-                    N
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.3deg)',
-                      display: 'inline-block'
-                    }}>
-                    E
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.2deg)',
-                      display: 'inline-block'
-                    }}>
-                    S
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.6deg)',
-                      display: 'inline-block',
-                      marginRight: '0.3em',
-                      lineHeight: '1.8'
-                    }}>
-                    {' '}
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.4deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    M
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.1deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    A
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.3deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    D
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.5deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    E
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.2deg)',
-                      display: 'inline-block',
-                      marginRight: '0.3em',
-                      lineHeight: '1.8'
-                    }}>
-                    {' '}
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.4deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    K
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.6deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    I
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.3deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    D
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.1deg)',
-                      display: 'inline-block',
-                      marginRight: '0.3em',
-                      lineHeight: '1.8'
-                    }}>
-                    {' '}
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.7deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    F
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.4deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    R
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.2deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    I
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.5deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    E
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.3deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    N
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.2deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    D
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(-0.6deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    L
-                  </span>
-                  <span
-                    style={{
-                      transform: 'rotate(0.1deg)',
-                      display: 'inline-block',
-                      lineHeight: '1.8'
-                    }}>
-                    Y
-                  </span>
-                </span>
+            {/* Mobile Refresh Button */}
+            {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+              navigator.userAgent
+            ) && (
+              <div className="mb-4">
+                <button
+                  onClick={() => fetchNews(1, false, true)}
+                  disabled={loading}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition-colors duration-200 shadow-lg">
+                  🔄 Refresh Headlines
+                </button>
+                <p className="text-sm text-gray-600 mt-2">
+                  Tap to get the latest news
+                </p>
               </div>
-            </div>
+            )}
+
+            <button
+              onClick={() => fetchNews(1, false, true)}
+              disabled={loading}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-lg">
+              {loading ? '🔄 Loading...' : '📰 Get Latest News'}
+            </button>
           </div>
 
           {/* News Grid */}
