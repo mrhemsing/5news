@@ -12,12 +12,24 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const forceRefresh = searchParams.get('refresh') === 'true';
 
+    // Log request details for debugging device differences
+    const userAgent = request.headers.get('user-agent') || 'Unknown';
+    const acceptLanguage = request.headers.get('accept-language') || 'Unknown';
+    console.log(
+      `🌐 API Request - Page: ${page}, Force Refresh: ${forceRefresh}`
+    );
+    console.log(`📱 Request User-Agent: ${userAgent.substring(0, 80)}...`);
+    console.log(`🌍 Request Accept-Language: ${acceptLanguage}`);
+
     // Try to get cached news first (for any page, unless force refresh)
     let existingArticles: NewsArticle[] = [];
     if (!forceRefresh) {
       const cachedArticles = await getCachedNews();
       if (cachedArticles) {
-        console.log(`Returning cached news data for page ${page}`);
+        console.log(
+          `📱 Returning cached news data for page ${page} (${cachedArticles.length} articles)`
+        );
+        console.log(`📱 Cache timestamp: ${new Date().toISOString()}`);
         // Apply VIDEO filter to cached articles as well
         existingArticles = cachedArticles.filter(article => {
           const cleanTitle = article.title.replace(/\s*\([^)]*\)/g, '').trim();
@@ -28,8 +40,10 @@ export async function GET(request: Request) {
           return true;
         });
         console.log(
-          `Filtered cached articles: ${cachedArticles.length} -> ${existingArticles.length}`
+          `📱 Filtered cached articles: ${cachedArticles.length} -> ${existingArticles.length}`
         );
+      } else {
+        console.log(`📱 No cached news found, will fetch fresh data`);
       }
     }
 
@@ -78,7 +92,10 @@ export async function GET(request: Request) {
 
       const userAgents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
       ];
 
       // Try Google News RSS with enhanced anti-blocking
@@ -93,6 +110,9 @@ export async function GET(request: Request) {
               userAgents[Math.floor(Math.random() * userAgents.length)];
             console.log(
               `Trying Google News RSS: ${rssUrl} (attempt ${3 - retries}/2)`
+            );
+            console.log(
+              `📱 Using User-Agent: ${userAgent.substring(0, 50)}...`
             );
 
             if (retries < 2) {
@@ -308,8 +328,11 @@ export async function GET(request: Request) {
       );
 
       // Cache the filtered results
-      await setCachedNews(validArticles, page);
+      await setCachedNews(validArticles);
 
+      console.log(
+        `📱 Device-agnostic cache stored for consistent headlines across all devices`
+      );
       console.log(`📤 Returning ${validArticles.length} articles to frontend:`);
       validArticles.slice(0, 5).forEach((article, index) => {
         const date = new Date(article.publishedAt);
@@ -628,14 +651,14 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                     continue; // Skip this article entirely
                   }
 
-                  // Filter out articles older than 2 days to ensure freshness
+                  // Filter out articles older than 4 days to ensure freshness
                   const articleDate = new Date(publishedAt);
-                  const twoDaysAgo = new Date(
-                    Date.now() - 2 * 24 * 60 * 60 * 1000
+                  const fourDaysAgo = new Date(
+                    Date.now() - 4 * 24 * 60 * 60 * 1000
                   );
-                  if (articleDate < twoDaysAgo) {
+                  if (articleDate < fourDaysAgo) {
                     console.log(
-                      `❌ Skipping old article: "${title}" (${publishedAt}) - older than 2 days`
+                      `❌ Skipping old article: "${title}" (${publishedAt}) - older than 4 days`
                     );
                     continue; // Skip this article entirely
                   }
@@ -952,14 +975,14 @@ async function parseGoogleNewsRSS(rssText: string): Promise<NewsArticle[]> {
                   );
                 }
 
-                // Filter out articles older than 2 days to ensure freshness
+                // Filter out articles older than 4 days to ensure freshness
                 const articleDate = new Date(publishedAt);
-                const twoDaysAgo = new Date(
-                  Date.now() - 2 * 24 * 60 * 60 * 1000
+                const fourDaysAgo = new Date(
+                  Date.now() - 4 * 24 * 60 * 60 * 1000
                 );
-                if (articleDate < twoDaysAgo) {
+                if (articleDate < fourDaysAgo) {
                   console.log(
-                    `❌ Skipping old article: "${title}" (${publishedAt}) - older than 2 days`
+                    `❌ Skipping old article: "${title}" (${publishedAt}) - older than 4 days`
                   );
                   continue; // Skip this article entirely
                 }
