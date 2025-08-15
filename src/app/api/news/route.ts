@@ -12,18 +12,31 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const forceRefresh = searchParams.get('refresh') === 'true';
 
+    // Detect browser refresh by checking for Cache-Control: no-cache header
+    const cacheControl = request.headers.get('cache-control');
+    const pragma = request.headers.get('pragma');
+    const isBrowserRefresh =
+      cacheControl?.includes('no-cache') ||
+      pragma?.includes('no-cache') ||
+      request.headers.get('sec-fetch-mode') === 'navigate';
+
     // Log request details for debugging device differences
     const userAgent = request.headers.get('user-agent') || 'Unknown';
     const acceptLanguage = request.headers.get('accept-language') || 'Unknown';
     console.log(
-      `🌐 API Request - Page: ${page}, Force Refresh: ${forceRefresh}`
+      `🌐 API Request - Page: ${page}, Force Refresh: ${forceRefresh}, Browser Refresh: ${isBrowserRefresh}`
     );
     console.log(`📱 Request User-Agent: ${userAgent.substring(0, 80)}...`);
     console.log(`🌍 Request Accept-Language: ${acceptLanguage}`);
+    console.log(
+      `🔄 Cache-Control: ${cacheControl}, Pragma: ${pragma}, Sec-Fetch-Mode: ${request.headers.get(
+        'sec-fetch-mode'
+      )}`
+    );
 
-    // Try to get cached news first (for any page, unless force refresh)
+    // Try to get cached news first (for any page, unless force refresh OR browser refresh)
     let existingArticles: NewsArticle[] = [];
-    if (!forceRefresh) {
+    if (!forceRefresh && !isBrowserRefresh) {
       const cachedArticles = await getCachedNews();
       if (cachedArticles) {
         console.log(
@@ -44,6 +57,16 @@ export async function GET(request: Request) {
         );
       } else {
         console.log(`📱 No cached news found, will fetch fresh data`);
+      }
+    } else {
+      if (isBrowserRefresh) {
+        console.log(
+          `🔄 Browser refresh detected - clearing cache and fetching fresh data`
+        );
+      } else {
+        console.log(
+          `🔄 Force refresh requested - clearing cache and fetching fresh data`
+        );
       }
     }
 
