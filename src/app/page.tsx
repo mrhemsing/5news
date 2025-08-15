@@ -6,7 +6,6 @@ import NewsCard from '@/components/NewsCard';
 import Logo from '@/components/Logo';
 
 export default function Home() {
-  // Test deployment - 2025-01-07
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +13,6 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [failedArticles, setFailedArticles] = useState<Set<string>>(new Set());
-  // Removed validArticles state - using only articles
   const [initialLoading, setInitialLoading] = useState(true);
 
   const currentRequestRef = useRef<AbortController | null>(null);
@@ -44,9 +42,8 @@ export default function Home() {
               parsedData.articles.length
             );
             setArticles(parsedData.articles);
-            setLoading(false); // Set loading to false when restoring from localStorage
+            setLoading(false);
             console.log('Articles restored, loading state set to false');
-            // Return a flag indicating we restored articles
             return true;
           } else {
             console.log('Saved articles are stale or invalid, cleaning up...');
@@ -70,14 +67,12 @@ export default function Home() {
     });
 
     return () => {
-      // Abort any ongoing request when component unmounts
       if (currentRequestRef.current) {
         currentRequestRef.current.abort();
       }
     };
-  }, []); // Remove currentRequest dependency to prevent re-runs
+  }, []);
 
-  // Save articles to localStorage whenever they change
   useEffect(() => {
     if (articles.length > 0) {
       const articleData = {
@@ -89,11 +84,9 @@ export default function Home() {
     }
   }, [articles]);
 
-  // Handle page visibility changes (when user returns to tab)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && articles.length > 0) {
-        // Check if articles are stale (older than 1 hour)
         const lastUpdate = localStorage.getItem('5news-articles');
         if (lastUpdate) {
           try {
@@ -117,19 +110,17 @@ export default function Home() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [articles]);
 
-  // Set up automatic background refresh every 6 hours (reduced from 1 hour to save API calls)
   useEffect(() => {
     const interval = setInterval(() => {
       console.log('Auto-refreshing headlines...');
       fetchNews(1, false, true);
-    }, 6 * 60 * 60 * 1000); // 6 hours in milliseconds
+    }, 6 * 60 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     const handleScroll = () => {
-      // Don't trigger if we're already loading, don't have more articles, or are loading more
       if (loading || loadingMore || !hasMore) {
         return;
       }
@@ -139,9 +130,7 @@ export default function Home() {
       const threshold = documentHeight - 1000;
 
       if (scrollPosition >= threshold) {
-        // Set loadingMore to true immediately to prevent multiple requests
         setLoadingMore(true);
-        // Use a separate timeout for pagination to avoid conflicts with main loading
         setTimeout(() => {
           fetchNews(page + 1, true);
         }, 100);
@@ -150,7 +139,7 @@ export default function Home() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, loading, page]); // Added page back to dependencies
+  }, [hasMore, loadingMore, loading, page]);
 
   const fetchNews = async (
     pageNum: number,
@@ -161,13 +150,11 @@ export default function Home() {
       `fetchNews called: pageNum=${pageNum}, append=${append}, forceRefresh=${forceRefresh}, currentArticles=${articles.length}`
     );
 
-    // Simple mobile detection for cache busting
     const isMobile =
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
       );
 
-    // Force refresh on mobile if cache is older than 5 minutes
     if (isMobile && !forceRefresh && articles.length > 0) {
       const lastFetchTime = localStorage.getItem('5news-last-fetch');
       if (lastFetchTime) {
@@ -184,38 +171,32 @@ export default function Home() {
       }
     }
 
-    // Don't fetch if we already have articles and this isn't a force refresh
     if (!forceRefresh && pageNum === 1 && articles.length > 0) {
       console.log('Articles already loaded, skipping fetch');
-      setLoading(false); // Ensure loading is set to false when skipping
+      setLoading(false);
       return;
     }
 
-    // Prevent multiple simultaneous requests (check before setting loading state)
     if (loading && !append) {
       console.log('Already loading, skipping duplicate request');
       return;
     }
 
-    // Set loading state first, only set main loading for first page
     if (pageNum === 1) {
       setLoading(true);
-      setError(null); // Clear any previous errors
+      setError(null);
     } else {
       setLoadingMore(true);
     }
 
-    // Abort any existing request
     if (currentRequestRef.current) {
       currentRequestRef.current.abort();
     }
 
-    // Create an AbortController for this request
     const abortController = new AbortController();
     currentRequestRef.current = abortController;
 
     try {
-      // Add 1-second delay for lazy loading
       if (append) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -241,13 +222,11 @@ export default function Home() {
       const data = await response.json();
 
       if (append) {
-        // For pagination, we need to handle it on the frontend since API returns all articles
         const articlesPerPage = 20;
         const startIndex = (pageNum - 1) * articlesPerPage;
         const endIndex = startIndex + articlesPerPage;
         const newArticles = data.articles.slice(startIndex, endIndex);
 
-        // Check if we already have these articles to prevent duplicates
         const existingUrls = new Set(
           articles.map((article: NewsArticle) => article.url)
         );
@@ -256,47 +235,39 @@ export default function Home() {
         );
 
         if (uniqueNewArticles.length > 0) {
-          // Simply append new articles - API already handles deduplication and sorting
           setArticles(prev => [...prev, ...uniqueNewArticles]);
         }
 
-        // If no new articles were added or we've reached the end, we've reached the end
         if (
           uniqueNewArticles.length === 0 ||
           endIndex >= data.articles.length
         ) {
           setHasMore(false);
-          setLoadingMore(false); // Reset loading state when no more articles
+          setLoadingMore(false);
         }
       } else {
-        // For the first page or force refresh, replace all articles
         const articlesPerPage = 20;
         const initialArticles = data.articles.slice(0, articlesPerPage);
         setArticles(initialArticles);
 
-        // Reset pagination state
         setPage(1);
         setHasMore(data.articles.length > articlesPerPage);
 
-        // Clear localStorage on force refresh to ensure fresh state
         if (forceRefresh) {
           localStorage.removeItem('5news-articles');
         }
       }
 
-      // Set hasMore based on whether there are more articles available
       const articlesPerPage = 20;
       const currentEndIndex = pageNum * articlesPerPage;
       const hasMoreArticles = currentEndIndex < data.articles.length;
       setHasMore(hasMoreArticles);
 
-      // Update last fetch time for mobile cache validation
       if (isMobile) {
         localStorage.setItem('5news-last-fetch', Date.now().toString());
         console.log('📱 Updated mobile last fetch timestamp');
       }
 
-      // If no articles returned and we're loading more, reset the loading state
       if (append && (!data.articles || data.articles.length === 0)) {
         setLoadingMore(false);
       }
@@ -314,7 +285,6 @@ export default function Home() {
       setLoading(false);
       setLoadingMore(false);
 
-      // Clear the current request reference
       if (currentRequestRef.current === abortController) {
         currentRequestRef.current = null;
       }
@@ -342,9 +312,7 @@ export default function Home() {
   if (initialLoading) {
     return (
       <div className="min-h-screen relative overflow-hidden">
-        {/* Children's Wallpaper Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-100 to-yellow-100">
-          {/* Hand-drawn Dinosaurs and Cartoons */}
           <div className="absolute top-10 left-10 w-16 h-16 opacity-20">
             <div className="w-full h-full bg-green-400 rounded-full"></div>
             <div className="absolute -bottom-2 left-2 w-8 h-4 bg-green-500 rounded-full"></div>
@@ -371,7 +339,6 @@ export default function Home() {
             <div className="absolute top-6 right-4 w-4 h-4 bg-pink-600 rounded-full"></div>
           </div>
 
-          {/* Floating Cartoon Elements */}
           <div className="absolute top-1/4 left-1/3 w-8 h-8 opacity-15">
             <div className="w-full h-full bg-yellow-300 rounded-full"></div>
             <div className="absolute top-1 left-1 w-6 h-6 bg-yellow-400 rounded-full"></div>
@@ -388,7 +355,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="relative z-10 container mx-auto px-4 py-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -407,9 +373,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen relative overflow-hidden">
-        {/* Children's Wallpaper Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-100 to-yellow-100">
-          {/* Hand-drawn Dinosaurs and Cartoons */}
           <div className="absolute top-10 left-10 w-16 h-16 opacity-20">
             <div className="w-full h-full bg-green-400 rounded-full"></div>
             <div className="absolute -bottom-2 left-2 w-8 h-4 bg-green-500 rounded-full"></div>
@@ -436,7 +400,6 @@ export default function Home() {
             <div className="absolute top-6 right-4 w-4 h-4 bg-pink-600 rounded-full"></div>
           </div>
 
-          {/* Floating Cartoon Elements */}
           <div className="absolute top-1/4 left-1/3 w-8 h-8 opacity-15">
             <div className="w-full h-full bg-yellow-300 rounded-full"></div>
             <div className="absolute top-1 left-1 w-6 h-6 bg-yellow-400 rounded-full"></div>
@@ -453,7 +416,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="relative z-10">
           <div className="container mx-auto px-4 py-8">
             <div className="text-center">
@@ -473,9 +435,7 @@ export default function Home() {
   if (error) {
     return (
       <div className="min-h-screen relative overflow-hidden">
-        {/* Children's Wallpaper Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-100 to-yellow-100">
-          {/* Hand-drawn Dinosaurs and Cartoons */}
           <div className="absolute top-10 left-10 w-16 h-16 opacity-20">
             <div className="w-full h-full bg-green-400 rounded-full"></div>
             <div className="absolute -bottom-2 left-2 w-8 h-4 bg-green-500 rounded-full"></div>
@@ -502,7 +462,6 @@ export default function Home() {
             <div className="absolute top-6 right-4 w-4 h-4 bg-pink-600 rounded-full"></div>
           </div>
 
-          {/* Floating Cartoon Elements */}
           <div className="absolute top-1/4 left-1/3 w-8 h-8 opacity-15">
             <div className="w-full h-full bg-yellow-300 rounded-full"></div>
             <div className="absolute top-1 left-1 w-6 h-6 bg-yellow-400 rounded-full"></div>
@@ -519,7 +478,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="relative z-10">
           <div className="container mx-auto px-4 py-8">
             <div className="text-center">
@@ -545,9 +503,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Children's Wallpaper Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-100 to-yellow-100">
-        {/* Hand-drawn Dinosaurs and Cartoons */}
         <div className="absolute top-10 left-10 w-16 h-16 opacity-20">
           <div className="w-full h-full bg-green-400 rounded-full"></div>
           <div className="absolute -bottom-2 left-2 w-8 h-4 bg-green-500 rounded-full"></div>
@@ -574,7 +530,6 @@ export default function Home() {
           <div className="absolute top-6 right-4 w-4 h-4 bg-pink-600 rounded-full"></div>
         </div>
 
-        {/* Floating Cartoon Elements */}
         <div className="absolute top-1/4 left-1/3 w-8 h-8 opacity-15">
           <div className="w-full h-full bg-yellow-300 rounded-full"></div>
           <div className="absolute top-1 left-1 w-6 h-6 bg-yellow-400 rounded-full"></div>
@@ -591,15 +546,19 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="relative z-10">
         <div className="container mx-auto px-4 py-8">
-          {/* Header */}
           <div className="text-center mb-8">
             <Logo />
+            <div className="mt-4 inline-block bg-black rounded-lg px-6 py-3 shadow-lg">
+              <p
+                className="text-lg text-white font-bold"
+                style={{ fontFamily: 'Eraser, cursive' }}>
+                Today's Top Headlines
+              </p>
+            </div>
           </div>
 
-          {/* News Grid */}
           <div className="max-w-4xl mx-auto space-y-6">
             {articles
               .filter(article => !failedArticles.has(article.id))
@@ -612,7 +571,6 @@ export default function Home() {
                 />
               ))}
 
-            {/* Loading More Indicator */}
             {loadingMore && (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -622,7 +580,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Load More Button (for testing) */}
             {hasMore && !loadingMore && articles.length > 0 && (
               <div className="text-center py-8">
                 <button
@@ -633,7 +590,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* End of Results */}
             {!hasMore && articles.length > 0 && (
               <div className="text-center py-8">
                 <p className="text-gray-500 dark:text-gray-400">
@@ -643,7 +599,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Footer */}
           <div className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
             <p>Powered by Google News RSS, OpenAI and Eleven Labs.</p>
           </div>
