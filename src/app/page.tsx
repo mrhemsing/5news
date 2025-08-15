@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { NewsArticle } from '@/types/news';
 import NewsCard from '@/components/NewsCard';
-import Logo from '@/components/Logo';
 
 export default function Home() {
   // Test deployment - 2025-01-07
@@ -61,7 +60,7 @@ export default function Home() {
       }
 
       console.log('Proceeding to fetch news...');
-      fetchNews();
+      fetchNews(1, false, false);
       return false;
     };
 
@@ -527,7 +526,7 @@ export default function Home() {
                 {error}
               </div>
               <button
-                onClick={() => fetchNews()}
+                onClick={() => fetchNews(1, false, true)}
                 className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">
                 Try Again
               </button>
