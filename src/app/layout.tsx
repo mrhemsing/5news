@@ -55,7 +55,7 @@ const eraser = localFont({
 });
 
 export const metadata: Metadata = {
-  title: '5News - News Explained Simply',
+  title: "Today's ABC News Headlines Made for Kids",
   description: 'Get the top news headlines explained in simple terms',
   icons: {
     icon: '/favicon.svg'
