@@ -127,12 +127,21 @@ async function fetchFreshHeadlines() {
         );
 
         if (response.ok) {
+          console.log(`📄 Response OK, reading RSS text...`);
           const rssText = await response.text();
+          console.log(`📄 RSS text length: ${rssText.length} characters`);
+          console.log(`📄 First 200 chars: ${rssText.substring(0, 200)}...`);
+          
+          console.log(`🔍 About to parse RSS feed...`);
           const parsedHeadlines = await parseRSSFeed(rssText);
+          console.log(`🔍 Parsed ${parsedHeadlines.length} headlines`);
+          
           headlines.push(...parsedHeadlines);
           console.log(
             `✅ Fetched ${parsedHeadlines.length} headlines from ${rssUrl}`
           );
+        } else {
+          console.log(`❌ RSS response not OK: ${response.status} ${response.statusText}`);
         }
       } catch (error) {
         console.error(`❌ Error fetching from ${rssUrl}:`, error);
@@ -170,16 +179,25 @@ async function fetchFreshHeadlines() {
 
 async function parseRSSFeed(rssText: string) {
   const headlines = [];
+  console.log(`🔍 parseRSSFeed called with ${rssText.length} characters`);
 
   try {
     // Parse RSS feed (simplified version of existing logic)
+    console.log(`🔍 Looking for <item> tags...`);
     const itemMatches = rssText.match(/<item>([\s\S]*?)<\/item>/g);
+    console.log(`🔍 Found ${itemMatches ? itemMatches.length : 0} item matches`);
 
     if (itemMatches) {
-      for (const item of itemMatches) {
+      console.log(`🔍 Processing ${itemMatches.length} items...`);
+      for (let i = 0; i < itemMatches.length; i++) {
+        const item = itemMatches[i];
+        console.log(`🔍 Processing item ${i + 1}/${itemMatches.length}`);
+        
         const titleMatch = item.match(/<title>([\s\S]*?)<\/title>/);
         const linkMatch = item.match(/<link>([^<]*)<\/link>/);
         const pubDateMatch = item.match(/<pubDate>([^<]+)<\/pubDate>/);
+        
+        console.log(`🔍 Item ${i + 1} - Title match: ${!!titleMatch}, Link match: ${!!linkMatch}, Date match: ${!!pubDateMatch}`);
 
         if (titleMatch && linkMatch && pubDateMatch) {
           const title = titleMatch[1]
@@ -252,7 +270,10 @@ async function storeHeadlinesInDatabase(headlines: any[]) {
     );
 
     // First, clear old headlines (older than 4 days)
+    console.log(`🧹 About to clear old headlines...`);
     const fourDaysAgo = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000);
+    console.log(`🧹 Four days ago: ${fourDaysAgo.toISOString()}`);
+    
     const { error: deleteError } = await supabase
       .from('headlines')
       .delete()
