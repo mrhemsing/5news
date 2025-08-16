@@ -294,12 +294,12 @@ async function storeHeadlinesInDatabase(headlines: any[]) {
     }
 
     // Insert new headlines with upsert to handle duplicates
-    const { data: upsertData, error: insertError } = await supabase
+    const { data: upsertData, error: insertError } = (await supabase
       .from('headlines')
       .upsert(headlines, {
         onConflict: 'url',
         ignoreDuplicates: false
-      });
+      })) as { data: any[] | null; error: any };
 
     if (insertError) {
       console.error('❌ Error inserting headlines:', insertError);
@@ -310,8 +310,10 @@ async function storeHeadlinesInDatabase(headlines: any[]) {
       `✅ Successfully upserted ${headlines.length} headlines in database`
     );
 
-    if (upsertData) {
+    if (upsertData && Array.isArray(upsertData)) {
       console.log(`📊 Upsert result: ${upsertData.length} records affected`);
+    } else if (upsertData) {
+      console.log(`📊 Upsert result: ${upsertData} records affected`);
     }
   } catch (error) {
     console.error('❌ Error storing headlines in database:', error);
