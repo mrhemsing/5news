@@ -61,7 +61,7 @@ async function handleHeadlineFetch(request: Request) {
 
     // Provide more detailed error information
     let errorMessage = 'Failed to fetch headlines';
-    let errorDetails = null;
+    let errorDetails: Record<string, any> | null = null;
 
     if (error instanceof Error) {
       errorMessage = error.message;
@@ -131,17 +131,19 @@ async function fetchFreshHeadlines() {
           const rssText = await response.text();
           console.log(`📄 RSS text length: ${rssText.length} characters`);
           console.log(`📄 First 200 chars: ${rssText.substring(0, 200)}...`);
-          
+
           console.log(`🔍 About to parse RSS feed...`);
           const parsedHeadlines = await parseRSSFeed(rssText);
           console.log(`🔍 Parsed ${parsedHeadlines.length} headlines`);
-          
+
           headlines.push(...parsedHeadlines);
           console.log(
             `✅ Fetched ${parsedHeadlines.length} headlines from ${rssUrl}`
           );
         } else {
-          console.log(`❌ RSS response not OK: ${response.status} ${response.statusText}`);
+          console.log(
+            `❌ RSS response not OK: ${response.status} ${response.statusText}`
+          );
         }
       } catch (error) {
         console.error(`❌ Error fetching from ${rssUrl}:`, error);
@@ -185,19 +187,25 @@ async function parseRSSFeed(rssText: string) {
     // Parse RSS feed (simplified version of existing logic)
     console.log(`🔍 Looking for <item> tags...`);
     const itemMatches = rssText.match(/<item>([\s\S]*?)<\/item>/g);
-    console.log(`🔍 Found ${itemMatches ? itemMatches.length : 0} item matches`);
+    console.log(
+      `🔍 Found ${itemMatches ? itemMatches.length : 0} item matches`
+    );
 
     if (itemMatches) {
       console.log(`🔍 Processing ${itemMatches.length} items...`);
       for (let i = 0; i < itemMatches.length; i++) {
         const item = itemMatches[i];
         console.log(`🔍 Processing item ${i + 1}/${itemMatches.length}`);
-        
+
         const titleMatch = item.match(/<title>([\s\S]*?)<\/title>/);
         const linkMatch = item.match(/<link>([^<]*)<\/link>/);
         const pubDateMatch = item.match(/<pubDate>([^<]+)<\/pubDate>/);
-        
-        console.log(`🔍 Item ${i + 1} - Title match: ${!!titleMatch}, Link match: ${!!linkMatch}, Date match: ${!!pubDateMatch}`);
+
+        console.log(
+          `🔍 Item ${
+            i + 1
+          } - Title match: ${!!titleMatch}, Link match: ${!!linkMatch}, Date match: ${!!pubDateMatch}`
+        );
 
         if (titleMatch && linkMatch && pubDateMatch) {
           const title = titleMatch[1]
@@ -273,7 +281,7 @@ async function storeHeadlinesInDatabase(headlines: any[]) {
     console.log(`🧹 About to clear old headlines...`);
     const fourDaysAgo = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000);
     console.log(`🧹 Four days ago: ${fourDaysAgo.toISOString()}`);
-    
+
     const { error: deleteError } = await supabase
       .from('headlines')
       .delete()
