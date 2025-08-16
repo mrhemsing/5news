@@ -25,7 +25,11 @@ async function handleHeadlineFetch(request: Request) {
     console.log('🕐 Starting scheduled headline fetch...');
 
     // Fetch fresh headlines from RSS feeds
+    console.log('📡 About to call fetchFreshHeadlines...');
     const headlines = await fetchFreshHeadlines();
+    console.log(
+      `📊 fetchFreshHeadlines returned ${headlines.length} headlines`
+    );
 
     if (headlines.length === 0) {
       console.log('❌ No headlines fetched, skipping update');
@@ -36,7 +40,9 @@ async function handleHeadlineFetch(request: Request) {
     }
 
     // Store in central Supabase database
+    console.log('💾 About to call storeHeadlinesInDatabase...');
     await storeHeadlinesInDatabase(headlines);
+    console.log('✅ storeHeadlinesInDatabase completed successfully');
 
     console.log(
       `✅ Successfully updated ${headlines.length} headlines in central database`
@@ -49,6 +55,9 @@ async function handleHeadlineFetch(request: Request) {
     });
   } catch (error) {
     console.error('❌ Error in scheduled headline fetch:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error constructor:', error?.constructor?.name);
+    console.error('Error value:', error);
 
     // Provide more detailed error information
     let errorMessage = 'Failed to fetch headlines';
@@ -60,6 +69,14 @@ async function handleHeadlineFetch(request: Request) {
         name: error.name,
         stack: error.stack,
         message: error.message
+      };
+    } else {
+      // Handle non-Error objects
+      errorMessage = String(error);
+      errorDetails = {
+        type: typeof error,
+        constructor: error?.constructor?.name,
+        value: error
       };
     }
 
@@ -93,8 +110,10 @@ async function fetchFreshHeadlines() {
 
     for (const rssUrl of rssUrls) {
       try {
+        console.log(`🔗 Attempting to fetch from: ${rssUrl}`);
         const userAgent =
           userAgents[Math.floor(Math.random() * userAgents.length)];
+        console.log(`🤖 Using User-Agent: ${userAgent}`);
         const response = await fetch(rssUrl, {
           headers: {
             'User-Agent': userAgent,
@@ -103,6 +122,9 @@ async function fetchFreshHeadlines() {
             'Accept-Language': 'en-US,en;q=0.5'
           }
         });
+        console.log(
+          `📡 Response status: ${response.status} ${response.statusText}`
+        );
 
         if (response.ok) {
           const rssText = await response.text();
@@ -119,6 +141,12 @@ async function fetchFreshHeadlines() {
 
     // Remove duplicates and sort by date
     const uniqueHeadlines = removeDuplicates(headlines);
+    console.log(
+      `🔄 Removed ${
+        headlines.length - uniqueHeadlines.length
+      } duplicate headlines`
+    );
+
     const sortedHeadlines = uniqueHeadlines.sort(
       (a, b) =>
         new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
@@ -236,10 +264,13 @@ async function storeHeadlinesInDatabase(headlines: any[]) {
       console.log('🧹 Cleared old headlines from database');
     }
 
-    // Insert new headlines
-    const { error: insertError } = await supabase
+    // Insert new headlines with upsert to handle duplicates
+    const { data: upsertData, error: insertError } = await supabase
       .from('headlines')
-      .insert(headlines);
+      .upsert(headlines, {
+        onConflict: 'url',
+        ignoreDuplicates: false
+      });
 
     if (insertError) {
       console.error('❌ Error inserting headlines:', insertError);
@@ -247,8 +278,12 @@ async function storeHeadlinesInDatabase(headlines: any[]) {
     }
 
     console.log(
-      `✅ Successfully stored ${headlines.length} headlines in database`
+      `✅ Successfully upserted ${headlines.length} headlines in database`
     );
+
+    if (upsertData) {
+      console.log(`📊 Upsert result: ${upsertData.length} records affected`);
+    }
   } catch (error) {
     console.error('❌ Error storing headlines in database:', error);
 
