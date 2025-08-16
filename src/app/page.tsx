@@ -31,7 +31,7 @@ export default function Home() {
           console.log('Found saved articles in localStorage:', parsedData);
           const isRecent =
             parsedData.timestamp &&
-            Date.now() - parsedData.timestamp < 2 * 60 * 60 * 1000;
+            Date.now() - parsedData.timestamp < 15 * 60 * 1000;
           if (
             isRecent &&
             Array.isArray(parsedData.articles) &&
@@ -502,22 +502,8 @@ export default function Home() {
     );
   }
 
-  // Debug information
-  console.log('Render state:', {
-    articles: articles.length,
-    loading,
-    error,
-    initialLoading
-  });
-
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-green-100 via-green-50 to-emerald-100">
-      {/* Debug info */}
-      <div className="fixed top-4 right-4 bg-black text-white p-2 rounded text-xs z-50">
-        Articles: {articles.length} | Loading: {loading.toString()} | Error:{' '}
-        {error || 'none'}
-      </div>
-
       {/* Dinosaur background decorations */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Dinosaur 1 - Top left */}
