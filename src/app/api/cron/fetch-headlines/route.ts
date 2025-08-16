@@ -49,8 +49,26 @@ async function handleHeadlineFetch(request: Request) {
     });
   } catch (error) {
     console.error('❌ Error in scheduled headline fetch:', error);
+    
+    // Provide more detailed error information
+    let errorMessage = 'Failed to fetch headlines';
+    let errorDetails = null;
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = {
+        name: error.name,
+        stack: error.stack,
+        message: error.message
+      };
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to fetch headlines' },
+      { 
+        error: errorMessage,
+        details: errorDetails,
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }
@@ -58,12 +76,15 @@ async function handleHeadlineFetch(request: Request) {
 
 async function fetchFreshHeadlines() {
   const headlines = [];
+  console.log('🔄 Starting to fetch fresh headlines...');
 
   try {
     const rssUrls = [
       'https://news.google.com/rss/search?q=ABC+News&hl=en-US&gl=US&ceid=US:en&num=50',
       'https://news.google.com/rss/search?q=ABC+News&hl=en&gl=US&ceid=US:en&num=50'
     ];
+    
+    console.log(`📡 Attempting to fetch from ${rssUrls.length} RSS sources...`);
 
     const userAgents = [
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -230,6 +251,21 @@ async function storeHeadlinesInDatabase(headlines: any[]) {
     );
   } catch (error) {
     console.error('❌ Error storing headlines in database:', error);
+    
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
+    // Check if it's a Supabase error
+    if (error && typeof error === 'object' && 'code' in error) {
+      console.error('Supabase error code:', (error as any).code);
+      console.error('Supabase error details:', (error as any).details);
+      console.error('Supabase error hint:', (error as any).hint);
+    }
+    
     throw error;
   }
 }
