@@ -927,26 +927,32 @@ export default function Home() {
 
       <div className="relative z-10">
         <div className="container mx-auto px-4 py-8">
-                     <div className="max-w-4xl mx-auto space-y-6">
-             {articles
-               .filter(article => !failedArticles.has(article.id))
-               .filter(article => {
-                 const title = article.title.toLowerCase();
-                 const content = article.content?.toLowerCase() || '';
-                 const combinedText = `${title} ${content}`;
-                 
-                 // Filter out local road/accident reports
-                 const unwantedTerms = ['shut down', 'accident', 'police'];
-                 return !unwantedTerms.some(term => combinedText.includes(term));
-               })
-               .map(article => (
-                 <NewsCard
-                   key={article.id}
-                   article={article}
-                   onExplain={handleExplain}
-                   onExplainError={handleExplainError}
-                 />
-               ))}
+          <div className="max-w-4xl mx-auto space-y-6">
+            {articles
+              .filter(article => !failedArticles.has(article.id))
+              .filter(article => {
+                const title = article.title.toLowerCase();
+                const content = article.content?.toLowerCase() || '';
+                const combinedText = `${title} ${content}`;
+
+                // Filter out local road/accident reports and TV show transcripts
+                const unwantedTerms = [
+                  'shut down',
+                  'accident',
+                  'police',
+                  'this week',
+                  'transcript'
+                ];
+                return !unwantedTerms.some(term => combinedText.includes(term));
+              })
+              .map(article => (
+                <NewsCard
+                  key={article.id}
+                  article={article}
+                  onExplain={handleExplain}
+                  onExplainError={handleExplainError}
+                />
+              ))}
 
             {loadingMore && (
               <div className="text-center py-8">
