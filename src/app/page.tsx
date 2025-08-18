@@ -310,6 +310,57 @@ export default function Home() {
     });
   };
 
+  // Function to detect and remove duplicate articles
+  const removeDuplicates = (articles: NewsArticle[]) => {
+    const seen = new Set<string>();
+    const uniqueArticles: NewsArticle[] = [];
+
+    for (const article of articles) {
+      // Create a normalized version of the title for comparison
+      const normalizedTitle = article.title
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '') // Remove punctuation
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim();
+
+      // Check if we've seen a very similar title before
+      let isDuplicate = false;
+      for (const seenTitle of Array.from(seen)) {
+        // Calculate similarity - if titles are 80% similar, consider them duplicates
+        const similarity = calculateSimilarity(normalizedTitle, seenTitle);
+        if (similarity > 0.8) {
+          isDuplicate = true;
+          break;
+        }
+      }
+
+      if (!isDuplicate) {
+        seen.add(normalizedTitle);
+        uniqueArticles.push(article);
+      }
+    }
+
+    return uniqueArticles;
+  };
+
+  // Function to calculate similarity between two strings
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const words1 = str1.split(' ');
+    const words2 = str2.split(' ');
+
+    // Count common words
+    let commonWords = 0;
+    for (const word of words1) {
+      if (words2.includes(word)) {
+        commonWords++;
+      }
+    }
+
+    // Calculate similarity as percentage of common words
+    const totalWords = Math.max(words1.length, words2.length);
+    return commonWords / totalWords;
+  };
+
   if (initialLoading) {
     return (
       <div className="min-h-screen relative overflow-hidden">
@@ -928,31 +979,34 @@ export default function Home() {
       <div className="relative z-10">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto space-y-6">
-            {articles
-              .filter(article => !failedArticles.has(article.id))
-              .filter(article => {
-                const title = article.title.toLowerCase();
-                const content = article.content?.toLowerCase() || '';
-                const combinedText = `${title} ${content}`;
+            {removeDuplicates(
+              articles
+                .filter(article => !failedArticles.has(article.id))
+                .filter(article => {
+                  const title = article.title.toLowerCase();
+                  const content = article.content?.toLowerCase() || '';
+                  const combinedText = `${title} ${content}`;
 
-                // Filter out local road/accident reports and TV show transcripts
-                const unwantedTerms = [
-                  'shut down',
-                  'accident',
-                  'police',
-                  'this week',
-                  'transcript'
-                ];
-                return !unwantedTerms.some(term => combinedText.includes(term));
-              })
-              .map(article => (
-                <NewsCard
-                  key={article.id}
-                  article={article}
-                  onExplain={handleExplain}
-                  onExplainError={handleExplainError}
-                />
-              ))}
+                  // Filter out local road/accident reports and TV show transcripts
+                  const unwantedTerms = [
+                    'shut down',
+                    'accident',
+                    'police',
+                    'this week',
+                    'transcript'
+                  ];
+                  return !unwantedTerms.some(term =>
+                    combinedText.includes(term)
+                  );
+                })
+            ).map(article => (
+              <NewsCard
+                key={article.id}
+                article={article}
+                onExplain={handleExplain}
+                onExplainError={handleExplainError}
+              />
+            ))}
 
             {loadingMore && (
               <div className="text-center py-8">
