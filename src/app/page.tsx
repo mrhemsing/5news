@@ -1038,6 +1038,12 @@ export default function Home() {
 
           <div className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
             <p>Powered by Google News RSS, OpenAI and Eleven Labs.</p>
+            <p className="mt-4">
+              &copy; {new Date().getFullYear()}{' '}
+              <a href="https://b-average.com" target="_blank">
+                B Average
+              </a>{' '}
+            </p>
           </div>
         </div>
       </div>
