@@ -13,14 +13,7 @@ export default function Logo() {
 
           {/* Animated news indicator */}
           <div className="absolute -top-2 -right-1 w-5 h-5 md:w-7 md:h-7 bg-gradient-to-br from-red-500 to-pink-600 rounded-full flex items-center justify-center shadow-lg bounce-twice">
-            <span
-              className="text-white text-[6px] md:text-[8px] font-black tracking-tight logo-newz-small"
-              style={{
-                fontFamily:
-                  'var(--font-comic-neue), "Comic Neue", "Comic Sans MS", cursive'
-              }}>
-              NEWZ
-            </span>
+            <img src="/newz.svg" alt="NEWZ" className="w-3 h-3 md:w-4 md:h-4" />
           </div>
         </div>
 
@@ -169,15 +162,14 @@ export default function Logo() {
 
             {/* NEWS text */}
             <div className="flex flex-col items-start ml-2 md:ml-3">
-              <span
-                className="text-gray-900 dark:text-white font-black text-2xl md:text-4xl news-text logo-newz"
+              <img
+                src="/newz.svg"
+                alt="NEWZ"
+                className="h-8 md:h-12 w-auto news-text logo-newz"
                 style={{
-                  fontFamily:
-                    'var(--font-architects-daughter), "Architects Daughter", cursive',
-                  textShadow: '2px 2px 4px rgba(0,0,0,0.1)'
-                }}>
-                NEWZ
-              </span>
+                  filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.1))'
+                }}
+              />
             </div>
           </div>
         </div>

@@ -144,7 +144,7 @@ html.fonts-loaded .logo-newz-small {
   }
 }
 .news-text {
-  margin-bottom: -1rem;
+  margin-bottom: 0rem;
   @media only screen and (max-width: 600px) {
     margin-bottom: -0.5rem;
   }
