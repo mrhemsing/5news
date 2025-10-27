@@ -13,7 +13,7 @@ A Next.js application that makes current news kid-friendly with AI-generated exp
 ## Tech Stack
 
 - **Next.js 14** - React framework
-- **Tailwind CSS** - Styling
+- **Tailwind CSS** - Styling and colors
 - **Google News RSS** - News headlines
 - **ElevenLabs** - Text-to-speech
 - **Replicate** - AI cartoon generation
