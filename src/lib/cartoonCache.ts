@@ -88,3 +88,49 @@ export async function clearExpiredCache(): Promise<void> {
     console.error('Error clearing expired cache:', error);
   }
 }
+
+export async function deleteCachedCartoon(headline: string): Promise<void> {
+  try {
+    if (!supabase) {
+      console.log('Supabase not configured, skipping cache deletion');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('cartoon_cache')
+      .delete()
+      .eq('headline', headline);
+
+    if (error) {
+      console.error('Error deleting cached cartoon:', error);
+    } else {
+      console.log(`Deleted expired cache entry for headline: ${headline}`);
+    }
+  } catch (error) {
+    console.error('Error deleting cached cartoon:', error);
+  }
+}
+
+export async function deleteCachedCartoonByUrl(
+  cartoonUrl: string
+): Promise<void> {
+  try {
+    if (!supabase) {
+      console.log('Supabase not configured, skipping cache deletion');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('cartoon_cache')
+      .delete()
+      .eq('cartoon_url', cartoonUrl);
+
+    if (error) {
+      console.error('Error deleting cached cartoon by URL:', error);
+    } else {
+      console.log(`Deleted expired cache entry for URL: ${cartoonUrl}`);
+    }
+  } catch (error) {
+    console.error('Error deleting cached cartoon by URL:', error);
+  }
+}

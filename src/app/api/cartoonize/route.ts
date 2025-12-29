@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getCachedCartoon, setCachedCartoon } from '@/lib/cartoonCache';
+import {
+  getCachedCartoon,
+  setCachedCartoon,
+  deleteCachedCartoon
+} from '@/lib/cartoonCache';
 
 // Configure for Vercel - allow up to 60 seconds for function execution
 export const maxDuration = 60;
@@ -14,7 +18,7 @@ class RequestQueue {
   private running = 0;
   private maxConcurrent = 1; // Only allow 1 concurrent request to Replicate (more conservative)
   private lastRequestTime = 0;
-  private minDelayBetweenRequests = 5000; // 5 seconds between requests to avoid rate limits
+  private minDelayBetweenRequests = 8000; // 8 seconds between requests to avoid rate limits (increased from 5s)
 
   async add<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -71,12 +75,24 @@ async function validateCartoonUrl(url: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
+    // Use GET instead of HEAD - some CDNs (like Replicate) may respond differently to HEAD
+    // Also check for 404 specifically since that means the URL is expired
     const response = await fetch(url, {
-      method: 'HEAD',
-      signal: controller.signal
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        Range: 'bytes=0-1' // Only fetch first 2 bytes to check if URL is valid
+      }
     });
 
     clearTimeout(timeoutId);
+
+    // 404 means the URL is definitely expired
+    if (response.status === 404) {
+      console.log('URL validation: 404 detected - URL is expired');
+      return false;
+    }
+
     return response.ok;
   } catch (error) {
     console.log('URL validation failed:', error);
@@ -150,8 +166,10 @@ export async function POST(request: Request) {
           });
         } else {
           console.log(
-            'Cached cartoon URL validation failed, will regenerate...'
+            'Cached cartoon URL validation failed (expired), deleting from cache and regenerating...'
           );
+          // Delete expired cache entry
+          await deleteCachedCartoon(cleaned);
           // Continue to generate new cartoon
         }
       } catch (validationError) {

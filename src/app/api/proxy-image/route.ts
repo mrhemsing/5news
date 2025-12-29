@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { deleteCachedCartoonByUrl } from '@/lib/cartoonCache';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -40,8 +41,22 @@ export async function GET(request: Request) {
       console.error(
         `Proxy image error: Failed to fetch image - Status: ${response.status}, URL: ${imageUrl}`
       );
+
+      // If we get a 404, the URL is expired - invalidate the cache entry
+      if (response.status === 404) {
+        console.log('Image URL expired (404), invalidating cache entry...');
+        try {
+          await deleteCachedCartoonByUrl(imageUrl);
+        } catch (error) {
+          console.error('Error invalidating cache:', error);
+        }
+      }
+
       return NextResponse.json(
-        { error: `Failed to fetch image: ${response.status}` },
+        {
+          error: `Failed to fetch image: ${response.status}`,
+          expired: response.status === 404 // Signal to frontend that URL is expired
+        },
         { status: response.status }
       );
     }
