@@ -124,10 +124,11 @@ export async function POST(request: Request) {
     const prediction = await response.json();
     console.log('Replicate prediction created:', prediction.id);
 
-    // Poll for completion
+    // Poll for completion - increased timeout to 60 seconds
     let result;
-    for (let i = 0; i < 20; i++) {
-      // Max 20 seconds
+    let completed = false;
+    for (let i = 0; i < 60; i++) {
+      // Max 60 seconds (increased from 20)
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const statusResponse = await fetch(prediction.urls.get, {
@@ -136,20 +137,38 @@ export async function POST(request: Request) {
         }
       });
 
+      if (!statusResponse.ok) {
+        console.error(`Failed to fetch prediction status: ${statusResponse.status}`);
+        throw new Error(`Failed to fetch prediction status: ${statusResponse.status}`);
+      }
+
       result = await statusResponse.json();
       console.log(`Poll ${i + 1}: Status = ${result.status}`);
 
       if (result.status === 'succeeded') {
+        completed = true;
         break;
       } else if (result.status === 'failed') {
         console.error('Replicate prediction failed:', result);
         throw new Error('Cartoon generation failed');
+      } else if (result.status === 'canceled') {
+        console.error('Replicate prediction was canceled:', result);
+        throw new Error('Cartoon generation was canceled');
       }
+      // Continue polling if status is 'starting' or 'processing'
     }
 
     console.log('Final result:', result);
 
+    // Check if we completed successfully
+    if (!completed) {
+      console.error('Polling timeout - prediction still processing after 60 seconds');
+      console.error('Final status:', result?.status);
+      throw new Error('Cartoon generation timed out - prediction still processing');
+    }
+
     if (
+      !result ||
       !result.output ||
       !Array.isArray(result.output) ||
       result.output.length === 0
@@ -274,9 +293,11 @@ export async function PUT(request: Request) {
 
         const prediction = await response.json();
 
-        // Poll for completion
+        // Poll for completion - increased timeout to 60 seconds
         let result;
-        for (let i = 0; i < 20; i++) {
+        let completed = false;
+        for (let i = 0; i < 60; i++) {
+          // Max 60 seconds (increased from 20)
           await new Promise(resolve => setTimeout(resolve, 1000));
 
           const statusResponse = await fetch(prediction.urls.get, {
@@ -285,25 +306,39 @@ export async function PUT(request: Request) {
             }
           });
 
+          if (!statusResponse.ok) {
+            console.error(`Failed to fetch prediction status: ${statusResponse.status}`);
+            throw new Error(`Failed to fetch prediction status: ${statusResponse.status}`);
+          }
+
           result = await statusResponse.json();
+          console.log(`Background poll ${i + 1} for "${headline}": Status = ${result.status}`);
 
           if (result.status === 'succeeded') {
+            completed = true;
             break;
           } else if (result.status === 'failed') {
             throw new Error('Cartoon generation failed');
+          } else if (result.status === 'canceled') {
+            throw new Error('Cartoon generation was canceled');
           }
+          // Continue polling if status is 'starting' or 'processing'
         }
 
-        if (result.output && result.output[0]) {
+        if (completed && result.output && result.output[0]) {
           const cartoonUrl = result.output[0];
           await setCachedCartoon(cleanHeadline, cartoonUrl);
           results.push({ headline, status: 'success', cartoonUrl });
           console.log('Background cartoon generated for:', headline);
         } else {
+          const errorMsg = completed
+            ? 'No output generated'
+            : 'Polling timeout - prediction still processing after 60 seconds';
+          console.error(`Background cartoon generation failed for "${headline}":`, errorMsg);
           results.push({
             headline,
             status: 'failed',
-            error: 'No output generated'
+            error: errorMsg
           });
         }
       } catch (error) {
