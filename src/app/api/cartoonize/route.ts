@@ -12,12 +12,31 @@ const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 class RequestQueue {
   private queue: Array<() => Promise<any>> = [];
   private running = 0;
-  private maxConcurrent = 2; // Only allow 2 concurrent requests to Replicate
+  private maxConcurrent = 1; // Only allow 1 concurrent request to Replicate (more conservative)
+  private lastRequestTime = 0;
+  private minDelayBetweenRequests = 5000; // 5 seconds between requests to avoid rate limits
 
   async add<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.push(async () => {
         try {
+          // Add delay between requests to avoid rate limiting
+          // Add jitter (random delay) to spread out requests across different serverless instances
+          const timeSinceLastRequest = Date.now() - this.lastRequestTime;
+          const jitter = Math.random() * 3000; // 0-3 seconds random delay to spread across instances
+          const totalDelay = this.minDelayBetweenRequests + jitter;
+
+          if (timeSinceLastRequest < totalDelay) {
+            const delay = totalDelay - timeSinceLastRequest;
+            console.log(
+              `Rate limiting: waiting ${Math.round(
+                delay
+              )}ms before next request (with ${Math.round(jitter)}ms jitter)`
+            );
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+
+          this.lastRequestTime = Date.now();
           const result = await fn();
           resolve(result);
         } catch (error) {
@@ -197,6 +216,22 @@ export async function POST(request: Request) {
 
       if (response.status === 429) {
         console.error('Replicate API rate limit exceeded (429)');
+        // Try to return cached cartoon as fallback before returning 429
+        if (cleaned) {
+          const fallbackCartoon = await getCachedCartoon(cleaned);
+          if (fallbackCartoon) {
+            console.log(
+              'Returning cached cartoon as fallback due to rate limit'
+            );
+            return NextResponse.json({
+              cartoonUrl: fallbackCartoon,
+              success: true,
+              cached: true,
+              fallback: true,
+              warning: 'Using cached image - rate limited'
+            });
+          }
+        }
         // Return a special response that the client can retry
         return NextResponse.json(
           {
