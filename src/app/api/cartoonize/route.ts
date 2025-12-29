@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import {
   getCachedCartoon,
   setCachedCartoon,
-  deleteCachedCartoon
+  deleteCachedCartoon,
+  acquireRateLimitLock,
+  updateRateLimitLock
 } from '@/lib/cartoonCache';
 
 // Configure for Vercel - allow up to 60 seconds for function execution
@@ -18,7 +20,7 @@ class RequestQueue {
   private running = 0;
   private maxConcurrent = 1; // Only allow 1 concurrent request to Replicate (more conservative)
   private lastRequestTime = 0;
-  private minDelayBetweenRequests = 8000; // 8 seconds between requests to avoid rate limits (increased from 5s)
+  private minDelayBetweenRequests = 15000; // 15 seconds between requests to avoid rate limits (increased significantly)
 
   async add<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -27,7 +29,7 @@ class RequestQueue {
           // Add delay between requests to avoid rate limiting
           // Add jitter (random delay) to spread out requests across different serverless instances
           const timeSinceLastRequest = Date.now() - this.lastRequestTime;
-          const jitter = Math.random() * 3000; // 0-3 seconds random delay to spread across instances
+          const jitter = Math.random() * 5000; // 0-5 seconds random delay to spread across instances (increased)
           const totalDelay = this.minDelayBetweenRequests + jitter;
 
           if (timeSinceLastRequest < totalDelay) {
@@ -188,7 +190,36 @@ export async function POST(request: Request) {
     console.log('Sending request to Replicate API...');
     console.log('Cartoon prompt:', cartoonPrompt);
 
-    // Use request queue to prevent rate limiting
+    // Use database-backed rate limiter to prevent rate limiting across instances
+    // This works across all serverless instances, not just one
+    const canProceed = await acquireRateLimitLock();
+    if (!canProceed) {
+      console.log(
+        'Rate limit: Too soon since last request, returning 429 to retry later'
+      );
+      // Try to return cached cartoon as fallback
+      const fallbackCartoon = await getCachedCartoon(cleaned);
+      if (fallbackCartoon) {
+        console.log('Returning cached cartoon as fallback due to rate limit');
+        return NextResponse.json({
+          cartoonUrl: fallbackCartoon,
+          success: true,
+          cached: true,
+          fallback: true,
+          warning: 'Using cached image - rate limited'
+        });
+      }
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          retryAfter: 15, // Suggest retrying after 15 seconds
+          success: false
+        },
+        { status: 429 }
+      );
+    }
+
+    // Use request queue to prevent rate limiting (additional protection)
     // This ensures we don't send too many requests to Replicate simultaneously
     const response = await requestQueue.add(async () => {
       return await fetch('https://api.replicate.com/v1/predictions', {
@@ -385,6 +416,9 @@ export async function POST(request: Request) {
     }
 
     console.log('Successfully generated cartoon URL:', cartoonUrl);
+
+    // Update rate limit lock after successful request
+    await updateRateLimitLock();
 
     // Cache the generated cartoon
     await setCachedCartoon(cleaned, cartoonUrl);

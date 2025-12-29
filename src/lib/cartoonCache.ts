@@ -134,3 +134,76 @@ export async function deleteCachedCartoonByUrl(
     console.error('Error deleting cached cartoon by URL:', error);
   }
 }
+
+// Database-backed rate limiter that works across serverless instances
+// Returns true if we can proceed, false if we need to wait
+export async function acquireRateLimitLock(): Promise<boolean> {
+  try {
+    if (!supabase) {
+      console.log('Supabase not configured, allowing request');
+      return true;
+    }
+
+    // Check if we can make a request (last request was more than 15 seconds ago)
+    const fifteenSecondsAgo = new Date(Date.now() - 15000);
+
+    // First, check the current state of the lock
+    const { data: lockData, error: selectError } = await supabase
+      .from('rate_limit_lock')
+      .select('last_request')
+      .eq('id', 'replicate_api')
+      .single();
+
+    if (selectError || !lockData) {
+      // Lock doesn't exist yet, allow request (will be created after request)
+      return true;
+    }
+
+    // Lock exists, check if we can proceed
+    const lastRequest = new Date(lockData.last_request);
+    const timeSinceLastRequest = Date.now() - lastRequest.getTime();
+
+    if (timeSinceLastRequest < 15000) {
+      // Too soon, can't proceed
+      console.log(
+        `Rate limit: Last request was ${Math.round(
+          timeSinceLastRequest / 1000
+        )}s ago, need to wait ${Math.round(
+          (15000 - timeSinceLastRequest) / 1000
+        )}s more`
+      );
+      return false;
+    }
+
+    // Can proceed - lock will be updated after successful request
+    return true;
+  } catch (error) {
+    console.error('Error checking rate limit lock:', error);
+    return true; // Allow on error to not block requests
+  }
+}
+
+// Update the rate limit lock after a successful request
+export async function updateRateLimitLock(): Promise<void> {
+  try {
+    if (!supabase) {
+      return;
+    }
+
+    // Upsert the lock with current timestamp
+    await supabase.from('rate_limit_lock').upsert(
+      {
+        id: 'replicate_api',
+        last_request: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        onConflict: 'id',
+        ignoreDuplicates: false
+      }
+    );
+  } catch (error) {
+    console.error('Error updating rate limit lock:', error);
+    // Don't throw - this is not critical
+  }
+}
