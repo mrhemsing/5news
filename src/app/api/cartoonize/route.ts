@@ -59,13 +59,21 @@ export async function POST(request: Request) {
     console.log('Generating cartoon from headline:', headline);
 
     // Clean and simplify the headline for better cartoon generation
-    cleanHeadline = headline
+    const cleaned = headline
       .replace(/ - .*$/, '') // Remove everything after " - "
       .replace(/['"]/g, '') // Remove quotes
       .replace(/[^\w\s]/g, ' ') // Replace special chars with spaces
       .replace(/\s+/g, ' ') // Replace multiple spaces with single space
       .trim();
 
+    if (!cleaned) {
+      return NextResponse.json(
+        { error: 'Invalid headline after cleaning' },
+        { status: 400 }
+      );
+    }
+
+    cleanHeadline = cleaned;
     console.log('Cleaned headline:', cleanHeadline);
 
     // Check if cartoon is already cached
