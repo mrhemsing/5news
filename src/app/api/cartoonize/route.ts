@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server';
 import { getCachedCartoon, setCachedCartoon } from '@/lib/cartoonCache';
 
+// Configure for Vercel - allow up to 60 seconds for function execution
+export const maxDuration = 60;
+
 // Use Replicate's Stable Diffusion for accurate cartoon generation
 const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 
 // Function to validate if a cartoon URL is still accessible
 async function validateCartoonUrl(url: string): Promise<boolean> {
   try {
-    const response = await fetch(url, { method: 'HEAD' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
     return response.ok;
   } catch (error) {
     console.log('URL validation failed:', error);
@@ -16,8 +27,13 @@ async function validateCartoonUrl(url: string): Promise<boolean> {
 }
 
 export async function POST(request: Request) {
+  // Store headline for potential fallback use
+  let originalHeadline: string | null = null;
+  let cleanHeadline: string | null = null;
+
   try {
     const { headline } = await request.json();
+    originalHeadline = headline;
 
     if (!headline) {
       return NextResponse.json(
@@ -43,7 +59,7 @@ export async function POST(request: Request) {
     console.log('Generating cartoon from headline:', headline);
 
     // Clean and simplify the headline for better cartoon generation
-    const cleanHeadline = headline
+    cleanHeadline = headline
       .replace(/ - .*$/, '') // Remove everything after " - "
       .replace(/['"]/g, '') // Remove quotes
       .replace(/[^\w\s]/g, ' ') // Replace special chars with spaces
@@ -57,18 +73,23 @@ export async function POST(request: Request) {
     if (cachedCartoon) {
       console.log('Found cached cartoon for headline, validating URL...');
 
-      // Validate if the cached URL is still accessible
-      const isUrlValid = await validateCartoonUrl(cachedCartoon);
-      if (isUrlValid) {
-        console.log('Cached cartoon URL is still valid');
-        return NextResponse.json({
-          cartoonUrl: cachedCartoon,
-          success: true,
-          cached: true
-        });
-      } else {
-        console.log('Cached cartoon URL is expired, regenerating...');
-        // Continue to generate new cartoon
+      // Validate if the cached URL is still accessible (with timeout)
+      try {
+        const isUrlValid = await validateCartoonUrl(cachedCartoon);
+        if (isUrlValid) {
+          console.log('Cached cartoon URL is still valid');
+          return NextResponse.json({
+            cartoonUrl: cachedCartoon,
+            success: true,
+            cached: true
+          });
+        } else {
+          console.log('Cached cartoon URL validation failed, will regenerate...');
+          // Continue to generate new cartoon
+        }
+      } catch (validationError) {
+        console.log('URL validation error (might be transient), will try to regenerate:', validationError);
+        // Continue to generate new cartoon - validation might have timed out
       }
     }
 
@@ -106,6 +127,8 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Replicate API error response:', errorText);
+      console.error('Replicate API error status:', response.status);
+      console.error('Headline that failed:', cleanHeadline);
 
       if (response.status === 402) {
         console.log('Replicate API 402 error - credits may not be applied yet');
@@ -117,8 +140,19 @@ export async function POST(request: Request) {
           fallback: true
         });
       }
+
+      if (response.status === 429) {
+        console.error('Replicate API rate limit exceeded (429)');
+        throw new Error('Rate limit exceeded - too many requests');
+      }
+
+      if (response.status === 401) {
+        console.error('Replicate API authentication failed (401)');
+        throw new Error('Authentication failed - check API token');
+      }
+
       console.error(`Replicate API error: ${response.status}`, errorText);
-      throw new Error(`Replicate API error: ${response.status}`);
+      throw new Error(`Replicate API error: ${response.status} - ${errorText.substring(0, 200)}`);
     }
 
     const prediction = await response.json();
@@ -131,19 +165,51 @@ export async function POST(request: Request) {
       // Max 60 seconds (increased from 20)
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const statusResponse = await fetch(prediction.urls.get, {
-        headers: {
-          Authorization: `Token ${REPLICATE_API_TOKEN}`
-        }
-      });
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout per request
 
-      if (!statusResponse.ok) {
-        console.error(`Failed to fetch prediction status: ${statusResponse.status}`);
-        throw new Error(`Failed to fetch prediction status: ${statusResponse.status}`);
+        const statusResponse = await fetch(prediction.urls.get, {
+          headers: {
+            Authorization: `Token ${REPLICATE_API_TOKEN}`
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!statusResponse.ok) {
+          const errorText = await statusResponse.text();
+          console.error(`Failed to fetch prediction status: ${statusResponse.status}`, errorText);
+          // Don't throw immediately - might be transient, continue polling
+          if (statusResponse.status === 401 || statusResponse.status === 403) {
+            throw new Error(`Authentication error fetching status: ${statusResponse.status}`);
+          }
+          // For other errors, wait a bit longer and retry
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+
+        result = await statusResponse.json();
+        console.log(`Poll ${i + 1}: Status = ${result.status}`);
+      } catch (fetchError: any) {
+        if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+          console.error(`Timeout fetching prediction status on poll ${i + 1}`);
+          // Continue polling - might be network issue
+          continue;
+        }
+        if (fetchError.message?.includes('Authentication')) {
+          throw fetchError;
+        }
+        console.error(`Error fetching prediction status on poll ${i + 1}:`, fetchError);
+        // Continue polling for other errors
+        continue;
       }
 
-      result = await statusResponse.json();
-      console.log(`Poll ${i + 1}: Status = ${result.status}`);
+      // Skip if result wasn't set (shouldn't happen, but safety check)
+      if (!result) {
+        continue;
+      }
 
       if (result.status === 'succeeded') {
         completed = true;
@@ -195,9 +261,41 @@ export async function POST(request: Request) {
       cached: false
     });
   } catch (error) {
-    console.error('Error generating cartoon:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    console.error('Error generating cartoon:', errorMessage);
+    console.error('Error stack:', errorStack);
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+
+    // As a fallback, try to return cached cartoon even if validation failed earlier
+    // This gives users something to see rather than a placeholder
+    if (cleanHeadline) {
+      try {
+        const fallbackCartoon = await getCachedCartoon(cleanHeadline);
+        if (fallbackCartoon) {
+          console.log('Returning cached cartoon as fallback despite generation error');
+          return NextResponse.json({
+            cartoonUrl: fallbackCartoon,
+            success: true,
+            cached: true,
+            fallback: true,
+            warning: 'Using cached image - generation failed'
+          });
+        }
+      } catch (fallbackError) {
+        console.error('Fallback cache lookup also failed:', fallbackError);
+      }
+    }
+
+    // Return more detailed error information for debugging
     return NextResponse.json(
-      { error: 'Failed to generate cartoon image' },
+      {
+        error: 'Failed to generate cartoon image',
+        details: errorMessage,
+        // Only include stack in development
+        ...(process.env.NODE_ENV === 'development' && errorStack ? { stack: errorStack } : {})
+      },
       { status: 500 }
     );
   }
