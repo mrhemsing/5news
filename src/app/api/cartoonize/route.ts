@@ -28,12 +28,10 @@ async function validateCartoonUrl(url: string): Promise<boolean> {
 
 export async function POST(request: Request) {
   // Store headline for potential fallback use
-  let originalHeadline: string | null = null;
   let cleanHeadline: string | null = null;
-
+  
   try {
     const { headline } = await request.json();
-    originalHeadline = headline;
 
     if (!headline) {
       return NextResponse.json(
@@ -77,7 +75,8 @@ export async function POST(request: Request) {
     console.log('Cleaned headline:', cleanHeadline);
 
     // Check if cartoon is already cached
-    const cachedCartoon = await getCachedCartoon(cleanHeadline);
+    // Use cleaned directly since we know it's not null after the check above
+    const cachedCartoon = await getCachedCartoon(cleaned);
     if (cachedCartoon) {
       console.log('Found cached cartoon for headline, validating URL...');
 
@@ -101,7 +100,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const cartoonPrompt = `cartoon illustration, childlike drawing style, simple lines, bright vibrant colors, cute and friendly, showing: ${cleanHeadline}, colorful background, fun and playful, kid-friendly art, simple clean composition, clear visual representation of the story`;
+    const cartoonPrompt = `cartoon illustration, childlike drawing style, simple lines, bright vibrant colors, cute and friendly, showing: ${cleaned}, colorful background, fun and playful, kid-friendly art, simple clean composition, clear visual representation of the story`;
     const negativePrompt =
       'realistic, photographic, adult, complex, dark, scary, blurry, text, words, letters';
 
@@ -136,7 +135,7 @@ export async function POST(request: Request) {
       const errorText = await response.text();
       console.error('Replicate API error response:', errorText);
       console.error('Replicate API error status:', response.status);
-      console.error('Headline that failed:', cleanHeadline);
+      console.error('Headline that failed:', cleaned);
 
       if (response.status === 402) {
         console.log('Replicate API 402 error - credits may not be applied yet');
@@ -260,7 +259,7 @@ export async function POST(request: Request) {
     console.log('Successfully generated cartoon URL:', cartoonUrl);
 
     // Cache the generated cartoon
-    await setCachedCartoon(cleanHeadline, cartoonUrl);
+    await setCachedCartoon(cleaned, cartoonUrl);
     console.log('Cached new cartoon for headline');
 
     return NextResponse.json({
