@@ -72,31 +72,42 @@ export async function GET(request: Request) {
       );
     }
 
+    // Filter out sports-related stories
+    const filteredHeadlines = headlines.filter(headline => {
+      return !isSportsStory(headline.title);
+    });
+
+    console.log(
+      `🏀 Filtered out ${
+        headlines.length - filteredHeadlines.length
+      } sports stories`
+    );
+
     // Apply pagination
     const articlesPerPage = 20;
     const startIndex = (page - 1) * articlesPerPage;
     const endIndex = startIndex + articlesPerPage;
-    const paginatedHeadlines = headlines.slice(startIndex, endIndex);
+    const paginatedHeadlines = filteredHeadlines.slice(startIndex, endIndex);
 
     console.log(
       `📊 Returning ${
         paginatedHeadlines.length
       } headlines (page ${page} of ${Math.ceil(
-        headlines.length / articlesPerPage
+        filteredHeadlines.length / articlesPerPage
       )})`
     );
-    console.log(`📊 Total headlines in database: ${headlines.length}`);
+    console.log(`📊 Total headlines in database: ${filteredHeadlines.length}`);
     console.log(
       `📊 Database last updated: ${headlines[0]?.fetchedAt || 'Unknown'}`
     );
 
     return NextResponse.json({
       articles: paginatedHeadlines,
-      totalResults: headlines.length,
-      hasMore: endIndex < headlines.length,
+      totalResults: filteredHeadlines.length,
+      hasMore: endIndex < filteredHeadlines.length,
       page: page,
-      totalPages: Math.ceil(headlines.length / articlesPerPage),
-      databaseTimestamp: headlines[0]?.fetchedAt || null
+      totalPages: Math.ceil(filteredHeadlines.length / articlesPerPage),
+      databaseTimestamp: filteredHeadlines[0]?.fetchedAt || null
     });
   } catch (error) {
     console.error('Error fetching news:', error);
@@ -155,6 +166,52 @@ async function fetchHeadlinesFromDatabase() {
     console.error('❌ Error in fetchHeadlinesFromDatabase:', error);
     return null;
   }
+}
+
+// Function to detect if a headline is sports-related
+function isSportsStory(title: string): boolean {
+  const titleUpper = title.toUpperCase();
+
+  // Sports-specific patterns
+  const sportsPatterns = [
+    // Common sports verbs
+    /\b(VISITS|HOSTS|KNOCKS OFF|DEFEATS|BEATS|WINS|LOSES|PLAYS|FACES|TRAILS|LEADS)\b/,
+    // Point-based scoring (basketball, football, etc.)
+    /\b\d+\s*-?\s*POINT\s+(SHOWING|GAME|PERFORMANCE|EFFORT|OUTING|NIGHT|CONTRIBUTION)\b/i,
+    /\b\d+\s*-?\s*POINTS?\b/i,
+    // Division references
+    /\b(DIVISION|CONFERENCE|LEAGUE)\s+(OPPONENTS|MATCHUP|GAME|MEET|CLASH)\b/i,
+    // Team vs team patterns
+    /\b(VS|V\.|VERSUS)\b/i,
+    // Common sports terms
+    /\b(TOURNAMENT|CHAMPIONSHIP|PLAYOFFS?|SEMIFINALS?|FINALS?|QUARTERFINALS?)\b/i,
+    // College/university team patterns (common in sports headlines)
+    /\b([A-Z]{2,}\s+)?(VISITS|HOSTS|TRAVELS TO|WELCOMES)\s+[A-Z]{2,}\b/,
+    // Score patterns
+    /\b\d+\s*-\s*\d+\b.*\b(WINS?|LOSES?|BEATS?|DEFEATS?)\b/i,
+    // Season references
+    /\b(SEASON|REGULAR SEASON|POSTSEASON|PRESEASON)\b/i
+  ];
+
+  // Check for sports patterns
+  for (const pattern of sportsPatterns) {
+    if (pattern.test(title)) {
+      return true;
+    }
+  }
+
+  // Check for common college/university abbreviations that are often sports teams
+  // This is a heuristic - college names in all caps often indicate sports
+  const collegeTeamPattern =
+    /\b([A-Z]{2,}\s+){1,3}(VISITS|HOSTS|TRAVELS|WELCOMES|PLAYS|FACES)\b/;
+  if (collegeTeamPattern.test(titleUpper)) {
+    // Additional check: if it contains point references, it's likely sports
+    if (/\bPOINT/i.test(title)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // Function to decode HTML entities
