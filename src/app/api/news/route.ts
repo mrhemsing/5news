@@ -174,26 +174,33 @@ async function fetchHeadlinesFromDatabase() {
 // Function to detect if a headline is sports-related
 function isSportsStory(title: string): boolean {
   const titleUpper = title.toUpperCase();
+  const titleLower = title.toLowerCase();
 
   // Sports-specific patterns
   const sportsPatterns = [
-    // Common sports verbs
-    /\b(VISITS|HOSTS|KNOCKS OFF|DEFEATS|BEATS|WINS|LOSES|PLAYS|FACES|TRAILS|LEADS)\b/,
+    // Common sports verbs (including singular forms)
+    /\b(VISITS?|HOSTS?|KNOCKS OFF|DEFEATS?|BEATS?|WINS?|LOSES?|PLAYS?|FACES?|TRAILS?|LEADS?)\b/,
     // Point-based scoring (basketball, football, etc.)
     /\b\d+\s*-?\s*POINT\s+(SHOWING|GAME|PERFORMANCE|EFFORT|OUTING|NIGHT|CONTRIBUTION)\b/i,
     /\b\d+\s*-?\s*POINTS?\b/i,
+    // Goal-based scoring (hockey, soccer, etc.)
+    /\b\d+\s*-?\s*GOAL\s+(GAME|PERFORMANCE|EFFORT|OUTING|NIGHT|CONTRIBUTION)\b/i,
+    /\b\d+\s*-?\s*GOALS?\b/i,
+    /\bGOAL\s+(GAME|PERFORMANCE|EFFORT|OUTING|NIGHT)\b/i,
     // Division references
-    /\b(DIVISION|CONFERENCE|LEAGUE)\s+(OPPONENTS|MATCHUP|GAME|MEET|CLASH)\b/i,
+    /\b(DIVISION|CONFERENCE|LEAGUE)\s+(OPPONENTS?|MATCHUP|GAME|MEET|CLASH)\b/i,
     // Team vs team patterns
     /\b(VS|V\.|VERSUS)\b/i,
     // Common sports terms
     /\b(TOURNAMENT|CHAMPIONSHIP|PLAYOFFS?|SEMIFINALS?|FINALS?|QUARTERFINALS?)\b/i,
     // College/university team patterns (common in sports headlines)
-    /\b([A-Z]{2,}\s+)?(VISITS|HOSTS|TRAVELS TO|WELCOMES)\s+[A-Z]{2,}\b/,
+    /\b([A-Z]{2,}\s+)?(VISITS?|HOSTS?|TRAVELS TO|WELCOMES)\s+[A-Z]{2,}\b/,
     // Score patterns
     /\b\d+\s*-\s*\d+\b.*\b(WINS?|LOSES?|BEATS?|DEFEATS?)\b/i,
     // Season references
-    /\b(SEASON|REGULAR SEASON|POSTSEASON|PRESEASON)\b/i
+    /\b(SEASON|REGULAR SEASON|POSTSEASON|PRESEASON)\b/i,
+    // Game-related patterns with sports context
+    /\b(GAME|MATCH|MATCHUP)\s+(AFTER|BEFORE|AGAINST|WITH)\b/i
   ];
 
   // Check for sports patterns
@@ -203,13 +210,47 @@ function isSportsStory(title: string): boolean {
     }
   }
 
+  // Check for common sports team names (hockey, basketball, football teams)
+  const teamNames = [
+    'blue jackets', 'senators', 'rangers', 'islanders', 'devils', 'flyers',
+    'penguins', 'capitals', 'hurricanes', 'lightning', 'panthers', 'bruins',
+    'maple leafs', 'sabres', 'red wings', 'blackhawks', 'stars', 'wild',
+    'avalanche', 'jets', 'oilers', 'flames', 'canucks', 'kraken', 'ducks',
+    'kings', 'sharks', 'golden knights', 'coyotes', 'predators', 'blues',
+    'lakers', 'warriors', 'celtics', 'heat', 'knicks', 'nets', 'bulls',
+    'bucks', '76ers', 'raptors', 'mavericks', 'nuggets', 'suns', 'clippers',
+    'yankees', 'red sox', 'dodgers', 'giants', 'cubs', 'cardinals', 'mets',
+    'phillies', 'braves', 'astros', 'angels', 'mariners', 'athletics', 'padres',
+    'diamondbacks', 'rockies', 'royals', 'tigers', 'twins', 'white sox',
+    'indians', 'guardians', 'orioles', 'rays', 'rangers', 'blue jays',
+    'patriots', 'bills', 'dolphins', 'jets', 'bengals', 'browns', 'steelers',
+    'ravens', 'texans', 'colts', 'jaguars', 'titans', 'broncos', 'chiefs',
+    'raiders', 'chargers', 'cowboys', 'giants', 'eagles', 'commanders',
+    'bears', 'lions', 'packers', 'vikings', 'falcons', 'panthers', 'saints',
+    'buccaneers', 'cardinals', 'rams', '49ers', 'seahawks'
+  ];
+
+  // Check if title contains team names
+  for (const team of teamNames) {
+    if (titleLower.includes(team)) {
+      // If it contains a team name and sports-related words, it's likely sports
+      if (
+        /\b(VISITS?|HOSTS?|DEFEATS?|BEATS?|WINS?|LOSES?|PLAYS?|FACES?|GAME|GOAL|GOALS?|POINT|POINTS?|SCORE)\b/i.test(
+          title
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
   // Check for common college/university abbreviations that are often sports teams
   // This is a heuristic - college names in all caps often indicate sports
   const collegeTeamPattern =
-    /\b([A-Z]{2,}\s+){1,3}(VISITS|HOSTS|TRAVELS|WELCOMES|PLAYS|FACES)\b/;
+    /\b([A-Z]{2,}\s+){1,3}(VISITS?|HOSTS?|TRAVELS|WELCOMES|PLAYS?|FACES?)\b/;
   if (collegeTeamPattern.test(titleUpper)) {
-    // Additional check: if it contains point references, it's likely sports
-    if (/\bPOINT/i.test(title)) {
+    // Additional check: if it contains point/goal references, it's likely sports
+    if (/\b(POINT|GOAL|GAME|SCORE)\b/i.test(title)) {
       return true;
     }
   }
@@ -219,12 +260,17 @@ function isSportsStory(title: string): boolean {
   if (scorePattern.test(title)) {
     // If there's a score and sports-related words, it's definitely sports
     if (
-      /\b(VISITS|HOSTS|KNOCKS|DEFEATS|BEATS|WINS|LOSES|PLAYS|FACES|TRAILS|LEADS|OPPONENTS|MEET|GAME)\b/i.test(
+      /\b(VISITS?|HOSTS?|KNOCKS|DEFEATS?|BEATS?|WINS?|LOSES?|PLAYS?|FACES?|TRAILS?|LEADS?|OPPONENTS?|MEET|GAME|GOAL|GOALS?)\b/i.test(
         title
       )
     ) {
       return true;
     }
+  }
+
+  // Check for "AFTER [number]-[sports term]" pattern (e.g., "AFTER MARCHENKO'S 2-GOAL GAME")
+  if (/\bAFTER\s+[A-Z\s']+\d+\s*-?\s*(GOAL|GOALS?|POINT|POINTS?)\s+(GAME|PERFORMANCE|EFFORT)\b/i.test(title)) {
+    return true;
   }
 
   return false;
