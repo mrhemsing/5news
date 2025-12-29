@@ -74,13 +74,16 @@ export async function GET(request: Request) {
 
     // Filter out sports-related stories
     const filteredHeadlines = headlines.filter(headline => {
-      return !isSportsStory(headline.title);
+      const isSports = isSportsStory(headline.title);
+      if (isSports) {
+        console.log(`🏀 Filtering out sports story: "${headline.title}"`);
+      }
+      return !isSports;
     });
 
+    const filteredCount = headlines.length - filteredHeadlines.length;
     console.log(
-      `🏀 Filtered out ${
-        headlines.length - filteredHeadlines.length
-      } sports stories`
+      `🏀 Filtered out ${filteredCount} sports stories (${headlines.length} -> ${filteredHeadlines.length})`
     );
 
     // Apply pagination
@@ -207,6 +210,19 @@ function isSportsStory(title: string): boolean {
   if (collegeTeamPattern.test(titleUpper)) {
     // Additional check: if it contains point references, it's likely sports
     if (/\bPOINT/i.test(title)) {
+      return true;
+    }
+  }
+
+  // Check for numeric scores (e.g., "95-59", "24-20") which are strong sports indicators
+  const scorePattern = /\b\d{1,3}\s*-\s*\d{1,3}\b/;
+  if (scorePattern.test(title)) {
+    // If there's a score and sports-related words, it's definitely sports
+    if (
+      /\b(VISITS|HOSTS|KNOCKS|DEFEATS|BEATS|WINS|LOSES|PLAYS|FACES|TRAILS|LEADS|OPPONENTS|MEET|GAME)\b/i.test(
+        title
+      )
+    ) {
       return true;
     }
   }
