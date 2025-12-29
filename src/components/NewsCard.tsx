@@ -135,6 +135,28 @@ export default function NewsCard({
           setCartoonLoading(false); // Stop loading since we got a response
           throw new Error('No cartoon URL returned');
         }
+      } else if (response.status === 429) {
+        // Rate limited - retry with longer delay
+        const data = await response.json().catch(() => ({}));
+        const retryAfter = data.retryAfter || 60;
+        console.log(`Rate limited, will retry after ${retryAfter} seconds`);
+        setCartoonLoading(false);
+
+        // Retry with exponential backoff, but longer delay for rate limits
+        if (retryAttempt < 2) {
+          const delay = retryAfter * 1000; // Use retryAfter seconds
+          console.log(
+            `Retrying cartoon generation after rate limit in ${delay}ms...`
+          );
+          setTimeout(() => {
+            setRetryCount(retryAttempt + 1);
+            generateCartoon(headline, retryAttempt + 1);
+          }, delay);
+        } else {
+          console.log('Max retry attempts reached after rate limit');
+          setCartoonLoading(false);
+        }
+        return; // Don't throw, we're handling the retry
       } else {
         const errorText = await response.text();
         console.error('Cartoon API error:', response.status, errorText);
@@ -381,9 +403,7 @@ export default function NewsCard({
               ) : (
                 <div className="w-[120px] h-[80px] bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
                   <div className="text-center">
-                    <div className="text-gray-400 text-2xl mb-1">
-                      🎨
-                    </div>
+                    <div className="text-gray-400 text-2xl mb-1">🎨</div>
                     <div className="text-xs text-gray-500 font-medium">
                       CARTOON
                     </div>
