@@ -148,20 +148,24 @@ async function getLatestHeadlines() {
   }
 }
 
-async function generateCartoons(headlines) {
+async function generateCartoons() {
   try {
-    const baseUrl =
-      process.env.BASE_URL || process.env.VERCEL_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/cartoonize`, {
-      method: 'PUT',
+    // Always use an absolute URL. Note: VERCEL_URL does not include protocol.
+    const baseUrl = process.env.BASE_URL
+      ? process.env.BASE_URL
+      : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
+    // Use the server-side batch endpoint which respects caching and rate limiting.
+    const response = await fetch(`${baseUrl}/api/generate-cartoons`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ headlines })
+      }
     });
 
     if (!response.ok) {
-      throw new Error(`Cartoon generation error: ${response.status}`);
+      const text = await response.text().catch(() => '');
+      throw new Error(`Generate cartoons error: ${response.status} ${text}`);
     }
 
     const result = await response.json();
@@ -176,17 +180,12 @@ async function generateCartoons(headlines) {
 async function main() {
   console.log('Starting background cartoon generation...');
 
-  // Get latest headlines
+  // Optional: still fetch headlines for logging, but the server decides what to generate.
   const headlines = await getLatestHeadlines();
-  console.log(`Found ${headlines.length} headlines to process`);
+  console.log(`Found ${headlines.length} headlines in RSS (server will generate a small batch of missing cartoons)`);
 
-  if (headlines.length === 0) {
-    console.log('No headlines found, exiting');
-    return;
-  }
-
-  // Generate cartoons for headlines
-  const result = await generateCartoons(headlines);
+  // Generate cartoons (server-side will decide what needs generating)
+  const result = await generateCartoons();
 
   if (result.success) {
     console.log('Background cartoon generation completed successfully');

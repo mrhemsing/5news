@@ -16,7 +16,11 @@ export async function POST() {
 
     console.log(`Found ${headlines.length} headlines to process`);
     const results = [];
-    const headlinesToProcess = headlines.slice(0, 10); // Process first 10 headlines
+
+    // Only process a small batch per run; generating a single image can take ~30-60s,
+    // and serverless functions have tight execution limits.
+    const MAX_PER_RUN = 2;
+    const headlinesToProcess = headlines.slice(0, 25).slice(0, MAX_PER_RUN);
 
     for (const article of headlinesToProcess) {
       try {
@@ -37,8 +41,12 @@ export async function POST() {
 
         console.log(`Generating cartoon for: ${headline}`);
         // Generate cartoon
+        const baseUrl = process.env.BASE_URL
+          ? process.env.BASE_URL
+          : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
         const response = await fetch(
-          `${process.env.VERCEL_URL || 'http://localhost:3000'}/api/cartoonize`,
+          `${baseUrl}/api/cartoonize`,
           {
             method: 'POST',
             headers: {
