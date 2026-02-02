@@ -2,8 +2,8 @@ name: Generate Cartoons
 
 on:
   schedule:
-    # Run every 30 minutes
-    - cron: '*/30 * * * *'
+    # Run every 4 hours (cartoons are heavier)
+    - cron: '0 */4 * * *'
   workflow_dispatch: # Allow manual triggering
 
 jobs:
