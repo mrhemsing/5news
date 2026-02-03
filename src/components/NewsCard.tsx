@@ -4,6 +4,32 @@ import { useState, useEffect, useRef } from 'react';
 import { NewsArticle } from '@/types/news';
 import Image from 'next/image';
 
+// Client-side queue to prevent a thundering herd of /api/cartoonize calls.
+// Without this, dozens of cards mount at once and immediately trip server-side rate limits,
+// resulting in placeholders everywhere.
+declare global {
+  interface Window {
+    __abcnewzCartoonQueue?: Promise<unknown>;
+  }
+}
+
+function enqueueCartoonTask<T>(fn: () => Promise<T>): Promise<T> {
+  if (typeof window === 'undefined') return fn();
+  const prev = window.__abcnewzCartoonQueue ?? Promise.resolve();
+
+  const next = prev
+    .catch(() => undefined)
+    .then(fn);
+
+  // Keep the chain alive even if one task fails.
+  window.__abcnewzCartoonQueue = next.catch(() => undefined);
+  return next;
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 interface NewsCardProps {
   article: NewsArticle;
   onExplain: (articleId: string, explanation: string) => void;
@@ -104,85 +130,63 @@ export default function NewsCard({
     };
   }, [article.id]); // Use article.id instead of article.title to detect new articles
 
-  const generateCartoon = async (headline: string, retryAttempt = 0) => {
+  const generateCartoon = async (headline: string) => {
     if (cartoonUrl || cartoonLoading) return;
 
     setCartoonLoading(true);
-    try {
-      console.log(
-        `Generating cartoon for headline (attempt ${retryAttempt + 1}):`,
-        headline
-      );
-      const response = await fetch('/api/cartoonize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ headline })
-      });
 
-      console.log(`Cartoon API response status: ${response.status}`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Cartoon response:', data);
-        if (data.cartoonUrl) {
-          setCartoonUrl(data.cartoonUrl);
-          setRetryCount(0); // Reset retry count on success
-          setCartoonLoading(false); // Always stop loading when we get a URL
-        } else {
-          // No cartoon URL returned, try to retry
-          console.error('No cartoon URL returned from API');
-          setCartoonLoading(false); // Stop loading since we got a response
-          throw new Error('No cartoon URL returned');
+    // Serialize generation attempts across all cards on the page.
+    // This avoids having 20+ requests all immediately 429.
+    await enqueueCartoonTask(async () => {
+      try {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          console.log(`Generating cartoon (attempt ${attempt + 1}):`, headline);
+
+          const response = await fetch('/api/cartoonize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ headline })
+          });
+
+          console.log(`Cartoon API response status: ${response.status}`);
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Cartoon response:', data);
+
+            if (data.cartoonUrl) {
+              setCartoonUrl(data.cartoonUrl);
+              setRetryCount(0);
+              return;
+            }
+
+            // No URL even though ok.
+            console.error('No cartoon URL returned from API');
+          } else if (response.status === 429) {
+            const data = await response.json().catch(() => ({}));
+            const retryAfter = Number(data.retryAfter ?? 15);
+            const jitterMs = Math.floor(Math.random() * 1500);
+            const waitMs = Math.max(1, retryAfter) * 1000 + jitterMs;
+            console.log(`Rate limited; waiting ${waitMs}ms then retrying…`);
+            await sleep(waitMs);
+            continue;
+          } else {
+            const errorText = await response.text().catch(() => '');
+            console.error('Cartoon API error:', response.status, errorText);
+            break;
+          }
+
+          // Brief backoff for non-429 failures.
+          await sleep(500 + attempt * 750);
         }
-      } else if (response.status === 429) {
-        // Rate limited - retry with longer delay
-        const data = await response.json().catch(() => ({}));
-        const retryAfter = data.retryAfter || 60;
-        console.log(`Rate limited, will retry after ${retryAfter} seconds`);
-        setCartoonLoading(false);
 
-        // Retry with exponential backoff, but longer delay for rate limits
-        if (retryAttempt < 2) {
-          const delay = retryAfter * 1000; // Use retryAfter seconds
-          console.log(
-            `Retrying cartoon generation after rate limit in ${delay}ms...`
-          );
-          setTimeout(() => {
-            setRetryCount(retryAttempt + 1);
-            generateCartoon(headline, retryAttempt + 1);
-          }, delay);
-        } else {
-          console.log('Max retry attempts reached after rate limit');
-          setCartoonLoading(false);
-        }
-        return; // Don't throw, we're handling the retry
-      } else {
-        const errorText = await response.text();
-        console.error('Cartoon API error:', response.status, errorText);
-        setCartoonLoading(false); // Stop loading on error
-        throw new Error(`Cartoon API error: ${response.status} - ${errorText}`);
+        console.log('Giving up on cartoon generation for this headline (for now)');
+      } catch (error) {
+        console.error('Error generating cartoon:', error);
       }
-    } catch (error) {
-      console.error(
-        `Error generating cartoon (attempt ${retryAttempt + 1}):`,
-        error
-      );
+    });
 
-      // Retry logic - up to 3 attempts with exponential backoff
-      if (retryAttempt < 2) {
-        const delay = Math.pow(2, retryAttempt) * 1000; // 1s, 2s, 4s delays
-        console.log(`Retrying cartoon generation in ${delay}ms...`);
-        setTimeout(() => {
-          setRetryCount(retryAttempt + 1);
-          generateCartoon(headline, retryAttempt + 1);
-        }, delay);
-      } else {
-        console.log('Max retry attempts reached for cartoon generation');
-        setRetryCount(0); // Reset for next time
-        setCartoonLoading(false); // Always stop loading after max retries
-      }
-    }
+    setCartoonLoading(false);
   };
 
   const handleExplain = async () => {
