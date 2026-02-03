@@ -180,6 +180,11 @@ export async function POST(request: Request) {
             });
           } else {
             console.log(`Replicate->Storage migration skipped: ${stored.reason}`);
+            // If the Replicate URL is already expired, drop the cache entry so we regenerate.
+            if (/Failed to fetch source image: 404/i.test(stored.reason)) {
+              await deleteCachedCartoon(cleaned);
+              console.log('Deleted expired Replicate cached URL; will regenerate');
+            }
           }
         } catch (e) {
           console.log('Replicate->Storage migration failed (non-fatal):', e);
