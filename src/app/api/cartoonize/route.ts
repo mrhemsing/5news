@@ -146,12 +146,9 @@ export async function POST(request: Request) {
     console.log('Generating cartoon from headline:', headline);
 
     // Clean and simplify the headline for better cartoon generation
-    const cleaned = headline
-      .replace(/ - .*$/, '') // Remove everything after " - "
-      .replace(/['"]/g, '') // Remove quotes
-      .replace(/[^\w\s]/g, ' ') // Replace special chars with spaces
-      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-      .trim();
+    const { cleanForCartoon } = await import('@/lib/cartoonKey');
+
+    const cleaned = cleanForCartoon(headline);
 
     if (!cleaned) {
       return NextResponse.json(

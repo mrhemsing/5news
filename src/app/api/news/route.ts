@@ -6,6 +6,7 @@ import {
   getAllCachedPages
 } from '@/lib/newsCache';
 import { createClient } from '@supabase/supabase-js';
+import { cleanForCartoon } from '@/lib/cartoonKey';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
@@ -121,15 +122,7 @@ export async function GET(request: Request) {
   }
 }
 
-function cleanForCartoon(title: any) {
-  return String(title ?? '')
-    .replace(/\s*\([^)]*\)\s*/g, ' ') // remove parenthetical
-    .replace(/\s*-\s*.*$/, '') // remove " - Source" suffix
-    .replace(/[\"']/g, '')
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+// (moved) cleanForCartoon is now imported from @/lib/cartoonKey
 
 async function fetchHeadlinesFromDatabase() {
   try {
