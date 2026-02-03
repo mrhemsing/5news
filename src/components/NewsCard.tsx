@@ -67,7 +67,11 @@ export default function NewsCard({
     null
   );
   const [isStopping, setIsStopping] = useState(false);
-  const [useProxy, setUseProxy] = useState(true);
+  // Use the proxy for Replicate URLs (CORS/expiry quirks). For durable Supabase Storage URLs,
+  // load directly to avoid caching proxy error responses.
+  const [useProxy, setUseProxy] = useState(
+    !(article.cartoonUrl && /supabase\.co\/storage\/v1\/object\/public\//i.test(article.cartoonUrl))
+  );
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Clear cartoon URL when image fails to load
@@ -123,7 +127,7 @@ export default function NewsCard({
     setCartoonUrl(article.cartoonUrl ?? null);
     setImageError(false);
     setRetryCount(0);
-    setUseProxy(true);
+    setUseProxy(!(article.cartoonUrl && /supabase\.co\/storage\/v1\/object\/public\//i.test(article.cartoonUrl)));
     setCartoonLoading(false); // Ensure loading state is reset
 
     // Generate cartoon only if we don't already have a cached thumbnail from the server.
@@ -138,7 +142,7 @@ export default function NewsCard({
       setCartoonUrl(null);
       setImageError(false);
       setRetryCount(0);
-      setUseProxy(true);
+      setUseProxy(!(article.cartoonUrl && /supabase\.co\/storage\/v1\/object\/public\//i.test(article.cartoonUrl)));
       setCartoonLoading(false);
     };
   }, [article.id, article.cartoonUrl]); // Preserve cached thumbnails when provided
