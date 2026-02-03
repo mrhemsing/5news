@@ -30,6 +30,17 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(input, { ...init, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 interface NewsCardProps {
   article: NewsArticle;
   onExplain: (articleId: string, explanation: string) => void;
@@ -139,14 +150,21 @@ export default function NewsCard({
     // This avoids having 20+ requests all immediately 429.
     await enqueueCartoonTask(async () => {
       try {
+        // Small delay so multiple tabs/devices don't align perfectly.
+        await sleep(Math.floor(Math.random() * 800));
+
         for (let attempt = 0; attempt < 3; attempt++) {
           console.log(`Generating cartoon (attempt ${attempt + 1}):`, headline);
 
-          const response = await fetch('/api/cartoonize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ headline })
-          });
+          const response = await fetchWithTimeout(
+            '/api/cartoonize',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ headline })
+            },
+            25000
+          );
 
           console.log(`Cartoon API response status: ${response.status}`);
 
@@ -183,6 +201,9 @@ export default function NewsCard({
         console.log('Giving up on cartoon generation for this headline (for now)');
       } catch (error) {
         console.error('Error generating cartoon:', error);
+
+        // If this request hung and got aborted, wait a beat so we don't hammer immediately.
+        await sleep(500);
       }
     });
 
