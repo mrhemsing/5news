@@ -49,13 +49,13 @@ function jaccard(a: string[], b: string[]): number {
 
 function aggressiveDedupeHeadlines<T extends { title: string; publishedAt: string }>(rows: T[]): T[] {
   // Keep newest item per "topic cluster".
-  // Aggressive mode: cluster if the first ~3-4 meaningful tokens match OR if Jaccard overlap is high.
+  // Aggressive mode: cluster if the first ~3 meaningful tokens match OR if Jaccard overlap is moderate.
   const kept: T[] = [];
   const clusters: { repTokens: string[]; prefixKey: string }[] = [];
 
   for (const row of rows) {
     const toks = tokensForDedupe(row.title);
-    const prefixKey = toks.slice(0, 4).join(' '); // aggressive: small prefix
+    const prefixKey = toks.slice(0, 3).join(' '); // more aggressive (e.g., "turpin siblings case")
 
     let dup = false;
     for (let i = 0; i < clusters.length; i++) {
@@ -65,7 +65,7 @@ function aggressiveDedupeHeadlines<T extends { title: string; publishedAt: strin
         break;
       }
       const sim = jaccard(toks, c.repTokens);
-      if (sim >= 0.55) {
+      if (sim >= 0.45) {
         dup = true;
         break;
       }
