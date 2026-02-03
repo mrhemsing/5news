@@ -71,8 +71,12 @@ class RequestQueue {
 
 const requestQueue = new RequestQueue();
 
-// Function to validate if a cartoon URL is still accessible
-async function validateCartoonUrl(url: string): Promise<boolean> {
+// Function to validate if a cartoon URL is still accessible.
+// Returns:
+// - true  => confirmed accessible
+// - false => confirmed expired (404)
+// - null  => inconclusive (timeout/network/etc) — do NOT delete cache on this
+async function validateCartoonUrl(url: string): Promise<boolean | null> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
@@ -97,8 +101,8 @@ async function validateCartoonUrl(url: string): Promise<boolean> {
 
     return response.ok;
   } catch (error) {
-    console.log('URL validation failed:', error);
-    return false;
+    console.log('URL validation inconclusive (will keep cache):', error);
+    return null;
   }
 }
 
@@ -159,27 +163,44 @@ export async function POST(request: Request) {
       // Validate if the cached URL is still accessible (with timeout)
       try {
         const isUrlValid = await validateCartoonUrl(cachedCartoon);
-        if (isUrlValid) {
+
+        if (isUrlValid === true) {
           console.log('Cached cartoon URL is still valid');
           return NextResponse.json({
             cartoonUrl: cachedCartoon,
             success: true,
             cached: true
           });
-        } else {
+        }
+
+        if (isUrlValid === false) {
           console.log(
-            'Cached cartoon URL validation failed (expired), deleting from cache and regenerating...'
+            'Cached cartoon URL is expired (404), deleting from cache and regenerating...'
           );
           // Delete expired cache entry
           await deleteCachedCartoon(cleaned);
           // Continue to generate new cartoon
+        } else {
+          // Inconclusive validation (timeout/network). Keep cache and return it.
+          console.log('Cached cartoon URL validation inconclusive; returning cached URL');
+          return NextResponse.json({
+            cartoonUrl: cachedCartoon,
+            success: true,
+            cached: true,
+            warning: 'Using cached image - validation inconclusive'
+          });
         }
       } catch (validationError) {
         console.log(
-          'URL validation error (might be transient), will try to regenerate:',
+          'URL validation error (might be transient), returning cached URL:',
           validationError
         );
-        // Continue to generate new cartoon - validation might have timed out
+        return NextResponse.json({
+          cartoonUrl: cachedCartoon,
+          success: true,
+          cached: true,
+          warning: 'Using cached image - validation errored'
+        });
       }
     }
 
