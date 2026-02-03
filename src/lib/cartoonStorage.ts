@@ -64,7 +64,7 @@ export async function storeCartoonInSupabaseStorage(opts: {
     .from(bucket)
     .upload(objectPath, bytes, {
       upsert: true,
-      contentType: isJpeg ? 'image/jpeg' : (isPng ? 'image/png' : (ct || 'image/png')),
+      contentType: isJpeg ? 'image/jpeg' : isPng ? 'image/png' : ct || 'image/png',
       cacheControl: '31536000',
     });
 
@@ -72,11 +72,55 @@ export async function storeCartoonInSupabaseStorage(opts: {
     return { ok: false, reason: `Supabase upload failed: ${upErr.message}` };
   }
 
+  // Verify the object exists before returning a public URL.
+  // We’ve seen cases where a public URL is computed but the object is missing
+  // (Supabase public endpoint may return JSON: {"detail":"requested file not found"}).
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const { data: dl, error: dlErr } = await supabase.storage
+      .from(bucket)
+      .download(objectPath);
+
+    if (!dlErr && dl) {
+      break;
+    }
+
+    if (attempt === 3) {
+      return {
+        ok: false,
+        reason: `Supabase upload verification failed: ${dlErr?.message || 'download returned null'}`,
+      };
+    }
+
+    await new Promise(r => setTimeout(r, 250 * attempt));
+  }
+
   const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
   const publicUrl = data.publicUrl;
 
   if (!publicUrl) {
     return { ok: false, reason: 'Could not compute public URL after upload' };
+  }
+
+  // Also verify the *public* URL resolves to an image (not JSON "not found").
+  try {
+    const controller2 = new AbortController();
+    const timeoutId2 = setTimeout(() => controller2.abort(), 8000);
+    const pubRes = await fetch(publicUrl, {
+      method: 'GET',
+      signal: controller2.signal,
+      headers: { Range: 'bytes=0-1' },
+    });
+    clearTimeout(timeoutId2);
+
+    const pubCt = (pubRes.headers.get('content-type') || '').toLowerCase();
+    if (!pubRes.ok || pubCt.includes('application/json')) {
+      return {
+        ok: false,
+        reason: `Supabase public URL not accessible after upload: ${pubRes.status} ${pubCt}`,
+      };
+    }
+  } catch (e: any) {
+    return { ok: false, reason: `Supabase public URL verification threw: ${e?.message || String(e)}` };
   }
 
   return { ok: true, publicUrl, path: objectPath };
