@@ -6,6 +6,7 @@ import {
   acquireRateLimitLock,
   updateRateLimitLock
 } from '@/lib/cartoonCache';
+import { storeCartoonInSupabaseStorage } from '@/lib/cartoonStorage';
 
 // Configure for Vercel - allow up to 60 seconds for function execution
 export const maxDuration = 60;
@@ -430,23 +431,40 @@ export async function POST(request: Request) {
       throw new Error('Failed to generate cartoon image - invalid output');
     }
 
-    const cartoonUrl = result.output[0];
+    const replicateUrl = result.output[0];
 
-    if (!cartoonUrl) {
+    if (!replicateUrl) {
       throw new Error('Failed to generate cartoon image - no URL');
     }
 
-    console.log('Successfully generated cartoon URL:', cartoonUrl);
+    console.log('Successfully generated Replicate cartoon URL:', replicateUrl);
 
     // Update rate limit lock after successful request
     await updateRateLimitLock();
 
-    // Cache the generated cartoon
-    await setCachedCartoon(cleaned, cartoonUrl);
+    // Persist image to durable storage (Supabase Storage) so thumbnails don't disappear.
+    let finalUrl = replicateUrl;
+    try {
+      const stored = await storeCartoonInSupabaseStorage({
+        headlineKey: cleaned,
+        sourceUrl: replicateUrl,
+      });
+      if (stored.ok) {
+        finalUrl = stored.publicUrl;
+        console.log(`Stored cartoon in Supabase Storage: ${stored.path}`);
+      } else {
+        console.log(`Supabase Storage not used: ${stored.reason}`);
+      }
+    } catch (e) {
+      console.log('Supabase Storage upload failed (non-fatal), keeping Replicate URL:', e);
+    }
+
+    // Cache the (durable) URL.
+    await setCachedCartoon(cleaned, finalUrl);
     console.log('Cached new cartoon for headline');
 
     return NextResponse.json({
-      cartoonUrl,
+      cartoonUrl: finalUrl,
       success: true,
       cached: false
     });

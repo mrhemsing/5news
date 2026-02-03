@@ -58,6 +58,23 @@ Your GitHub Actions workflow is failing because `BASE_URL` is not set.
 3. **Check the logs** - should now show "✅ BASE_URL is set"
 4. **The cron job should succeed** and populate your database
 
+## Add Supabase Storage secrets (for durable thumbnails)
+
+To prevent thumbnails from disappearing (Replicate delivery URLs expire), the app can upload images to **Supabase Storage**.
+
+Add these **Vercel environment variables** (Project → Settings → Environment Variables):
+
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only)
+  - Find it in Supabase: Project Settings → API → **service_role** key
+  - ⚠️ Keep private. Never expose to the browser.
+
+Optional:
+- `SUPABASE_STORAGE_BUCKET` (default: `cartoons`)
+
+Also create a Supabase Storage bucket:
+- Bucket name: `cartoons` (or match `SUPABASE_STORAGE_BUCKET`)
+- Access: **Public** (read)
+
 ## Expected Result
 
 Once the secrets are added:
