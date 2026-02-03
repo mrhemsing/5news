@@ -12,6 +12,7 @@ export interface NewsArticle {
   content: string;
   simpleExplanation?: string;
   isExpanded?: boolean;
+  cartoonUrl?: string | null;
 }
 
 export interface NewsApiResponse {

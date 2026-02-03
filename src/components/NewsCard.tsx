@@ -56,7 +56,7 @@ export default function NewsCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [explanationError, setExplanationError] = useState(false);
-  const [cartoonUrl, setCartoonUrl] = useState<string | null>(null);
+  const [cartoonUrl, setCartoonUrl] = useState<string | null>(article.cartoonUrl ?? null);
   const [cartoonLoading, setCartoonLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -119,16 +119,18 @@ export default function NewsCard({
       `🔄 NewsCard useEffect triggered for article: ${article.id} - "${article.title}"`
     );
 
-    // Clear any existing cartoon when article changes
-    setCartoonUrl(null);
+    // Reset cartoon state when article changes; preserve any server-provided cached thumbnail.
+    setCartoonUrl(article.cartoonUrl ?? null);
     setImageError(false);
     setRetryCount(0);
     setUseProxy(true);
     setCartoonLoading(false); // Ensure loading state is reset
 
-    // Generate new cartoon for this headline
-    console.log(`🎨 Starting cartoon generation for: "${article.title}"`);
-    generateCartoon(article.title);
+    // Generate cartoon only if we don't already have a cached thumbnail from the server.
+    if (!article.cartoonUrl) {
+      console.log(`🎨 Starting cartoon generation for: "${article.title}"`);
+      generateCartoon(article.title);
+    }
 
     // Cleanup function to reset state when component unmounts or article changes
     return () => {
@@ -139,7 +141,7 @@ export default function NewsCard({
       setUseProxy(true);
       setCartoonLoading(false);
     };
-  }, [article.id]); // Use article.id instead of article.title to detect new articles
+  }, [article.id, article.cartoonUrl]); // Preserve cached thumbnails when provided
 
   const generateCartoon = async (headline: string) => {
     if (cartoonUrl || cartoonLoading) return;

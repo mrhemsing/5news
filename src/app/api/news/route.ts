@@ -121,6 +121,16 @@ export async function GET(request: Request) {
   }
 }
 
+function cleanForCartoon(title) {
+  return String(title ?? '')
+    .replace(/\s*\([^)]*\)\s*/g, ' ') // remove parenthetical
+    .replace(/\s*-\s*.*$/, '') // remove " - Source" suffix
+    .replace(/[\"']/g, '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function fetchHeadlinesFromDatabase() {
   try {
     const supabase = createClient(
@@ -145,21 +155,47 @@ async function fetchHeadlinesFromDatabase() {
       return null;
     }
 
-    // Transform to match the expected NewsArticle format
-    const transformedHeadlines = headlines.map((headline: any) => ({
-      id: headline.id,
-      title: headline.title,
-      url: headline.url,
-      publishedAt: headline.publishedAt,
-      description: headline.title, // Use title as description for now
-      content: headline.title,
-      urlToImage: '',
-      source: {
-        id: null,
-        name: headline.source || 'ABC News'
-      },
-      fetchedAt: headline.fetchedAt // Preserve the fetchedAt timestamp
-    }));
+    // Build a lookup of cached cartoons for the current headline batch.
+    const keys = Array.from(
+      new Set(headlines.map((h: any) => cleanForCartoon(h.title)).filter(Boolean))
+    );
+
+    let cartoonMap = new Map<string, string>();
+    if (keys.length) {
+      // Supabase 'in' can handle lists; keep it bounded.
+      const { data: cartoons, error: cartoonsError } = await supabase
+        .from('cartoon_cache')
+        .select('headline,cartoon_url')
+        .in('headline', keys.slice(0, 100));
+
+      if (cartoonsError) {
+        console.log('⚠️ Could not fetch cartoon cache (non-fatal):', cartoonsError.message);
+      } else if (cartoons) {
+        for (const row of cartoons as any[]) {
+          if (row?.headline && row?.cartoon_url) cartoonMap.set(row.headline, row.cartoon_url);
+        }
+      }
+    }
+
+    // Transform to match the expected NewsArticle format.
+    const transformedHeadlines = headlines.map((headline: any) => {
+      const key = cleanForCartoon(headline.title);
+      return {
+        id: headline.id,
+        title: headline.title,
+        url: headline.url,
+        publishedAt: headline.publishedAt,
+        description: headline.title, // Use title as description for now
+        content: headline.title,
+        urlToImage: '',
+        source: {
+          id: null,
+          name: headline.source || 'ABC News'
+        },
+        fetchedAt: headline.fetchedAt, // Preserve the fetchedAt timestamp
+        cartoonUrl: key ? (cartoonMap.get(key) ?? null) : null,
+      };
+    });
 
     console.log(
       `✅ Successfully fetched ${transformedHeadlines.length} headlines from database`
