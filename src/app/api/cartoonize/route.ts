@@ -161,6 +161,31 @@ export async function POST(request: Request) {
     if (cachedCartoon) {
       console.log('Found cached cartoon for headline, validating URL...');
 
+      // If the cached URL is a Replicate delivery URL, migrate it to Supabase Storage
+      // so it doesn't expire in incognito/new devices.
+      if (/^https?:\/\/replicate\.delivery\//i.test(cachedCartoon)) {
+        try {
+          const stored = await storeCartoonInSupabaseStorage({
+            headlineKey: cleaned,
+            sourceUrl: cachedCartoon,
+          });
+          if (stored.ok) {
+            await setCachedCartoon(cleaned, stored.publicUrl);
+            console.log(`Migrated cached Replicate URL to Supabase Storage: ${stored.path}`);
+            return NextResponse.json({
+              cartoonUrl: stored.publicUrl,
+              success: true,
+              cached: true,
+              migrated: true,
+            });
+          } else {
+            console.log(`Replicate->Storage migration skipped: ${stored.reason}`);
+          }
+        } catch (e) {
+          console.log('Replicate->Storage migration failed (non-fatal):', e);
+        }
+      }
+
       // Validate if the cached URL is still accessible (with timeout)
       try {
         const isUrlValid = await validateCartoonUrl(cachedCartoon);
