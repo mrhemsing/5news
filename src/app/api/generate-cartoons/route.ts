@@ -3,6 +3,9 @@ import { getCachedCartoon } from '@/lib/cartoonCache';
 import { createClient } from '@supabase/supabase-js';
 import { cleanForCartoon } from '@/lib/cartoonKey';
 
+// Allow this route more time; warming multiple thumbnails can take a while.
+export const maxDuration = 300;
+
 async function fetchHeadlinesFromDatabase(limit = 25) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -34,9 +37,9 @@ export async function POST() {
     console.log(`Found ${headlines.length} headlines to process`);
     const results = [];
 
-    // Process a modest batch per run; we keep this conservative to avoid 429s and timeouts,
-    // but high enough that most page visits won't need client-side generation.
-    const MAX_PER_RUN = 10;
+    // Process a modest batch per run; keep this conservative to avoid 429s/timeouts.
+    // The workflow calls this endpoint multiple times with sleeps in-between.
+    const MAX_PER_RUN = 4;
     const headlinesToProcess = headlines.slice(0, 40).slice(0, MAX_PER_RUN);
 
     for (const row of headlinesToProcess) {
