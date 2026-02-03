@@ -31,7 +31,7 @@ export default function Home() {
           console.log('Found saved articles in localStorage:', parsedData);
           const isRecent =
             parsedData.timestamp &&
-            Date.now() - parsedData.timestamp < 15 * 60 * 1000;
+            Date.now() - parsedData.timestamp < 5 * 60 * 1000;
           if (
             isRecent &&
             Array.isArray(parsedData.articles) &&
@@ -44,6 +44,14 @@ export default function Home() {
             setArticles(parsedData.articles);
             setLoading(false);
             console.log('Articles restored, loading state set to false');
+
+            // Even if we restore from localStorage, immediately refresh in the background.
+            // This avoids the "regular browser is stale, incognito is fresh" effect.
+            setTimeout(() => {
+              console.log('Refreshing headlines in background after localStorage restore...');
+              fetchNews(1, false, true);
+            }, 0);
+
             return true;
           } else {
             console.log('Saved articles are stale or invalid, cleaning up...');
