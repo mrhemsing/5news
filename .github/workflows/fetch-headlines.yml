@@ -56,7 +56,23 @@ jobs:
 
       - name: Pre-generate cartoons (warm cache)
         run: |
-          echo "Warming cartoon cache via: ${{ secrets.BASE_URL }}/api/generate-cartoons"
+          echo "Warming cartoon cache via: ${{ secrets.BASE_URL }}/api/generate-cartoons (batch 1)"
+          curl -X POST "${{ secrets.BASE_URL }}/api/generate-cartoons" \
+            -H "Content-Type: application/json" \
+            -v
+
+          echo "Sleeping 180s before batch 2..."
+          sleep 180
+
+          echo "Warming cartoon cache via: ${{ secrets.BASE_URL }}/api/generate-cartoons (batch 2)"
+          curl -X POST "${{ secrets.BASE_URL }}/api/generate-cartoons" \
+            -H "Content-Type: application/json" \
+            -v
+
+          echo "Sleeping 180s before batch 3..."
+          sleep 180
+
+          echo "Warming cartoon cache via: ${{ secrets.BASE_URL }}/api/generate-cartoons (batch 3)"
           curl -X POST "${{ secrets.BASE_URL }}/api/generate-cartoons" \
             -H "Content-Type: application/json" \
             -v
