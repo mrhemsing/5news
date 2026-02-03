@@ -82,7 +82,7 @@ export default function NewsCard({
       setTimeout(() => {
         setRetryCount(0); // Reset retry count for fresh generation
         setUseProxy(true); // Reset to use proxy for next attempt
-        generateCartoon(article.title, 0);
+        generateCartoon(article.title);
       }, 1000); // Wait 1 second before regenerating
       return;
     }
@@ -93,7 +93,7 @@ export default function NewsCard({
       setTimeout(() => {
         setRetryCount(retryCount + 1);
         setUseProxy(true); // Reset to use proxy for next attempt
-        generateCartoon(article.title, retryCount + 1);
+        generateCartoon(article.title);
       }, 2000); // Wait 2 seconds before retry
     } else {
       console.log(
