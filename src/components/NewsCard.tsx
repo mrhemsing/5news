@@ -10,6 +10,9 @@ import Image from 'next/image';
 declare global {
   interface Window {
     __abcnewzCartoonQueue?: Promise<unknown>;
+    // Limit how many cartoons we auto-generate per page load so users don't stare at
+    // a screen full of spinners while we serialize requests.
+    __abcnewzAutoGenBudget?: number;
   }
 }
 
@@ -73,6 +76,7 @@ export default function NewsCard({
     !(article.cartoonUrl && /supabase\.co\/storage\/v1\/object\/public\//i.test(article.cartoonUrl))
   );
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // Clear cartoon URL when image fails to load
   const handleImageError = () => {
@@ -130,10 +134,62 @@ export default function NewsCard({
     setUseProxy(!(article.cartoonUrl && /supabase\.co\/storage\/v1\/object\/public\//i.test(article.cartoonUrl)));
     setCartoonLoading(false); // Ensure loading state is reset
 
-    // Generate cartoon only if we don't already have a cached thumbnail from the server.
+    // Auto-generate cartoons conservatively:
+    // - Only when the card is actually visible
+    // - Only for a small number of items per page load (budget)
+    // This avoids a screen full of loading spinners and reduces rate-limit churn.
     if (!article.cartoonUrl) {
-      console.log(`🎨 Starting cartoon generation for: "${article.title}"`);
-      generateCartoon(article.title);
+      if (typeof window !== 'undefined' && window.__abcnewzAutoGenBudget == null) {
+        window.__abcnewzAutoGenBudget = 6; // tweakable
+      }
+
+      const tryAutoGenerate = () => {
+        if (cartoonUrl || cartoonLoading) return;
+        if (typeof window !== 'undefined') {
+          const budget = window.__abcnewzAutoGenBudget ?? 0;
+          if (budget <= 0) {
+            console.log('🎨 Auto-gen budget exhausted; leaving placeholder until user triggers');
+            return;
+          }
+          window.__abcnewzAutoGenBudget = budget - 1;
+        }
+        console.log(`🎨 Auto-generating cartoon (visible) for: "${article.title}"`);
+        generateCartoon(article.title);
+      };
+
+      const el = rootRef.current;
+      let obs: IntersectionObserver | null = null;
+
+      if (el && typeof IntersectionObserver !== 'undefined') {
+        obs = new IntersectionObserver(
+          entries => {
+            for (const entry of entries) {
+              if (entry.isIntersecting) {
+                obs?.disconnect();
+                // Tiny jitter so multiple cards entering view don't align perfectly.
+                setTimeout(tryAutoGenerate, Math.floor(Math.random() * 400));
+                break;
+              }
+            }
+          },
+          { root: null, threshold: 0.2 }
+        );
+
+        obs.observe(el);
+      } else {
+        // Fallback: don't auto-generate if we can't observe visibility.
+        console.log('🎨 Visibility observer unavailable; leaving placeholder until user triggers');
+      }
+
+      return () => {
+        obs?.disconnect();
+        console.log(`🧹 Cleaning up NewsCard for article: ${article.id}`);
+        setCartoonUrl(null);
+        setImageError(false);
+        setRetryCount(0);
+        setUseProxy(!(article.cartoonUrl && /supabase\.co\/storage\/v1\/object\/public\//i.test(article.cartoonUrl)));
+        setCartoonLoading(false);
+      };
     }
 
     // Cleanup function to reset state when component unmounts or article changes
@@ -406,7 +462,7 @@ export default function NewsCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-visible border border-gray-200">
+    <div ref={rootRef} className="bg-white rounded-lg shadow-md overflow-visible border border-gray-200">
       <div className="p-6">
         <div className="flex items-start space-x-4">
           <div className="flex-shrink-0">
@@ -432,7 +488,11 @@ export default function NewsCard({
                   unoptimized={true}
                 />
               ) : (
-                <div className="w-[120px] h-[80px] bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
+                <div
+                  className="w-[120px] h-[80px] bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center cursor-pointer"
+                  title="Generate cartoon"
+                  onClick={() => generateCartoon(article.title)}
+                >
                   <div className="text-center">
                     <div className="text-gray-400 text-2xl mb-1">🎨</div>
                     <div className="text-xs text-gray-500 font-medium">
