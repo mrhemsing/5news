@@ -1,16 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCachedCartoon } from '@/lib/cartoonCache';
 import { createClient } from '@supabase/supabase-js';
-
-function cleanHeadline(title: string): string {
-  return title
-    .replace(/\s*\([^)]*\)\s*/g, ' ') // remove parenthetical
-    .replace(/\s*-\s*.*$/, '') // remove " - Source" suffix
-    .replace(/['"]/g, '')
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+import { cleanForCartoon } from '@/lib/cartoonKey';
 
 async function fetchHeadlinesFromDatabase(limit = 25) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -43,15 +34,15 @@ export async function POST() {
     console.log(`Found ${headlines.length} headlines to process`);
     const results = [];
 
-    // Only process a small batch per run; generating a single image can take ~30-60s,
-    // and serverless functions have tight execution limits.
-    const MAX_PER_RUN = 3;
-    const headlinesToProcess = headlines.slice(0, 25).slice(0, MAX_PER_RUN);
+    // Process a modest batch per run; we keep this conservative to avoid 429s and timeouts,
+    // but high enough that most page visits won't need client-side generation.
+    const MAX_PER_RUN = 10;
+    const headlinesToProcess = headlines.slice(0, 40).slice(0, MAX_PER_RUN);
 
     for (const row of headlinesToProcess) {
       try {
         const rawTitle = String(row.title ?? '').trim();
-        const headline = cleanHeadline(rawTitle);
+        const headline = cleanForCartoon(rawTitle);
         if (!headline) continue;
 
         console.log(`Processing headline: ${headline}`);

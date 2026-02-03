@@ -53,3 +53,10 @@ jobs:
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           CRON_SECRET_KEY: ${{ secrets.CRON_SECRET_KEY }}
+
+      - name: Pre-generate cartoons (warm cache)
+        run: |
+          echo "Warming cartoon cache via: ${{ secrets.BASE_URL }}/api/generate-cartoons"
+          curl -X POST "${{ secrets.BASE_URL }}/api/generate-cartoons" \
+            -H "Content-Type: application/json" \
+            -v
