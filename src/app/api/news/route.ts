@@ -8,6 +8,78 @@ import {
 import { createClient } from '@supabase/supabase-js';
 import { cleanForCartoon } from '@/lib/cartoonKey';
 
+function normalizeForDedupe(title: string): string {
+  return String(title ?? '')
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)\s*/g, ' ') // remove parenthetical
+    .replace(/\s*-\s*.*$/, '') // remove " - Source" suffix
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const DEDUPE_STOPWORDS = new Set([
+  'a','an','the','and','or','but','to','of','in','on','for','with','at','by','from','as','into','over','after','before','about','amid','among',
+  'is','are','was','were','be','been','being',
+  'says','say','said','report','reports','reporting','according',
+  'live','watch','update','updates','breaking',
+  'statement','statements','new','latest'
+]);
+
+function tokensForDedupe(title: string): string[] {
+  const norm = normalizeForDedupe(title);
+  if (!norm) return [];
+  return norm
+    .split(' ')
+    .filter(t => t && !DEDUPE_STOPWORDS.has(t));
+}
+
+function jaccard(a: string[], b: string[]): number {
+  const A = new Set(a);
+  const B = new Set(b);
+  if (A.size === 0 || B.size === 0) return 0;
+  let inter = 0;
+  // Avoid relying on downlevel iteration settings.
+  A.forEach(x => {
+    if (B.has(x)) inter++;
+  });
+  const union = A.size + B.size - inter;
+  return union ? inter / union : 0;
+}
+
+function aggressiveDedupeHeadlines<T extends { title: string; publishedAt: string }>(rows: T[]): T[] {
+  // Keep newest item per "topic cluster".
+  // Aggressive mode: cluster if the first ~3-4 meaningful tokens match OR if Jaccard overlap is high.
+  const kept: T[] = [];
+  const clusters: { repTokens: string[]; prefixKey: string }[] = [];
+
+  for (const row of rows) {
+    const toks = tokensForDedupe(row.title);
+    const prefixKey = toks.slice(0, 4).join(' '); // aggressive: small prefix
+
+    let dup = false;
+    for (let i = 0; i < clusters.length; i++) {
+      const c = clusters[i];
+      if (prefixKey && c.prefixKey && prefixKey === c.prefixKey) {
+        dup = true;
+        break;
+      }
+      const sim = jaccard(toks, c.repTokens);
+      if (sim >= 0.55) {
+        dup = true;
+        break;
+      }
+    }
+
+    if (!dup) {
+      kept.push(row);
+      clusters.push({ repTokens: toks, prefixKey });
+    }
+  }
+
+  return kept;
+}
+
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic';
 
@@ -87,11 +159,22 @@ export async function GET(request: Request) {
       `🏀 Filtered out ${filteredCount} sports stories (${headlines.length} -> ${filteredHeadlines.length})`
     );
 
+    // Aggressive de-dupe of similar headlines (user preference)
+    // Sort newest first to keep the most recent item in each cluster.
+    const sortedForDedupe = [...filteredHeadlines].sort(
+      (a: any, b: any) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
+    const dedupedHeadlines = aggressiveDedupeHeadlines(sortedForDedupe);
+    const dedupedCount = filteredHeadlines.length - dedupedHeadlines.length;
+    if (dedupedCount > 0) {
+      console.log(`🧹 Deduped ${dedupedCount} similar headlines (${filteredHeadlines.length} -> ${dedupedHeadlines.length})`);
+    }
+
     // Apply pagination
     const articlesPerPage = 20;
     const startIndex = (page - 1) * articlesPerPage;
     const endIndex = startIndex + articlesPerPage;
-    const paginatedHeadlines = filteredHeadlines.slice(startIndex, endIndex);
+    const paginatedHeadlines = dedupedHeadlines.slice(startIndex, endIndex);
 
     console.log(
       `📊 Returning ${
@@ -107,11 +190,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       articles: paginatedHeadlines,
-      totalResults: filteredHeadlines.length,
-      hasMore: endIndex < filteredHeadlines.length,
+      totalResults: dedupedHeadlines.length,
+      hasMore: endIndex < dedupedHeadlines.length,
       page: page,
-      totalPages: Math.ceil(filteredHeadlines.length / articlesPerPage),
-      databaseTimestamp: filteredHeadlines[0]?.fetchedAt || null
+      totalPages: Math.ceil(dedupedHeadlines.length / articlesPerPage),
+      databaseTimestamp: dedupedHeadlines[0]?.fetchedAt || null
     });
   } catch (error) {
     console.error('Error fetching news:', error);
