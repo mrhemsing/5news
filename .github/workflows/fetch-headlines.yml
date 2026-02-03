@@ -55,6 +55,7 @@ jobs:
           CRON_SECRET_KEY: ${{ secrets.CRON_SECRET_KEY }}
 
       - name: Pre-generate cartoons (real background warm)
+        continue-on-error: true
         run: |
           echo "Warming cartoon cache via direct script (Replicate -> Supabase Storage)"
           npm run generate-cartoons
