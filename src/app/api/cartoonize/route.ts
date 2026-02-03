@@ -100,6 +100,14 @@ async function validateCartoonUrl(url: string): Promise<boolean | null> {
       return false;
     }
 
+    // Supabase Storage may return a JSON body like {"detail":"requested file not found"}
+    // with a 200 status. Treat non-image content as invalid.
+    const ct = (response.headers.get('content-type') || '').toLowerCase();
+    if (ct.includes('application/json')) {
+      console.log('URL validation: non-image content-type, treating as invalid:', ct);
+      return false;
+    }
+
     return response.ok;
   } catch (error) {
     console.log('URL validation inconclusive (will keep cache):', error);
