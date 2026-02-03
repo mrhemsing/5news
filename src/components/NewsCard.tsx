@@ -140,7 +140,7 @@ export default function NewsCard({
     // This avoids a screen full of loading spinners and reduces rate-limit churn.
     if (!article.cartoonUrl) {
       if (typeof window !== 'undefined' && window.__abcnewzAutoGenBudget == null) {
-        window.__abcnewzAutoGenBudget = 6; // tweakable
+        window.__abcnewzAutoGenBudget = 10; // tweakable
       }
 
       const tryAutoGenerate = () => {
