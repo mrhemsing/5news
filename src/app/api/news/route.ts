@@ -121,7 +121,7 @@ export async function GET(request: Request) {
   }
 }
 
-function cleanForCartoon(title) {
+function cleanForCartoon(title: any) {
   return String(title ?? '')
     .replace(/\s*\([^)]*\)\s*/g, ' ') // remove parenthetical
     .replace(/\s*-\s*.*$/, '') // remove " - Source" suffix

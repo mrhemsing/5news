@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import openai from '@/lib/openai';
+import { getOpenAI } from '@/lib/openai';
 
 export async function POST(request: Request) {
   try {
@@ -19,6 +19,7 @@ Content: ${content}
 
 Please provide a simple explanation that a 5-year-old would understand:`;
 
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -43,6 +44,16 @@ Please provide a simple explanation that a 5-year-old would understand:`;
     return NextResponse.json({ explanation });
   } catch (error) {
     console.error('Error generating explanation:', error);
+
+    // If OpenAI isn't configured on the deployment, return a friendly error for the UI.
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('OPENAI_API_KEY is missing')) {
+      return NextResponse.json(
+        { error: 'Explain is temporarily unavailable (missing OPENAI_API_KEY)' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to generate explanation' },
       { status: 500 }
