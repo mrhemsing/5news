@@ -1,16 +1,42 @@
 import { NextResponse } from 'next/server';
-import { getCachedNews } from '@/lib/newsCache';
 import { getCachedCartoon } from '@/lib/cartoonCache';
+import { createClient } from '@supabase/supabase-js';
+
+function cleanHeadline(title: string): string {
+  return title
+    .replace(/\s*\([^)]*\)\s*/g, ' ') // remove parenthetical
+    .replace(/\s*-\s*.*$/, '') // remove " - Source" suffix
+    .replace(/['"]/g, '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function fetchHeadlinesFromDatabase(limit = 25) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return [];
+
+  const supabase = createClient(url, key);
+  const { data, error } = await supabase
+    .from('headlines')
+    .select('*')
+    .order('publishedAt', { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return data;
+}
 
 export async function POST() {
   try {
-    // Get headlines from cache (last 48 hours)
-    const headlines = await getCachedNews();
+    // Pull the same headlines the site is showing (from Supabase "headlines" table).
+    const headlines = await fetchHeadlinesFromDatabase(40);
 
     if (!headlines || headlines.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'No headlines found in cache'
+        error: 'No headlines found in database'
       });
     }
 
@@ -19,15 +45,18 @@ export async function POST() {
 
     // Only process a small batch per run; generating a single image can take ~30-60s,
     // and serverless functions have tight execution limits.
-    const MAX_PER_RUN = 2;
+    const MAX_PER_RUN = 3;
     const headlinesToProcess = headlines.slice(0, 25).slice(0, MAX_PER_RUN);
 
-    for (const article of headlinesToProcess) {
+    for (const row of headlinesToProcess) {
       try {
-        const headline = article.title;
+        const rawTitle = String(row.title ?? '').trim();
+        const headline = cleanHeadline(rawTitle);
+        if (!headline) continue;
+
         console.log(`Processing headline: ${headline}`);
 
-        // Check if cartoon already exists
+        // Check if cartoon already exists (cache key matches /api/cartoonize cleaning)
         const existingCartoon = await getCachedCartoon(headline);
         if (existingCartoon) {
           console.log(`Cartoon already cached for: ${headline}`);
@@ -76,9 +105,9 @@ export async function POST() {
           });
         }
       } catch (error) {
-        console.error(`Error processing headline "${article.title}":`, error);
+        console.error(`Error processing headline "${String((row as any)?.title ?? '')}":`, error);
         results.push({
-          headline: article.title,
+          headline: String((row as any)?.title ?? ''),
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error'
         });
