@@ -54,25 +54,15 @@ jobs:
           BASE_URL: ${{ secrets.BASE_URL }}
           CRON_SECRET_KEY: ${{ secrets.CRON_SECRET_KEY }}
 
-      - name: Pre-generate cartoons (warm cache)
+      - name: Pre-generate cartoons (real background warm)
         run: |
-          echo "Warming cartoon cache via: ${{ secrets.BASE_URL }}/api/generate-cartoons (batch 1)"
-          curl -X POST "${{ secrets.BASE_URL }}/api/generate-cartoons" \
-            -H "Content-Type: application/json" \
-            -v
-
-          echo "Sleeping 180s before batch 2..."
-          sleep 180
-
-          echo "Warming cartoon cache via: ${{ secrets.BASE_URL }}/api/generate-cartoons (batch 2)"
-          curl -X POST "${{ secrets.BASE_URL }}/api/generate-cartoons" \
-            -H "Content-Type: application/json" \
-            -v
-
-          echo "Sleeping 180s before batch 3..."
-          sleep 180
-
-          echo "Warming cartoon cache via: ${{ secrets.BASE_URL }}/api/generate-cartoons (batch 3)"
-          curl -X POST "${{ secrets.BASE_URL }}/api/generate-cartoons" \
-            -H "Content-Type: application/json" \
-            -v
+          echo "Warming cartoon cache via direct script (Replicate -> Supabase Storage)"
+          npm run generate-cartoons
+        env:
+          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_STORAGE_BUCKET: cartoons
+          CARTOON_WARM_LIMIT: 60
+          CARTOON_WARM_MAX_NEW: 12
+          CARTOON_WARM_MIN_DELAY_MS: 16000
