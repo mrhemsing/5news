@@ -622,7 +622,7 @@ export default function Home() {
         <div className="absolute bottom-60 right-1/4 w-6 h-7 bg-emerald-200 rounded-full opacity-25"></div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 relative z-10">
+      <div className="container mx-auto px-4 pt-4 pb-2 relative z-10">
         {/* Header */}
         <div className="text-center mb-0">
           <div className="flex justify-center mb-5">
@@ -1003,8 +1003,8 @@ export default function Home() {
       </div>
 
       <div className="relative z-10">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto space-y-6">
+        <div className="container mx-auto px-4 pt-2 pb-8">
+          <div className="max-w-4xl mx-auto mt-5 space-y-3">
             {removeDuplicates(
               articles
                 .filter(article => !failedArticles.has(article.id))
@@ -1054,7 +1054,7 @@ export default function Home() {
             )}
 
             {!hasMore && articles.length > 0 && (
-              <div className="text-center py-8">
+              <div className="text-center pt-6 pb-2">
                 <p className="text-gray-500 dark:text-gray-400">
                   You&apos;ve reached the end of the headlines!
                 </p>
@@ -1062,7 +1062,7 @@ export default function Home() {
             )}
           </div>
 
-          <div className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
+          <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
             <p>Powered by Google News RSS, OpenAI and Eleven Labs.</p>
             {/* <p className="mt-4">
               &copy; {new Date().getFullYear()}{' '}
