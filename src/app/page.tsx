@@ -219,12 +219,26 @@ export default function Home() {
       );
 
       if (!response.ok) {
+        let errorMessage = 'Failed to fetch news';
+
+        try {
+          const errorData = await response.json();
+          if (errorData?.error) {
+            errorMessage = errorData.error;
+          } else if (errorData?.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // Ignore JSON parse errors and keep fallback message.
+        }
+
         if (response.status === 429) {
           throw new Error(
             'Rate limit exceeded. Please try again in a few minutes.'
           );
         }
-        throw new Error('Failed to fetch news');
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -287,7 +301,11 @@ export default function Home() {
         console.log('Fetch request was aborted');
         return;
       }
-      setError('Failed to load news. Please try again later.');
+      if (err instanceof Error && err.message) {
+        setError(err.message);
+      } else {
+        setError('Failed to load news. Please try again later.');
+      }
       console.error('Error fetching news:', err);
     } finally {
       console.log('fetchNews finally block: setting loading states to false');

@@ -209,10 +209,19 @@ export async function GET(request: Request) {
 
 async function fetchHeadlinesFromDatabase() {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabaseUrl =
+      process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseAnonKey =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error(
+        '❌ Missing Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_URL/SUPABASE_ANON_KEY).'
+      );
+      return null;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     // Fetch headlines from the centralized database, sorted by published date (newest first)
     const { data: headlines, error } = await supabase
