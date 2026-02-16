@@ -390,7 +390,7 @@ export default function Home() {
   if (initialLoading) {
     return (
       <div className="min-h-screen relative overflow-hidden">
-        <div className="absolute inset-0 bg-white md:bg-gradient-to-br md:from-blue-100 md:via-green-100 md:to-yellow-100">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-100 to-yellow-100">
           <div className="absolute top-10 left-10 w-16 h-16 opacity-20">
             <div className="w-full h-full bg-green-400 rounded-full"></div>
             <div className="absolute -bottom-2 left-2 w-8 h-4 bg-green-500 rounded-full"></div>
@@ -451,7 +451,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen relative overflow-hidden">
-        <div className="absolute inset-0 bg-white md:bg-gradient-to-br md:from-blue-100 md:via-green-100 md:to-yellow-100">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-100 to-yellow-100">
           <div className="absolute top-10 left-10 w-16 h-16 opacity-20">
             <div className="w-full h-full bg-green-400 rounded-full"></div>
             <div className="absolute -bottom-2 left-2 w-8 h-4 bg-green-500 rounded-full"></div>
@@ -513,7 +513,7 @@ export default function Home() {
   if (error) {
     return (
       <div className="min-h-screen relative overflow-hidden">
-        <div className="absolute inset-0 bg-white md:bg-gradient-to-br md:from-blue-100 md:via-green-100 md:to-yellow-100">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-100 to-yellow-100">
           <div className="absolute top-10 left-10 w-16 h-16 opacity-20">
             <div className="w-full h-full bg-green-400 rounded-full"></div>
             <div className="absolute -bottom-2 left-2 w-8 h-4 bg-green-500 rounded-full"></div>
@@ -580,7 +580,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-white md:bg-gradient-to-br md:from-green-100 md:via-green-50 md:to-emerald-100">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-green-100 via-green-50 to-emerald-100">
       {/* Dinosaur background decorations */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Dinosaur 1 - Top left */}
@@ -1076,4 +1076,3 @@ export default function Home() {
     </div>
   );
 }
-
