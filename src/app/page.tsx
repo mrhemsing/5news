@@ -499,7 +499,7 @@ export default function Home() {
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
               <p
-                className="mt-8 text-black md:text-gray-600 dark:text-gray-400 font-bold text-base md:text-xl"
+                className="hidden md:block mt-8 text-gray-600 dark:text-gray-400 font-bold text-base md:text-xl"
                 style={{ fontFamily: 'Eraser, cursive' }}>
                 Loading the latest news...
               </p>
@@ -1055,7 +1055,7 @@ export default function Home() {
 
             {!hasMore && articles.length > 0 && (
               <div className="text-center pt-6 pb-2">
-                <p className="text-gray-500 dark:text-gray-400">
+                <p className="text-black dark:text-black">
                   You&apos;ve reached the end of the headlines!
                 </p>
               </div>
