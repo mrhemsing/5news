@@ -499,7 +499,7 @@ export default function Home() {
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
               <p
-                className="mt-8 text-gray-600 dark:text-gray-400 font-bold text-base md:text-xl"
+                className="mt-8 text-black md:text-gray-600 dark:text-gray-400 font-bold text-base md:text-xl"
                 style={{ fontFamily: 'Eraser, cursive' }}>
                 Loading the latest news...
               </p>
@@ -1064,9 +1064,9 @@ export default function Home() {
 
           <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
             <p>Powered by Google News RSS, OpenAI and Eleven Labs.</p>
-            <p className="mt-3 text-gray-800 md:text-gray-600 dark:text-gray-300">
+            <p className="mt-3 text-gray-500 dark:text-gray-400">
               &copy; {new Date().getFullYear()}{' '}
-              <a href="https://www.b-average.com/" target="_blank" rel="noreferrer" className="text-gray-800 md:text-gray-600 dark:text-gray-300">
+              <a href="https://www.b-average.com/" target="_blank" rel="noreferrer" className="text-gray-500 dark:text-gray-400">
                 B Average
               </a>
             </p>
