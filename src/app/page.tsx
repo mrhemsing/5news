@@ -1064,9 +1064,9 @@ export default function Home() {
 
           <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
             <p>Powered by Google News RSS, OpenAI and Eleven Labs.</p>
-            <p className="mt-3 text-gray-700 md:text-gray-600 dark:text-gray-300">
+            <p className="mt-3 text-gray-800 md:text-gray-600 dark:text-gray-300">
               &copy; {new Date().getFullYear()}{' '}
-              <a href="https://www.b-average.com/" target="_blank" rel="noreferrer">
+              <a href="https://www.b-average.com/" target="_blank" rel="noreferrer" className="text-gray-800 md:text-gray-600 dark:text-gray-300">
                 B Average
               </a>
             </p>
