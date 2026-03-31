@@ -1064,10 +1064,10 @@ export default function Home() {
 
           <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
             <p>Powered by Google News RSS, OpenAI and Eleven Labs.</p>
-            <p className="mt-3 text-gray-500 dark:text-gray-400">
-              &copy; {new Date().getFullYear()}{' '}
-              <a href="https://www.b-average.com/" target="_blank" rel="noreferrer" className="text-gray-500 dark:text-gray-400">
-                B Average
+            <p className="mt-3 inline-flex items-center gap-2 text-gray-500 dark:text-gray-400">
+              <span>&copy; {new Date().getFullYear()}</span>
+              <a href="https://www.b-average.com/" target="_blank" rel="noreferrer" className="inline-block bg-black px-[6px] pr-[5px] py-1 text-[11px] font-semibold uppercase tracking-[2.16px] leading-none text-white no-underline transition-colors duration-150 hover:bg-white hover:text-black">
+                B AVERAGE
               </a>
             </p>
           </div>
