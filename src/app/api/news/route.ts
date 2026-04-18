@@ -83,9 +83,6 @@ function aggressiveDedupeHeadlines<T extends { title: string; publishedAt: strin
   return kept;
 }
 
-// Force dynamic rendering for this API route
-export const dynamic = 'force-dynamic';
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
