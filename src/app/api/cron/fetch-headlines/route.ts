@@ -387,20 +387,20 @@ async function storeHeadlinesInDatabase(headlines: any[]) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // First, clear old headlines (older than 4 days)
-    console.log(`🧹 About to clear old headlines...`);
-    const fourDaysAgo = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000);
-    console.log(`🧹 Four days ago: ${fourDaysAgo.toISOString()}`);
+    // Clear the current cached headline set before inserting a fresh batch.
+    // Google News feed URLs can vary, so URL-based upsert is not enough to keep
+    // the visible dataset fresh and can leave stale rows hanging around.
+    console.log(`🧹 About to clear existing headlines...`);
 
     const { error: deleteError } = await supabase
       .from('headlines')
       .delete()
-      .lt('publishedAt', fourDaysAgo.toISOString());
+      .not('id', 'is', null);
 
     if (deleteError) {
-      console.error('❌ Error clearing old headlines:', deleteError);
+      console.error('❌ Error clearing existing headlines:', deleteError);
     } else {
-      console.log('🧹 Cleared old headlines from database');
+      console.log('🧹 Cleared existing headlines from database');
     }
 
     // Insert new headlines with upsert to handle duplicates
