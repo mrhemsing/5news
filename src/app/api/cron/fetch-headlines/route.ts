@@ -92,11 +92,18 @@ async function handleHeadlineFetch(request: Request) {
 }
 
 async function fetchFreshHeadlines() {
-  const headlines = [];
+  const headlines: any[] = [];
   console.log('🔄 Starting to fetch fresh headlines...');
 
   try {
     const rssUrls = [
+      'https://abcnews.go.com/abcnews/topstories',
+      'https://abcnews.go.com/abcnews/usheadlines',
+      'https://abcnews.go.com/abcnews/internationalheadlines',
+      'https://abcnews.go.com/abcnews/politicsheadlines',
+      'https://abcnews.go.com/abcnews/healthheadlines',
+      'https://abcnews.go.com/abcnews/technologyheadlines',
+      'https://abcnews.go.com/abcnews/entertainmentheadlines',
       'https://news.google.com/rss/search?q=ABC+News&hl=en-US&gl=US&ceid=US:en&num=50',
       'https://news.google.com/rss/search?q=ABC+News&hl=en&gl=US&ceid=US:en&num=50'
     ];
@@ -197,31 +204,25 @@ async function parseRSSFeed(rssText: string) {
         const item = itemMatches[i];
         console.log(`🔍 Processing item ${i + 1}/${itemMatches.length}`);
 
-        const titleMatch = item.match(/<title>([\s\S]*?)<\/title>/);
-        const linkMatch = item.match(/<link>([^<]*)<\/link>/);
-        const pubDateMatch = item.match(/<pubDate>([^<]+)<\/pubDate>/);
+        const title = readRssTag(item, 'title');
+        const url = readRssTag(item, 'link') || readRssTag(item, 'guid');
+        const pubDate = readRssTag(item, 'pubDate');
 
         console.log(
           `🔍 Item ${
             i + 1
-          } - Title match: ${!!titleMatch}, Link match: ${!!linkMatch}, Date match: ${!!pubDateMatch}`
+          } - Title match: ${!!title}, Link match: ${!!url}, Date match: ${!!pubDate}`
         );
 
-        if (titleMatch && linkMatch && pubDateMatch) {
-          const title = titleMatch[1]
-            .replace(/<!\[CDATA\[(.*?)\]\]>/, '$1')
-            .trim();
-          const url = linkMatch[1].trim();
-          const pubDate = pubDateMatch[1];
-
+        if (title && url && pubDate) {
           // Filter out unwanted headlines
           if (shouldIncludeHeadline(title)) {
             headlines.push({
               id: `headline-${Date.now()}-${Math.random()
                 .toString(36)
                 .substr(2, 9)}`,
-              title: title.replace(/\s*\([^)]*\)/g, '').trim(),
-              url: url,
+              title: cleanHeadlineTitle(title),
+              url,
               publishedAt: new Date(pubDate).toISOString(),
               source: 'ABC News',
               fetchedAt: new Date().toISOString()
@@ -235,6 +236,30 @@ async function parseRSSFeed(rssText: string) {
   }
 
   return headlines;
+}
+
+function readRssTag(item: string, tagName: string): string {
+  const match = item.match(new RegExp(`<${tagName}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tagName}>`));
+  if (!match) return '';
+
+  return decodeHtmlEntities(match[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, '$1').trim());
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
+function cleanHeadlineTitle(title: string): string {
+  return title
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s+-\s+ABC News$/i, '')
+    .trim();
 }
 
 function shouldIncludeHeadline(title: string): boolean {

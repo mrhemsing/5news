@@ -245,15 +245,10 @@ export default function Home() {
       console.log('API response data:', data);
 
       if (append) {
-        const articlesPerPage = 20;
-        const startIndex = (pageNum - 1) * articlesPerPage;
-        const endIndex = startIndex + articlesPerPage;
-        const newArticles = data.articles.slice(startIndex, endIndex);
-
         const existingUrls = new Set(
           articles.map((article: NewsArticle) => article.url)
         );
-        const uniqueNewArticles = newArticles.filter(
+        const uniqueNewArticles = data.articles.filter(
           (article: NewsArticle) => !existingUrls.has(article.url)
         );
 
@@ -261,30 +256,22 @@ export default function Home() {
           setArticles(prev => [...prev, ...uniqueNewArticles]);
         }
 
-        if (
-          uniqueNewArticles.length === 0 ||
-          endIndex >= data.articles.length
-        ) {
+        if (uniqueNewArticles.length === 0 || !data.hasMore) {
           setHasMore(false);
           setLoadingMore(false);
         }
       } else {
-        const articlesPerPage = 20;
-        const initialArticles = data.articles.slice(0, articlesPerPage);
-        setArticles(initialArticles);
+        setArticles(data.articles);
 
         setPage(1);
-        setHasMore(data.articles.length > articlesPerPage);
+        setHasMore(Boolean(data.hasMore));
 
         if (forceRefresh) {
           localStorage.removeItem('5news-articles');
         }
       }
 
-      const articlesPerPage = 20;
-      const currentEndIndex = pageNum * articlesPerPage;
-      const hasMoreArticles = currentEndIndex < data.articles.length;
-      setHasMore(hasMoreArticles);
+      setHasMore(Boolean(data.hasMore));
 
       if (isMobile) {
         localStorage.setItem('5news-last-fetch', Date.now().toString());
