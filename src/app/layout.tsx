@@ -7,6 +7,7 @@ import {
   Indie_Flower
 } from 'next/font/google';
 import localFont from 'next/font/local';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 const inter = Inter({
@@ -101,6 +102,7 @@ export default function RootLayout({ children }: { children: any }) {
       <body
         className={`${inter.className} ${comicNeue.variable} ${architectsDaughter.variable} ${bubblegumSans.variable} ${indieFlower.variable} ${eraser.variable}`}>
         {children}
+        <Analytics />
       </body>
     </html>
   );
