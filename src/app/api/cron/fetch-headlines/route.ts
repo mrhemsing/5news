@@ -262,9 +262,25 @@ function cleanHeadlineTitle(title: string): string {
     .trim();
 }
 
+function normalizeForBlockedHeadline(title: string): string {
+  return cleanHeadlineTitle(title)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isBlockedHeadline(title: string): boolean {
+  return normalizeForBlockedHeadline(title) === 'abc 24 news midday';
+}
+
 function shouldIncludeHeadline(title: string): boolean {
   const titleLower = title.toLowerCase();
   const titleUpper = title.toUpperCase();
+
+  if (isBlockedHeadline(title)) {
+    return false;
+  }
 
   // Filter out unwanted content
   const excludePatterns = [

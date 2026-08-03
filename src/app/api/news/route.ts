@@ -21,6 +21,10 @@ function normalizeForDedupe(title: string): string {
     .trim();
 }
 
+function isBlockedHeadline(title: string): boolean {
+  return normalizeForDedupe(title) === 'abc 24 news midday';
+}
+
 const DEDUPE_STOPWORDS = new Set([
   'a','an','the','and','or','but','to','of','in','on','for','with','at','by','from','as','into','over','after','before','about','amid','among',
   'is','are','was','were','be','been','being',
@@ -145,8 +149,13 @@ export async function GET(request: Request) {
       );
     }
 
-    // Filter out sports-related stories
+    // Filter out blocked and sports-related stories
     const filteredHeadlines = headlines.filter(headline => {
+      if (isBlockedHeadline(headline.title)) {
+        console.log(`🚫 Filtering out blocked headline: "${headline.title}"`);
+        return false;
+      }
+
       const isSports = isSportsStory(headline.title);
       if (isSports) {
         console.log(`🏀 Filtering out sports story: "${headline.title}"`);

@@ -233,3 +233,40 @@ html.fonts-loaded .logo-newz-small {
 .bounce-twice {
   animation: bounce-twice 12s infinite;
 }
+
+/* Chunky kid spinner - wordmark orange */
+.kid-spinner {
+  --ring: 8px;
+  border-radius: 9999px;
+  background: conic-gradient(
+    #FFE3C2 0deg 90deg,
+    #FF7A00 90deg 360deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - var(--ring)),
+    #000 calc(100% - var(--ring) + 1px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - var(--ring)),
+    #000 calc(100% - var(--ring) + 1px)
+  );
+  animation: kid-spin 1.1s linear infinite;
+}
+
+.kid-spinner-sm {
+  --ring: 5px;
+}
+
+@keyframes kid-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kid-spinner {
+    animation-duration: 3s;
+  }
+}

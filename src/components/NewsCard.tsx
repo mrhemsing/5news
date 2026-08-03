@@ -412,7 +412,7 @@ export default function NewsCard({
             <div className="w-[120px] h-[80px] rounded-lg overflow-hidden relative">
               {cartoonLoading && (
                 <div className="absolute inset-0 bg-blue-100 flex items-center justify-center z-10">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <div className="kid-spinner kid-spinner-sm h-6 w-6"></div>
                 </div>
               )}
               {cartoonUrl && !imageError ? (

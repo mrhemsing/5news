@@ -422,7 +422,7 @@ export default function Home() {
 
         <div className="relative z-10 container mx-auto px-4 py-8">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="kid-spinner h-12 w-12 mx-auto"></div>
             <p
               className="mt-8 text-gray-700 font-bold text-base md:text-xl"
               style={{ fontFamily: 'Eraser, cursive' }}>
@@ -484,7 +484,7 @@ export default function Home() {
         <div className="relative z-10">
           <div className="container mx-auto px-4 py-8">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <div className="kid-spinner h-12 w-12 mx-auto"></div>
               <p
                 className="hidden md:block mt-8 text-gray-600 dark:text-gray-400 font-bold text-base md:text-xl"
                 style={{ fontFamily: 'Eraser, cursive' }}>
@@ -1023,7 +1023,7 @@ export default function Home() {
 
             {loadingMore && (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="kid-spinner kid-spinner-sm h-8 w-8 mx-auto"></div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">
                   Loading more articles..
                 </p>
