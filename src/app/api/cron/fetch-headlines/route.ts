@@ -271,7 +271,8 @@ function normalizeForBlockedHeadline(title: string): string {
 }
 
 function isBlockedHeadline(title: string): boolean {
-  return normalizeForBlockedHeadline(title) === 'abc 24 news midday';
+  const normalized = normalizeForBlockedHeadline(title);
+  return normalized === 'abc 24 news midday' || normalized.includes('cartoon');
 }
 
 function shouldIncludeHeadline(title: string): boolean {

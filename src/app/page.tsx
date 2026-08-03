@@ -999,6 +999,14 @@ export default function Home() {
                   const title = article.title.toLowerCase();
                   const content = article.content?.toLowerCase() || '';
                   const combinedText = `${title} ${content}`;
+                  const normalizedTitle = title
+                    .replace(/[^a-z0-9\s]/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                  if (normalizedTitle.includes('cartoon')) {
+                    return false;
+                  }
 
                   // Filter out local road/accident reports and TV show transcripts
                   const unwantedTerms = [

@@ -22,7 +22,8 @@ function normalizeForDedupe(title: string): string {
 }
 
 function isBlockedHeadline(title: string): boolean {
-  return normalizeForDedupe(title) === 'abc 24 news midday';
+  const normalized = normalizeForDedupe(title);
+  return normalized === 'abc 24 news midday' || normalized.includes('cartoon');
 }
 
 const DEDUPE_STOPWORDS = new Set([
