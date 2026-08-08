@@ -46,7 +46,7 @@ jobs:
       - name: Fetch headlines
         run: |
           echo "Making request to: ${{ secrets.BASE_URL }}/api/cron/fetch-headlines"
-          curl -X POST "${{ secrets.BASE_URL }}/api/cron/fetch-headlines" \
+          curl --fail-with-body -X POST "${{ secrets.BASE_URL }}/api/cron/fetch-headlines" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET_KEY }}" \
             -v

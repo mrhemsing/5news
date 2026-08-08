@@ -137,7 +137,10 @@ export async function GET(request: Request) {
     // Fetch headlines from centralized Supabase database
     const headlines = await fetchHeadlinesFromDatabase();
 
-    if (!headlines || headlines.length === 0) {
+    const headlineSource = headlines && headlines.length > 0 ? 'database' : 'rss-fallback';
+    const headlineRows = headlines && headlines.length > 0 ? headlines : await fetchHeadlinesFromRssFallback();
+
+    if (!headlineRows || headlineRows.length === 0) {
       console.log('❌ No headlines found in database');
       return NextResponse.json(
         {
@@ -151,7 +154,7 @@ export async function GET(request: Request) {
     }
 
     // Filter out blocked and sports-related stories
-    const filteredHeadlines = headlines.filter(headline => {
+    const filteredHeadlines = headlineRows.filter(headline => {
       if (isBlockedHeadline(headline.title)) {
         console.log(`🚫 Filtering out blocked headline: "${headline.title}"`);
         return false;
@@ -164,9 +167,9 @@ export async function GET(request: Request) {
       return !isSports;
     });
 
-    const filteredCount = headlines.length - filteredHeadlines.length;
+    const filteredCount = headlineRows.length - filteredHeadlines.length;
     console.log(
-      `🏀 Filtered out ${filteredCount} sports stories (${headlines.length} -> ${filteredHeadlines.length})`
+      `🏀 Filtered out ${filteredCount} sports stories (${headlineRows.length} -> ${filteredHeadlines.length})`
     );
 
     // Aggressive de-dupe of similar headlines (user preference)
@@ -195,7 +198,7 @@ export async function GET(request: Request) {
     );
     console.log(`📊 Total headlines in database: ${filteredHeadlines.length}`);
     console.log(
-      `📊 Database last updated: ${headlines[0]?.fetchedAt || 'Unknown'}`
+      `📊 Database last updated: ${headlineRows[0]?.fetchedAt || 'Unknown'}`
     );
 
     return NextResponse.json({
@@ -204,7 +207,8 @@ export async function GET(request: Request) {
       hasMore: endIndex < dedupedHeadlines.length,
       page: page,
       totalPages: Math.ceil(dedupedHeadlines.length / articlesPerPage),
-      databaseTimestamp: dedupedHeadlines[0]?.fetchedAt || null
+      databaseTimestamp: dedupedHeadlines[0]?.fetchedAt || null,
+      source: headlineSource
     });
   } catch (error) {
     console.error('Error fetching news:', error);
@@ -216,6 +220,129 @@ export async function GET(request: Request) {
 }
 
 // (moved) cleanForCartoon is now imported from @/lib/cartoonKey
+
+async function fetchHeadlinesFromRssFallback(): Promise<NewsArticle[] | null> {
+  console.log('⚠️ Falling back to live RSS headlines because database returned no usable rows');
+
+  const headlines: NewsArticle[] = [];
+  const rssUrls = [
+    'https://abcnews.go.com/abcnews/topstories',
+    'https://abcnews.go.com/abcnews/usheadlines',
+    'https://abcnews.go.com/abcnews/internationalheadlines',
+    'https://abcnews.go.com/abcnews/politicsheadlines',
+    'https://abcnews.go.com/abcnews/healthheadlines',
+    'https://abcnews.go.com/abcnews/technologyheadlines',
+    'https://abcnews.go.com/abcnews/entertainmentheadlines',
+  ];
+
+  for (const rssUrl of rssUrls) {
+    try {
+      const response = await fetch(rssUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+          Accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
+        },
+        next: { revalidate: 300 },
+      });
+
+      if (!response.ok) {
+        console.log(`⚠️ RSS fallback source failed: ${rssUrl} ${response.status}`);
+        continue;
+      }
+
+      const rssText = await response.text();
+      headlines.push(...parseRssFallback(rssText));
+    } catch (error) {
+      console.log(`⚠️ RSS fallback source errored: ${rssUrl}`, error);
+    }
+  }
+
+  const seen = new Set<string>();
+  const unique = headlines
+    .filter(headline => {
+      const key = normalizeForDedupe(headline.title);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+
+  console.log(`✅ RSS fallback produced ${unique.length} headlines`);
+  return unique.length ? unique : null;
+}
+
+function parseRssFallback(rssText: string): NewsArticle[] {
+  const itemMatches = rssText.match(/<item>([\s\S]*?)<\/item>/g);
+  if (!itemMatches) return [];
+
+  const parsed: NewsArticle[] = [];
+
+  itemMatches.forEach((item, index) => {
+    const title = cleanHeadlineTitle(readRssTag(item, 'title'));
+    const url = readRssTag(item, 'link') || readRssTag(item, 'guid');
+    const pubDate = readRssTag(item, 'pubDate');
+    const publishedAt = pubDate ? new Date(pubDate).toISOString() : '';
+
+    if (!title || !url || !publishedAt || !shouldIncludeRssFallbackHeadline(title)) {
+      return;
+    }
+
+    parsed.push({
+      id: `rss-fallback-${Date.now()}-${index}`,
+      title,
+      url,
+      publishedAt,
+      description: title,
+      content: title,
+      urlToImage: '',
+      source: {
+        id: null,
+        name: 'ABC News',
+      },
+      fetchedAt: new Date().toISOString(),
+      cartoonUrl: null,
+    });
+  });
+
+  return parsed;
+}
+
+function shouldIncludeRssFallbackHeadline(title: string): boolean {
+  const titleLower = title.toLowerCase();
+  const excludePatterns = [
+    'video',
+    'live',
+    'watch',
+    'livestream',
+    'live stream',
+    'live coverage',
+    'live updates',
+    'breaking live',
+    'latest news',
+    'live breaking',
+    'watch live'
+  ];
+
+  return (
+    !isBlockedHeadline(title) &&
+    !excludePatterns.some(pattern => titleLower.includes(pattern)) &&
+    !isSportsStory(title)
+  );
+}
+
+function readRssTag(item: string, tagName: string): string {
+  const match = item.match(new RegExp(`<${tagName}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tagName}>`));
+  if (!match) return '';
+
+  return decodeHtmlEntities(match[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, '$1').trim());
+}
+
+function cleanHeadlineTitle(title: string): string {
+  return title
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s+-\s+ABC News$/i, '')
+    .trim();
+}
 
 async function fetchHeadlinesFromDatabase() {
   try {

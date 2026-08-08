@@ -10,6 +10,7 @@ export interface NewsArticle {
     name: string;
   };
   content: string;
+  fetchedAt?: string;
   simpleExplanation?: string;
   isExpanded?: boolean;
   cartoonUrl?: string | null;

@@ -41,7 +41,23 @@ async function handleHeadlineFetch(request: Request) {
 
     // Store in central Supabase database
     console.log('💾 About to call storeHeadlinesInDatabase...');
-    await storeHeadlinesInDatabase(headlines);
+    try {
+      await storeHeadlinesInDatabase(headlines);
+    } catch (error) {
+      if (isSupabaseQuotaError(error)) {
+        console.log('⚠️ Supabase quota restriction prevented headline storage; app will use RSS fallback');
+        return NextResponse.json({
+          success: true,
+          stored: false,
+          warning:
+            'Supabase is restricted by exceed_egress_quota, so headlines were fetched but not stored. App RSS fallback remains available.',
+          headlinesCount: headlines.length,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      throw error;
+    }
     console.log('✅ storeHeadlinesInDatabase completed successfully');
 
     console.log(
@@ -89,6 +105,22 @@ async function handleHeadlineFetch(request: Request) {
       { status: 500 }
     );
   }
+}
+
+function isSupabaseQuotaError(error: unknown): boolean {
+  const source =
+    typeof error === 'string'
+      ? error
+      : [
+          (error as any)?.message,
+          (error as any)?.details,
+          (error as any)?.hint,
+          JSON.stringify(error)
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+  return /exceed_egress_quota|spend caps?|restricted due to/i.test(source);
 }
 
 async function fetchFreshHeadlines() {

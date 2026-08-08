@@ -39,6 +39,19 @@ function requireEnv(name, value) {
   if (!value) throw new Error(`Missing required env var: ${name}`);
 }
 
+function isSupabaseQuotaError(error) {
+  const message = [
+    error?.message,
+    error?.details,
+    error?.hint,
+    typeof error === 'string' ? error : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return /exceed_egress_quota|spend caps?|restricted due to/i.test(message);
+}
+
 async function fetchJson(url, init) {
   const res = await fetch(url, init);
   const text = await res.text();
@@ -185,7 +198,13 @@ async function main() {
     .order('publishedAt', { ascending: false })
     .limit(limit);
 
-  if (hlErr) throw new Error(`Fetch headlines failed: ${hlErr.message}`);
+  if (hlErr) {
+    if (isSupabaseQuotaError(hlErr)) {
+      console.log(`[warm] Supabase is quota-restricted; skipping cartoon warm instead of failing the scheduled job: ${hlErr.message}`);
+      return;
+    }
+    throw new Error(`Fetch headlines failed: ${hlErr.message}`);
+  }
   if (!headlines || headlines.length === 0) {
     console.log('[warm] no headlines found');
     return;
@@ -203,7 +222,13 @@ async function main() {
     .select('headline')
     .in('headline', keys.slice(0, 200));
 
-  if (cErr) throw new Error(`Fetch cartoon_cache failed: ${cErr.message}`);
+  if (cErr) {
+    if (isSupabaseQuotaError(cErr)) {
+      console.log(`[warm] Supabase is quota-restricted while reading cartoon_cache; skipping cartoon warm: ${cErr.message}`);
+      return;
+    }
+    throw new Error(`Fetch cartoon_cache failed: ${cErr.message}`);
+  }
 
   const cachedSet = new Set((cached || []).map(r => r.headline));
   const missing = keys.filter(k => !cachedSet.has(k));
