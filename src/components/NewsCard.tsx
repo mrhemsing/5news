@@ -44,13 +44,11 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, tim
 interface NewsCardProps {
   article: NewsArticle;
   onExplain: (articleId: string, explanation: string) => void;
-  onExplainError: (articleId: string) => void;
 }
 
 export default function NewsCard({
   article,
-  onExplain,
-  onExplainError
+  onExplain
 }: NewsCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -242,16 +240,13 @@ export default function NewsCard({
           setIsExpanded(true);
         } else {
           setExplanationError(true);
-          onExplainError(article.id);
         }
       } else {
         setExplanationError(true);
-        onExplainError(article.id);
       }
     } catch (error) {
       console.error('Error getting explanation:', error);
       setExplanationError(true);
-      onExplainError(article.id);
     } finally {
       setIsLoading(false);
     }
@@ -621,6 +616,14 @@ export default function NewsCard({
             </div>
           </div>
         </div>
+
+        {explanationError && (
+          <div role="alert" className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+            <p className="text-sm text-blue-700">
+              We couldn&apos;t explain this story just now. Please try the blue button again.
+            </p>
+          </div>
+        )}
 
         {isExpanded && article.simpleExplanation && (
           <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">

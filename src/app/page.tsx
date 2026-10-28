@@ -12,7 +12,6 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [failedArticles, setFailedArticles] = useState<Set<string>>(new Set());
   const [initialLoading, setInitialLoading] = useState(true);
 
   const currentRequestRef = useRef<AbortController | null>(null);
@@ -313,14 +312,6 @@ export default function Home() {
           : article
       )
     );
-  };
-
-  const handleExplainError = (articleId: string) => {
-    setFailedArticles(prev => {
-      const newSet = new Set(prev);
-      newSet.add(articleId);
-      return newSet;
-    });
   };
 
   // Function to detect and remove duplicate articles
@@ -994,7 +985,6 @@ export default function Home() {
           <div className="max-w-4xl mx-auto mt-5 space-y-3">
             {removeDuplicates(
               articles
-                .filter(article => !failedArticles.has(article.id))
                 .filter(article => {
                   const title = article.title.toLowerCase();
                   const content = article.content?.toLowerCase() || '';
@@ -1025,7 +1015,6 @@ export default function Home() {
                 key={article.id}
                 article={article}
                 onExplain={handleExplain}
-                onExplainError={handleExplainError}
               />
             ))}
 

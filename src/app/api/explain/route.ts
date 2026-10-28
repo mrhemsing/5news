@@ -21,7 +21,7 @@ Please provide a simple explanation that a 5-year-old would understand:`;
 
     const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: process.env.OPENAI_EXPLAIN_MODEL || 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
